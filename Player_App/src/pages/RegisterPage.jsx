@@ -6,7 +6,7 @@ const RegisterPage = () => {
   const [activeTab, setActiveTab] = useState("login");
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-[#20273e] to-[#101522] px-2">
+    <div className="min-h-screen flex flex-col items-center pt-20 justify-center bg-gradient-to-br from-[#20273e] to-[#101522] px-2">
 
       <span className="text-md text-cyan-100 mb-8 opacity-80">Player Registration Portal</span>
 

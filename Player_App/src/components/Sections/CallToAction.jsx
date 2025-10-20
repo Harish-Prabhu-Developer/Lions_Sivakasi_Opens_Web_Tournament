@@ -1,7 +1,7 @@
 // CallToAction.jsx
 import React from "react";
 import { Trophy } from "lucide-react";
-
+import {Link} from "react-router-dom";
 const CallToAction = () => (
   <>
     <style>{`
@@ -27,11 +27,11 @@ const CallToAction = () => (
           </div>
         </div>
         <div className="mt-8 md:mt-0 flex-shrink-0">
-          <a href="/register">
+          <Link to="/register">
             <button className="px-9 py-4 rounded-full bg-gradient-to-r from-cyan-500 via-sky-400 to-indigo-500 font-semibold text-white shadow-lg shadow-cyan-400/30 hover:scale-105 hover:bg-cyan-600 transition duration-300 focus:outline-none">
               Register Now
             </button>
-          </a>
+          </Link>
         </div>
       </div>
     </section>
