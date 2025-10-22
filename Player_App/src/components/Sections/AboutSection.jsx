@@ -39,7 +39,7 @@ const AboutSection = () => {
           The Lions Club of Sivakasi Central proudly presents the 9
           <sup>th</sup>{" "}
           <span className="text-cyan-300 font-semibold">
-            Balamurugan Memorial Trophy
+            Statelevel Badminton Championship
           </span>
           — an elite state-level badminton championship sanctioned by TNBA.
         </p>

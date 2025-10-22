@@ -1,24 +1,46 @@
-// Navbar.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Menu, X, Shield } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import Logo from "../assets/logo.png";
+import AuthContext from "./Auth/AuthContext";
+
 function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
+  const { isLoggedIn, setIsLoggedIn } = useContext(AuthContext);
 
+  // Improve loggedIn tracking with storage event and location change
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+
+    const checkLoggedIn = () => {
+      const token = localStorage.getItem("token");
+      setIsLoggedIn(!!token);
+    };
+
+    checkLoggedIn();
+
+    const storageListener = (e) => {
+      if (e.key === "token") {
+        checkLoggedIn();
+      }
+    };
+
+    window.addEventListener("storage", storageListener);
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("storage", storageListener);
+    };
+  }, [location, setIsLoggedIn]);
 
   const toggleMenu = () => setIsOpen((prev) => !prev);
 
   const navLinks = [
     { name: "Home", path: "/" },
-    { name: "Dashboard", path: "/dashboard" },
+    ...(isLoggedIn ? [{ name: "Dashboard", path: "/dashboard" }] : []),
   ];
 
   return (
@@ -30,16 +52,16 @@ function Navbar() {
       }`}
     >
       <div className="max-w-7xl mx-auto flex items-center justify-between px-6 md:px-10 h-[70px]">
-        {/* ✅ Logo */}
+        {/* Logo */}
         <Link to="/" className="flex items-center gap-2">
-          <img src={Logo} className="w-8 h-8" />
+          <img src={Logo} className="w-8 h-8" alt="Lions Sivakasi Open Logo" />
           <span className="text-white font-semibold text-lg md:text-xl tracking-wide">
             <span className="hidden md:inline">Lions Sivakasi Open</span>
             <span className="md:hidden">LSO</span>
           </span>
         </Link>
 
-        {/* ✅ Desktop Nav */}
+        {/* Desktop Nav */}
         <ul className="hidden md:flex items-center space-x-10">
           {navLinks.map((link) => {
             const isActive = location.pathname === link.path;
@@ -47,30 +69,34 @@ function Navbar() {
               <li key={link.name}>
                 <Link
                   to={link.path}
-                  className={`relative transition-all duration-300  after:absolute after:left-0 after:-bottom-1 after:h-[2px] after:bg-cyan-400 after:transition-all after:duration-300 ${
+                  className={`relative transition-all duration-300 after:absolute after:left-0 after:-bottom-1 after:h-[2px] after:bg-cyan-400 after:transition-all after:duration-300 ${
                     isActive ? "after:w-full" : "after:w-0 hover:after:w-full"
                   }`}
                 >
-                  <span className={ `text-sm font-medium tracking-wide ${
-                    isActive
-                      ? "text-cyan-300 after:w-full"
-                      : "text-gray-200 hover:text-cyan-200"
-                  }`}>{link.name}</span>
+                  <span
+                    className={`text-sm font-medium tracking-wide ${
+                      isActive
+                        ? "text-cyan-300 after:w-full"
+                        : "text-gray-200 hover:text-cyan-200"
+                    }`}
+                  >
+                    {link.name}
+                  </span>
                 </Link>
               </li>
             );
           })}
-          {/* ✅ Register Button (Desktop) */}
-          <Link
-            to="/register"
-            className="hidden md:inline-flex items-center justify-center w-36 h-10 rounded-full
-          bg-gradient-to-r from-cyan-600 to-cyan-400 tracking-wide shadow-md hover:from-cyan-500 hover:to-cyan-300 active:scale-95 transition-all duration-300"
-          >
-            <span className="text-white font-semibold text-sm ">Register</span>
-          </Link>
+          {!isLoggedIn && (
+            <Link
+              to="/register"
+              className="hidden md:inline-flex items-center justify-center w-36 h-10 rounded-full bg-gradient-to-r from-cyan-600 to-cyan-400 tracking-wide shadow-md hover:from-cyan-500 hover:to-cyan-300 active:scale-95 transition-all duration-300"
+            >
+              <span className="text-white font-semibold text-sm">Register</span>
+            </Link>
+          )}
         </ul>
 
-        {/* ✅ Mobile Menu Toggle */}
+        {/* Mobile Menu Toggle */}
         <button
           onClick={toggleMenu}
           className="md:hidden text-white transition-transform duration-300 active:scale-90"
@@ -79,7 +105,7 @@ function Navbar() {
         </button>
       </div>
 
-      {/* ✅ Mobile Menu */}
+      {/* Mobile Menu */}
       <div
         className={`md:hidden overflow-hidden transition-all duration-500 ease-in-out ${
           isOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
@@ -94,7 +120,7 @@ function Navbar() {
                   <Link
                     to={link.path}
                     onClick={() => setIsOpen(false)}
-                    className={`relative  transition-all duration-300 after:absolute after:left-0 after:-bottom-1 after:h-[2px] after:bg-cyan-400 after:transition-all after:duration-300 ${
+                    className={`relative transition-all duration-300 after:absolute after:left-0 after:-bottom-1 after:h-[2px] after:bg-cyan-400 after:transition-all after:duration-300 ${
                       isActive ? "after:w-full" : "after:w-0 hover:after:w-full"
                     }`}
                   >
@@ -111,15 +137,17 @@ function Navbar() {
                 </li>
               );
             })}
-            <Link
-              to="/register"
-              onClick={() => setIsOpen(false)}
-              className="w-40 h-11 rounded-full bg-gradient-to-r from-cyan-600 to-cyan-400
-             flex items-center justify-center shadow-md
-            hover:from-cyan-500 hover:to-cyan-300 active:scale-95 transition-all duration-300"
-            >
-              <span className="text-white font-semibold text-sm">Register</span>
-            </Link>
+            {!isLoggedIn && (
+              <Link
+                to="/register"
+                onClick={() => setIsOpen(false)}
+                className="w-40 h-11 rounded-full bg-gradient-to-r from-cyan-600 to-cyan-400 flex items-center justify-center shadow-md hover:from-cyan-500 hover:to-cyan-300 active:scale-95 transition-all duration-300"
+              >
+                <span className="text-white font-semibold text-sm">
+                  Register
+                </span>
+              </Link>
+            )}
           </ul>
         </div>
       </div>

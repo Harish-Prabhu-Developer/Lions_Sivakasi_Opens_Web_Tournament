@@ -45,33 +45,33 @@ const HeroSection = () => {
       {/* Tournament Tag */}
       <div className="flex items-center gap-2 bg-cyan-500/10 border border-cyan-400/30 backdrop-blur-md px-6 py-2 rounded-full text-cyan-300 text-sm mt-24 shadow-md shadow-cyan-900/30 animate-fadeUp">
         <Trophy className="w-4 h-4" />
-        <span>State Level Tournament • TNBA Approved</span>
+        <span>State Level Tournament</span>
       </div>
 
       {/* Main Title */}
       <h1 className="mt-8 text-4xl sm:text-5xl md:text-6xl font-extrabold leading-tight animate-fadeUp [animation-delay:0.2s] max-w-4xl">
         9<sup>th</sup> Lions Sivakasi Open{" "}
-        <span className="shine-text">Balamurugan Memorial Trophy</span>
+        {/* <span className="shine-text">Balamurugan Memorial Trophy</span> */}
       </h1>
 
       {/* Year */}
       <p className="text-lg md:text-xl text-cyan-300 tracking-wide mt-4 animate-fadeUp [animation-delay:0.4s] font-semibold">
-        Championship 2025
+        Badminton Championship 2025
       </p>
 
       {/* Tournament Info */}
       <div className="flex flex-wrap items-center justify-center gap-8 mt-8 text-gray-300 text-sm md:text-base animate-fadeUp [animation-delay:0.6s]">
         <div className="flex items-center gap-2">
           <Calendar className="w-4 h-4 text-cyan-400" />
-          <span>7 Feb – 9 Feb 2025</span>
+          <span>28 Nov – 30 Nov 2025</span>
         </div>
         <div className="flex items-center gap-2">
           <MapPin className="w-4 h-4 text-cyan-400" />
-          <span>AJ Stadium, Sivakasi</span>
+          <span>Anso sports Academy, Sivakasi</span>
         </div>
         <div className="flex items-center gap-2">
           <IndianRupee className="w-4 h-4 text-cyan-400" />
-          <span>₹3 Lakhs Prize Pool</span>
+          <span>₹2.5 Lakhs Prize Pool</span>
         </div>
       </div>
 

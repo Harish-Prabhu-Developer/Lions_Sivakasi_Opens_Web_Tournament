@@ -4,7 +4,13 @@ import { Trophy, Users, Award, Star, Medal } from "lucide-react";
 
 const categories = [
   {
-    title: "U11 Boys & Girls Singles/Doubles",
+    title: "U9 Boys & Girls Singles",
+    description: "For players born on or after 2015. Separate singles and doubles events for boys and girls.",
+    icon: <Trophy className="w-7 h-7 text-yellow-400" />,
+    color: "from-cyan-600 to-yellow-400",
+  },
+  {
+    title: "U11 Boys & Girls Singles",
     description: "For players born on or after 2015. Separate singles and doubles events for boys and girls.",
     icon: <Trophy className="w-7 h-7 text-yellow-400" />,
     color: "from-cyan-600 to-yellow-400",

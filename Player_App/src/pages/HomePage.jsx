@@ -1,5 +1,5 @@
 // HomePage.jsx
-import React from "react";
+import Footer from "../components/Footer";
 import HeroSection from "../components/Sections/HeroSection";
 import AboutSection from "../components/Sections/AboutSection";
 import TournamentCategories from "../components/Sections/TournamentCategories";
@@ -10,29 +10,18 @@ const HomePage = () => {
   return (
     <div className="flex flex-col items-center justify-start w-full bg-gradient-to-b from-[#0a192f] to-[#0f223f] text-gray-200">
       {/* Hero */}
-      <section className="w-full">
+      <div className="w-full">
         <HeroSection />
-      </section>
-
       {/* About */}
-      <section className="w-full">
         <AboutSection />
-      </section>
-
       {/* Tournaments Categories */}
-      <section className="w-full">
         <TournamentCategories />
-      </section>
-
       {/* Price Distribution */}
-      <section className="w-full">
         <PriceDistribution />
-      </section>
-
       {/* Call To Action */}
-      <section className="w-full">
         <CallToAction />
-      </section>
+      </div>
+     <Footer/>
     </div>
   );
 };
