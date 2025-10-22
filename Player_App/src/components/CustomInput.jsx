@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Mail, Lock, User, Phone, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, User, Phone, Eye, EyeOff, Calendar } from 'lucide-react';
 
 const iconMap = {
   email: Mail,
@@ -8,6 +8,7 @@ const iconMap = {
   text: User,
   address: User,
   name: User,
+  date: Calendar
 };
 
 const CustomInput = ({
@@ -40,7 +41,9 @@ const CustomInput = ({
     onChange?.(e);
   };
 
-  const Icon = iconMap[type] || User;
+  // For date input, display calendar icon
+  const Icon = type !== "date" ? (iconMap[type] || User) : Calendar;
+  const showIcon = type !== "date" && type !== "hidden";
 
   const borderColorClass = error
     ? "border-red-500"
@@ -48,7 +51,11 @@ const CustomInput = ({
     ? "border-cyan-500 ring-2 ring-cyan-400"
     : "border-cyan-500/10";
 
-  const inputType = type === "password" && !showPassword ? "password" : "text";
+  // Use password toggling only for password type
+  const inputType =
+    type === "password" && !showPassword ? "password"
+    : type === "password" && showPassword ? "text"
+    : type;
 
   const handleFocus = (e) => {
     setFocused(true);
@@ -70,14 +77,16 @@ const CustomInput = ({
       <div
         className={`relative flex items-center rounded-lg border ${borderColorClass} bg-[#13192c] min-h-[52px] px-3 transition-all duration-300`}
       >
-        <Icon className="w-5 h-5 mr-3 text-cyan-400" />
+        {showIcon && <Icon className="w-5 h-5 mr-3 text-cyan-400" />}
         <input
           ref={inputRef}
           id={name}
           type={inputType}
           name={name}
           placeholder={placeholder}
-          className="flex-1 bg-transparent text-white outline-none text-base py-3"
+          className={`flex-1 bg-transparent text-white outline-none text-base py-3 appearance-none
+            ${type === "date" ? "pr-0" : ""}
+          `}
           autoComplete={autoComplete}
           value={internalValue}
           onChange={handleChange}
@@ -86,16 +95,21 @@ const CustomInput = ({
           style={style}
           {...rest}
         />
-        {/* {type === "password" && (
+        {/* Password Visibility Toggle
+        {type === "password" && (
           <button
-            type="button"
+            type="submit"
             className="ml-2 text-cyan-300 hover:text-cyan-200 focus:outline-none"
             onClick={() => setShowPassword(!showPassword)}
             aria-label={showPassword ? "Hide password" : "Show password"}
           >
             {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
           </button>
-        )} */}
+        )}
+        {/* Date Icon (shows at end for date input only) */}
+        {/* {type === "date" && (
+          <Calendar className="w-5 h-5 ml-2 text-cyan-400 pointer-events-none" />
+        )} */} 
       </div>
       {error && <span className="text-red-400 text-xs mt-1 block">{error}</span>}
     </div>

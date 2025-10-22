@@ -7,7 +7,6 @@ import {
   CreditCard,
   Trophy,
   Plus,
-  X,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
@@ -32,30 +31,37 @@ const DashboardPage = () => {
   };
 
   return (
-    <div className="max-h-screen px-2 mt-32 md:px-6 lg:px-12 bg-gradient-to-br from-[#141C2F] to-[#16213C] text-white transition-all duration-300 relative">
+    <div className="min-h-screen px-3 pt-28 sm:pt-32 md:pt-32 lg:pt-32 xl:pt-32 bg-gradient-to-br from-[#141C2F] to-[#16213C] text-white transition-all duration-300 relative">
       {/* Top Section */}
-      <div className="flex flex-col-reverse md:flex-row md:items-center justify-between gap-5 mb-8">
-        <div className="flex items-center gap-3">
-          <Trophy className="w-8 h-8 text-cyan-400" />
-          <h6 className="text-2xl md:text-3xl font-bold">Player Dashboard</h6>
+      <div className="flex flex-row items-center justify-between gap-3 sm:gap-5 mb-8 px-2 max-w-7xl mx-auto w-full">
+        {/* Headline with icon */}
+        <div className="flex items-center gap-3 min-w-0">
+          <Trophy className="w-7 h-7 sm:w-8 sm:h-8 text-cyan-400 flex-shrink-0" />
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-white  max-w-full">
+            Player Dashboard
+          </h2>
         </div>
-        <button
-          className="flex items-center gap-2 sm:px-4 sm:py-2 rounded-lg bg-red-600 hover:bg-red-950 transition-colors duration-300"
+
+        {/* Logout button */}
+        <div
+          className="inline-flex items-center sm:gap-2 px-4 py-2 rounded-lg bg-red-600 hover:border-white border hover:bg-red-100 hover:text-red-600 transition-all duration-300 shadow-md text-sm sm:text-base  justify-center"
           onClick={handleLogout}
         >
-          <LogOut className="w-5 h-5" />
-          <span className="hidden sm:inline">Logout</span>
-        </button>
+          <LogOut className="w-5 h-5 font-bold" />
+          <span className="hidden font-bold sm:inline">Logout</span>
+        </div>
       </div>
 
-      <h2 className="text-base md:text-lg text-gray-300 mb-8">Welcome back,</h2>
+      <h2 className="text-sm sm:text-base md:text-lg text-gray-300 mb-8 max-w-7xl mx-auto px-1">
+        Welcome back,
+      </h2>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+      {/* Stats Cards Grid */}
+      <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 max-w-7xl mx-auto mb-10 px-1">
         {stats.map((stat) => (
           <div
             key={stat.name}
-            className="flex flex-col items-start gap-2 px-6 py-6 rounded-xl bg-[#192339]/80 shadow-lg border border-cyan-400/10 min-h-[110px] hover:scale-[1.03] hover:shadow-lg transition-all duration-300"
+            className="flex flex-col items-start gap-2 px-5 py-6 rounded-xl bg-[#192339]/80 shadow-lg border border-cyan-400/10 min-h-[110px] hover:scale-[1.03] hover:shadow-lg transition-all duration-300"
           >
             <stat.icon className={`w-7 h-7 mb-2 ${stat.color}`} />
             <span className="text-2xl font-bold">{stat.value}</span>
@@ -65,11 +71,11 @@ const DashboardPage = () => {
       </div>
 
       {/* Entries Section */}
-      <div className="bg-[#192339]/80 rounded-xl shadow-lg border border-cyan-400/10 px-4 md:px-7 pt-8 pb-14 mb-10 transition-all duration-300">
-        <div className="flex flex-col md:flex-row items-center justify-between mb-8 gap-5">
+      <div className="bg-[#192339]/80 rounded-xl shadow-lg border border-cyan-400/10 px-4 md:px-7 pt-8 pb-16 mb-10 max-w-7xl mx-auto transition-all duration-300">
+        <div className="flex flex-col md:flex-row items-center justify-between mb-8 gap-4 md:gap-5 px-1">
           <h2 className="text-lg md:text-xl font-semibold">My Entries</h2>
           <button
-            className="flex flex-row items-center justify-center gap-2 px-10 py-2 bg-gradient-to-r from-cyan-500 to-cyan-400 text-white font-semibold rounded-md shadow hover:scale-105 transition-all duration-200"
+            className="flex items-center justify-center gap-2 px-6 py-2 bg-gradient-to-r from-cyan-500 to-cyan-400 text-white font-semibold rounded-md shadow hover:scale-105 transition duration-200 text-sm sm:text-base"
             onClick={handleEntry}
           >
             <Plus className="w-5 h-5" />
@@ -78,11 +84,13 @@ const DashboardPage = () => {
         </div>
 
         {/* No Entries State */}
-        <div className="flex flex-col items-center justify-center py-8 md:py-12">
+        <div className="flex flex-col items-center justify-center py-6 md:py-12 gap-4 px-1">
           <Trophy className="w-12 h-12 text-gray-400 mb-3" />
-          <p className="text-center text-gray-400 font-medium mb-6">No entries yet</p>
+          <p className="text-center text-gray-400 font-medium mb-6 text-sm sm:text-base">
+            No entries yet
+          </p>
           <button
-            className="px-8 py-3 bg-gradient-to-r from-cyan-500 to-cyan-400 text-white rounded-full font-semibold shadow-md hover:bg-cyan-600 hover:to-cyan-500 active:scale-95 transition-all text-lg"
+            className="px-8 py-3 bg-gradient-to-r from-cyan-500 to-cyan-400 text-white rounded-full font-semibold shadow-md hover:bg-cyan-600 hover:to-cyan-500 active:scale-95 transition-all text-base sm:text-lg"
             onClick={handleEntry}
           >
             Register for Tournament
@@ -91,9 +99,7 @@ const DashboardPage = () => {
       </div>
 
       {/* Full Screen Dialog */}
-      {isDialogOpen && (
-        <EntryDialog onClose={handleCloseDialog} />
-      )}
+      {isDialogOpen && <EntryDialog onClose={handleCloseDialog} />}
     </div>
   );
 };

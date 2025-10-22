@@ -27,7 +27,6 @@ const LoginForm = ({ form, setForm, remember, setRemember, onSubmit }) => {
             : ""
         }
       />
-      <div className="relative">
         <CustomInput
           label="Password"
           type={showPassword ? "text" : "password"}
@@ -42,13 +41,7 @@ const LoginForm = ({ form, setForm, remember, setRemember, onSubmit }) => {
               : ""
           }
         />
-        <span
-          className="cursor-pointer absolute right-4 top-10 text-gray-400 hover:text-cyan-400 transition"
-          onClick={toggleShowPassword}
-        >
-          {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-        </span>
-      </div>
+
       <div className="flex items-center text-xs text-cyan-200 w-full mt-[-12px] mb-[8px]">
         <label className="flex items-center cursor-pointer select-none">
           <span className="mr-2 transition-all duration-200">

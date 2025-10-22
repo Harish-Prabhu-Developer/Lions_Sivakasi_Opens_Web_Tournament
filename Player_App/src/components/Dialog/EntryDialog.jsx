@@ -48,60 +48,60 @@ const Stepper = ({ currentStep, steps }) => (
   </div>
 );
 
-function PlayerDialog({ open, onClose, type }) {
-  return !open ? null : (
-    <div className="fixed z-50 inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="bg-[#213051]/95 rounded-2xl border border-cyan-400/10 shadow-2xl p-7 w-full max-w-xl relative animate-fadeIn">
-        <button onClick={onClose} className="absolute right-5 top-5 text-gray-300 hover:text-cyan-400 transition">
-          <X className="w-6 h-6" />
-        </button>
-        <div className="flex items-center gap-2 mb-5">
-          {type === "singles" && <User className="w-7 h-7 text-cyan-400" />}
-          {(type === "doubles" || type === "mixed doubles") && <Users2 className="w-7 h-7 text-cyan-400" />}
-          <h3 className="text-lg font-bold text-cyan-300">{type.replace(/^./, c=>c.toUpperCase())} Entry Details</h3>
-        </div>
-        <form className="flex flex-col gap-4">
-          <input placeholder="TNBA ID" className="modern-input" />
-          <input type="date" placeholder="Date of Birth" className="modern-input" />
-          <input placeholder="State" className="modern-input" />
-          <input placeholder="District" className="modern-input" />
-          <input placeholder="City Name" className="modern-input" />
-          {type !== "singles" && <input placeholder="Partner TNBA ID" className="modern-input" />}
-        </form>
-        <div className="flex justify-end mt-6">
-          <button type="button" onClick={onClose} className="px-6 py-2 bg-gradient-to-r from-cyan-500 to-cyan-400 rounded-lg text-white font-bold shadow hover:scale-105 transition">Save</button>
-        </div>
-      </div>
-      <style>{`
-        .modern-input {
-          width: 100%;
-          background: rgba(27,38,61,0.87);
-          border: 2px solid #22d3ee22;
-          color: white;
-          padding: 0.8rem 1.1rem;
-          border-radius: 0.7rem;
-          font-size: 1rem;
-          outline: none;
-          box-shadow: 0 2px 18px -1px rgba(38,240,254,0.08);
-          transition: border-color 0.18s, box-shadow 0.18s, background 0.14s;
-        }
-        .modern-input:focus {
-          border-color: #22d3ee; background: rgba(16,44,63,1);
-        }
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(20px);}
-          to   { opacity: 1; transform: none;}
-        }
-        .animate-fadeIn { animation: fadeIn 0.35s cubic-bezier(.57,1.05,.58,1) both;}
-      `}</style>
-    </div>
-  );
-}
+// function PlayerDialog({ open, onClose, type }) {
+//   return !open ? null : (
+//     <div className="fixed z-50 inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+//       <div className="bg-[#213051]/95 rounded-2xl border border-cyan-400/10 shadow-2xl p-7 w-full max-w-xl relative animate-fadeIn">
+//         <button onClick={onClose} className="absolute right-5 top-5 text-gray-300 hover:text-cyan-400 transition">
+//           <X className="w-6 h-6" />
+//         </button>
+//         <div className="flex items-center gap-2 mb-5">
+//           {type === "singles" && <User className="w-7 h-7 text-cyan-400" />}
+//           {(type === "doubles" || type === "mixed doubles") && <Users2 className="w-7 h-7 text-cyan-400" />}
+//           <h3 className="text-lg font-bold text-cyan-300">{type.replace(/^./, c=>c.toUpperCase())} Entry Details</h3>
+//         </div>
+//         <form className="flex flex-col gap-4">
+//           <input placeholder="TNBA ID" className="modern-input" />
+//           <input type="date" placeholder="Date of Birth" className="modern-input" />
+//           <input placeholder="State" className="modern-input" />
+//           <input placeholder="District" className="modern-input" />
+//           <input placeholder="City Name" className="modern-input" />
+//           {type !== "singles" && <input placeholder="Partner TNBA ID" className="modern-input" />}
+//         </form>
+//         <div className="flex justify-end mt-6">
+//           <button type="button" onClick={onClose} className="px-6 py-2 bg-gradient-to-r from-cyan-500 to-cyan-400 rounded-lg text-white font-bold shadow hover:scale-105 transition">Save</button>
+//         </div>
+//       </div>
+//       <style>{`
+//         .modern-input {
+//           width: 100%;
+//           background: rgba(27,38,61,0.87);
+//           border: 2px solid #22d3ee22;
+//           color: white;
+//           padding: 0.8rem 1.1rem;
+//           border-radius: 0.7rem;
+//           font-size: 1rem;
+//           outline: none;
+//           box-shadow: 0 2px 18px -1px rgba(38,240,254,0.08);
+//           transition: border-color 0.18s, box-shadow 0.18s, background 0.14s;
+//         }
+//         .modern-input:focus {
+//           border-color: #22d3ee; background: rgba(16,44,63,1);
+//         }
+//         @keyframes fadeIn {
+//           from { opacity: 0; transform: translateY(20px);}
+//           to   { opacity: 1; transform: none;}
+//         }
+//         .animate-fadeIn { animation: fadeIn 0.35s cubic-bezier(.57,1.05,.58,1) both;}
+//       `}</style>
+//     </div>
+//   );
+// }
 
 function EventTypeChip({ type, selected, onClick, disabled }) {
   return (
     <button
-      type="button"
+      type="submit"
       onClick={onClick}
       disabled={disabled}
       className={`min-w-[90px] py-2 px-4 outline-none rounded-full font-semibold shadow text-[1rem] transition-all duration-150 border-2 group relative
@@ -123,7 +123,194 @@ function EventTypeChip({ type, selected, onClick, disabled }) {
   );
 }
 
-function StepOneEventSelection({ data, selectedEvents, setSelectedEvents, onTypeClick }) {
+// function StepOneEventSelection({ data, selectedEvents, setSelectedEvents, onTypeClick }) {
+//   const singlesAndDoublesCount = selectedEvents.filter(e => e.type === "singles" || e.type === "doubles").length;
+//   const mixedCount = selectedEvents.filter(e => e.type === "mixed doubles").length;
+//   const isChipDisabled = (cat, type) => {
+//     if (type === "mixed doubles" && mixedCount >= 1 && !selectedEvents.some(e => e.category === cat && e.type === "mixed doubles")) return true;
+//     if ((type === "singles" || type === "doubles") && singlesAndDoublesCount >= 2 && !selectedEvents.some(e => e.category === cat && e.type === type)) return true;
+//     if (
+//       selectedEvents.length >= 3 &&
+//       !selectedEvents.some(e => e.category === cat && e.type === type)
+//     ) return true;
+//     return false;
+//   };
+//   const isSelected = (cat, type) => selectedEvents.some(e => e.category === cat && e.type === type);
+//   const handleChip = (category, type) => {
+//     if (isSelected(category, type)) {
+//       setSelectedEvents(ev => ev.filter(e => !(e.category === category && e.type === type)));
+//     } else {
+//       setSelectedEvents(ev => [...ev, { category, type }]);
+//     }
+//   };
+
+//   return (
+//     <div className="w-full flex flex-col">
+//       <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 gap-6">
+//         {data.map((category) => (
+//           <div
+//             key={category.Category}
+//             className="bg-gradient-to-b from-[#244572]/80 to-[#181f3288] border border-cyan-800/50 rounded-2xl p-5 flex flex-col shadow-lg hover:shadow-2xl transition duration-300 group relative"
+//             tabIndex={0}
+//           >
+//             <div className="mb-2 flex items-center justify-between">
+//               <span className="font-bold text-lg text-white tracking-wider">{category.Category}</span>
+//               {category.AfterBorn && (
+//                 <span className="px-3 py-1 rounded-full bg-cyan-400/20 text-xs text-cyan-300 font-semibold ml-1">
+//                   Born after {category.AfterBorn}
+//                 </span>
+//               )}
+//             </div>
+//             <div className="flex flex-wrap gap-2 items-center justify-start mt-3">
+//               {category.types.map((type) => (
+//                 <EventTypeChip
+//                   key={type}
+//                   type={type}
+//                   selected={isSelected(category.Category, type)}
+//                   onClick={() => {
+//                     handleChip(category.Category, type);
+//                     setTimeout(() => { if (!isChipDisabled(category.Category, type)) onTypeClick(type, category.Category); }, 90);
+//                   }}
+//                   disabled={isChipDisabled(category.Category, type)}
+//                 />
+//               ))}
+//             </div>
+
+//             {/* Highlight border if any chip selected */}
+//             {(category.types.some(type => isSelected(category.Category, type))) && (
+//               <div className="absolute inset-0 rounded-2xl border-4 border-cyan-400/60 pointer-events-none animate-pulse-fast" />
+//             )}
+//           </div>
+//         ))}
+//       </div>
+//       <div className="mt-5 text-cyan-300 text-xs flex items-center gap-3">
+//         <span className="font-semibold bg-cyan-800/30 px-3 py-1 rounded-full">
+//           Max 3 Events
+//         </span>
+//         <span className="font-semibold bg-cyan-800/30 px-3 py-1 rounded-full">
+//           Max 2 Singles/Doubles
+//         </span>
+//         <span className="font-semibold bg-cyan-800/30 px-3 py-1 rounded-full">
+//           1 Mixed Doubles
+//         </span>
+//       </div>
+//       <style>{`
+//         .animate-pulse-fast { animation: pulse-fast 1s cubic-bezier(.4,0,.6,1) infinite; }
+//         @keyframes pulse-fast {
+//           0%, 100% { border-color: #8bdfff44; }
+//           50% { border-color: #22d3ee88; }
+//         }
+//       `}</style>
+//     </div>
+//   );
+// }
+
+
+/* ---- Structured Tournament Data ---- */
+const tournamentData = {
+  name: "9th Lion’s Sivakasi Open",
+  description: "State Level Badminton Tournament",
+  subTitle: "Tamil Nadu & Puduchery Players Only",
+  cashPrize: "3 Lakhs",
+  entryFees: { singles: 800, doubles: 1400 },
+  dates: "28,29,30 - November 2025",
+  venue: "ANSO Sports Academy, Sivakasi",
+  deadline: "25-11-2025",
+  contact: [
+    { name: "Ln.K. Nagarajan", phone: "9488700086" },
+    { name: "Ln. Amirtha Vijayan", phone: "9894177780" },
+    { name: "Ln. S. Subramanian", phone: "9843966544" },
+    { name: "Ln. M. Stephen", phone: "9171623022" },
+    { name: "Ln. P. Kamaraj", phone: "9443156784" },
+  ],
+  sendEntries: {
+    whatsapp: "9488700086",
+    email: "lionssivakasiopen@gmail.com"
+  },
+  payment: {
+    accName: "LIONS CLUB OF SIVAKASI CENTRAL",
+    bank: "TAMILNADU MERCANTILE BANK",
+    accNo: "00310050338570",
+    ifsc: "TMBL0000003"
+  },
+  prizeTable: [
+    { type: "Singles", first: 5000, second: 3000 },
+    { type: "Doubles/Mixed", first: 7000, second: 4000 },
+  ],
+  categories: [
+    {
+      name: "Under 09 Boys & Girls",
+      afterBorn: 2017,
+      events: ["Singles"]
+    },
+    {
+      name: "Under 11 Boys & Girls",
+      afterBorn: 2015,
+      events: ["Singles"]
+    },
+    {
+      name: "Under 13 Boys & Girls",
+      afterBorn: 2013,
+      events: ["Singles", "Doubles"]
+    },
+    {
+      name: "Under 15 Boys & Girls",
+      afterBorn: 2011,
+      events: ["Singles", "Doubles"]
+    },
+    {
+      name: "Under 17 Boys & Girls",
+      afterBorn: 2009,
+      events: ["Singles", "Doubles"]
+    },
+    {
+      name: "Under 19 Boys & Girls",
+      afterBorn: 2007,
+      events: ["Singles", "Doubles"]
+    }
+  ],
+  mixedDoubles: {
+    name: "Mixed Doubles (U15/U17/U19)",
+    events: ["Mixed Doubles"],
+    eligibleCategories: ["U15", "U17", "U19"]
+  },
+  rules: [
+    "BAI Rules & Regulations will be followed.",
+    "Best of 3 game 15 Points Rally system up to Quarter-finals.",
+    "Best of 3 game 21 Points Rally system in the Semi-finals, Finals.",
+    "Feather Shuttle will be used.",
+    "Copy of Age Proof & Address Proof compulsory.",
+    "Only Paid entries will be accepted.",
+    "Only Non-marking shoes allowed inside the court.",
+    "A player can participate maximum 3 events (Except: 1 Mixed Doubles).",
+    "Minimum 8 entries needed for conduct a event.",
+    "Decision of the Tournament Committee will be final."
+  ]
+};
+/* ----------------------------------- */
+
+/* Top Panel */
+const TournamentInfo = ({ data }) => (
+  <div className="mb-6 p-4 rounded-xl bg-[#202c3a]/80 border border-cyan-400/20 shadow text-white text-center space-y-1">
+    <div className="font-extrabold text-lg md:text-2xl tracking-wide">{data.name}</div>
+    <div className="text-xs md:text-base text-cyan-200">{data.description}</div>
+    <div className="text-xs text-yellow-400 mb-1">{data.subTitle}</div>
+    <div className="flex flex-wrap justify-center items-center text-base gap-2">
+      <span className="text-cyan-300 font-semibold">Prize: ₹{data.cashPrize}</span>
+      <span className="text-zinc-200">|</span>
+      <span className="text-green-200">Entry: Singles ₹{data.entryFees.singles}, Doubles ₹{data.entryFees.doubles}</span>
+      <span className="text-zinc-200">|</span>
+      <span className="text-orange-200">Deadline: {data.deadline}</span>
+    </div>
+    <div className="text-xs text-blue-300">{data.venue}</div>
+    <div className="text-xs text-cyan-300">Dates: {data.dates}</div>
+  </div>
+);
+
+/* Stepper, PlayerDialog, EventTypeChip remain the same as your code above */
+
+/* Category List */
+function StepOneEventSelection({ categories, selectedEvents, setSelectedEvents, onTypeClick }) {
   const singlesAndDoublesCount = selectedEvents.filter(e => e.type === "singles" || e.type === "doubles").length;
   const mixedCount = selectedEvents.filter(e => e.type === "mixed doubles").length;
   const isChipDisabled = (cat, type) => {
@@ -147,7 +334,7 @@ function StepOneEventSelection({ data, selectedEvents, setSelectedEvents, onType
   return (
     <div className="w-full flex flex-col">
       <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 gap-6">
-        {data.map((category) => (
+        {categories.map((category) => (
           <div
             key={category.Category}
             className="bg-gradient-to-b from-[#244572]/80 to-[#181f3288] border border-cyan-800/50 rounded-2xl p-5 flex flex-col shadow-lg hover:shadow-2xl transition duration-300 group relative"
@@ -205,19 +392,28 @@ function StepOneEventSelection({ data, selectedEvents, setSelectedEvents, onType
   );
 }
 
+/* Main Dialog */
 const EntryDialog = ({ onClose }) => {
   const [step, setStep] = useState(1);
   const steps = ["Event", "Details", "Documents"];
   const [selectedEvents, setSelectedEvents] = useState([]);
   const [playerDialog, setPlayerDialog] = useState({ open: false, type: null, category: null });
-  const data = [
-    { id: 1, Category: "U9", types: ["singles"], gender: ["boys", "girls"], AfterBorn: 2015 },
-    { id: 2, Category: "U11", types: ["singles"], gender: ["boys", "girls"] },
-    { id: 3, Category: "U13", types: ["singles", "doubles"], AfterBorn: 2013 },
-    { id: 4, Category: "U15", types: ["singles", "doubles", "mixed doubles"], gender: ["boys", "girls"], AfterBorn: 2011 },
-    { id: 5, Category: "U17", types: ["singles", "doubles", "mixed doubles"], gender: ["boys", "girls"], AfterBorn: 2009 },
-    { id: 6, Category: "U19", types: ["singles", "doubles", "mixed doubles"], gender: ["boys", "girls"], AfterBorn: 2007 },
+
+  // Compose categories array for event selection
+  const categories = [
+    ...tournamentData.categories.map(cat => ({
+      Category: cat.name,
+      types: cat.events.map(e => e.toLowerCase()),
+      AfterBorn: cat.afterBorn,
+      gender: ["boys", "girls"],
+    })),
+    {
+      Category: "Mixed Doubles (U15/U17/U19)",
+      types: ["mixed doubles"],
+      gender: ["boys", "girls"]
+    }
   ];
+
   const goNext = () => setStep((cur) => Math.min(cur + 1, steps.length));
   const goBack = () => setStep((cur) => Math.max(cur - 1, 1));
   const handleTypeClick = (type, category) => {
@@ -229,22 +425,23 @@ const EntryDialog = ({ onClose }) => {
     <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center overflow-y-auto px-2 py-4">
       <div className="relative bg-gradient-to-br from-[#243356]/90 to-[#1b2336]/97 w-full max-w-2xl md:max-w-3xl rounded-2xl shadow-2xl p-5 md:p-8 ring-1 ring-white/10 ring-inset border border-cyan-400/10 backdrop-blur-sm overflow-y-auto">
         <button
-          onClick={onClose}
           className="absolute top-5 right-5 text-cyan-400 hover:text-cyan-300 rounded-full p-1 transition"
-          aria-label="Close dialog"
+          onClick={onClose}
         >
           <X className="w-7 h-7" />
         </button>
-        <h2 className="text-2xl md:text-3xl font-bold mb-4 text-white tracking-wide drop-shadow">
+        <TournamentInfo data={tournamentData} />
+        <h2 className="text-xl md:text-2xl font-bold mb-2 text-white tracking-wide drop-shadow text-center">
           Tournament Entry
         </h2>
         <Stepper currentStep={step} steps={steps} />
         <div className="mb-3" />
+
         <div>
           {step === 1 && (
             <div>
               <StepOneEventSelection
-                data={data}
+                categories={categories}
                 selectedEvents={selectedEvents}
                 setSelectedEvents={setSelectedEvents}
                 onTypeClick={handleTypeClick}
@@ -258,15 +455,12 @@ const EntryDialog = ({ onClose }) => {
                   Next
                 </button>
               </div>
-              <PlayerDialog
-                open={playerDialog.open}
-                onClose={() => setPlayerDialog({ open: false, type: null, category: null })}
-                type={playerDialog.type}
-              />
+              {/* PlayerDialog etc if required */}
             </div>
           )}
           {step === 2 && (
             <div>
+              {/* Your Step 2 Form */}
               <p className="text-gray-300 mb-4 mt-4 text-base">
                 Step 2: Player Details form goes here.
               </p>
@@ -288,6 +482,7 @@ const EntryDialog = ({ onClose }) => {
           )}
           {step === 3 && (
             <div>
+              {/* Step 3: Docs/Payment */}
               <p className="text-gray-300 mb-4 mt-4 text-base">
                 Step 3: Documents & Payment form goes here.
               </p>

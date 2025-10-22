@@ -127,8 +127,8 @@ function Navbar() {
                     <span
                       className={`text-sm font-medium${
                         isActive
-                          ? "text-cyan-300 after:w-full"
-                          : "text-gray-200 hover:text-cyan-200"
+                          ? "text-white after:w-full"
+                          : "text-white hover:text-cyan-200"
                       }`}
                     >
                       {link.name}
