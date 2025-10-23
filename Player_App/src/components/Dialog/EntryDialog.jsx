@@ -1,508 +1,176 @@
-import { Check, X, User, Users2 } from "lucide-react";
+import { X } from "lucide-react";
 import React, { useState } from "react";
+import Stepper from "../Steppers/Stepper";
+import StepOneEventSelection from "../Steppers/StepOneEventSelection";
+import PlayerForm from "../PlayerForm";
+import PaymentStep from "../Steppers/PaymentStep";
 
-// Modern Stepper with glass, shadow, gradient
-const Stepper = ({ currentStep, steps }) => (
-  <div className="w-full flex flex-col items-center mb-3 select-none">
-    <div className="flex w-full justify-between items-center pt-7 pb-6 px-1">
-      {steps.map((step, idx) => (
-        <React.Fragment key={step}>
-          {idx > 0 && (
-            <div
-              className={`
-                flex-1 h-1 mx-1 md:mx-2 rounded-full transition-all duration-500 
-                ${idx < currentStep ? "bg-gradient-to-r from-cyan-400 to-cyan-500 shadow-cyan-400/40 shadow-sm" : "bg-gray-300/50"}
-              `}
-              style={{
-                minWidth: '28px'
-              }}
-            />
-          )}
-          <div className="flex flex-col items-center flex-none group">
-            <div
-              className={`flex items-center justify-center w-11 h-11 rounded-full border-[3px] font-bold text-lg transition duration-300 ring-2 ring-transparent
-                ${
-                  idx + 1 < currentStep
-                    ? "bg-gradient-to-br from-cyan-500 to-cyan-400 border-cyan-400 text-white shadow-lg group-hover:ring-cyan-500"
-                    : idx + 1 === currentStep
-                    ? "bg-[#151d29]/90 border-cyan-400 text-cyan-500 shadow-2xl shadow-cyan-400/30 scale-110 ring-cyan-400 ring-offset-2"
-                    : "bg-white/70 border-gray-300 text-gray-400 group-hover:ring-cyan-300"
-                }
-              `}
-            >
-              {idx + 1 < currentStep ? <Check className="w-5 h-5" /> : idx + 1}
-            </div>
-            <span className={`mt-2 text-xs md:text-sm font-semibold transition-colors duration-300 tracking-wide
-              ${idx + 1 === currentStep
-                ? "text-cyan-400"
-                : idx + 1 < currentStep
-                  ? "text-cyan-300"
-                  : "text-gray-400"
-            }`}>
-              {step}
-            </span>
-          </div>
-        </React.Fragment>
-      ))}
-    </div>
-  </div>
-);
-
-// function PlayerDialog({ open, onClose, type }) {
-//   return !open ? null : (
-//     <div className="fixed z-50 inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-//       <div className="bg-[#213051]/95 rounded-2xl border border-cyan-400/10 shadow-2xl p-7 w-full max-w-xl relative animate-fadeIn">
-//         <button onClick={onClose} className="absolute right-5 top-5 text-gray-300 hover:text-cyan-400 transition">
-//           <X className="w-6 h-6" />
-//         </button>
-//         <div className="flex items-center gap-2 mb-5">
-//           {type === "singles" && <User className="w-7 h-7 text-cyan-400" />}
-//           {(type === "doubles" || type === "mixed doubles") && <Users2 className="w-7 h-7 text-cyan-400" />}
-//           <h3 className="text-lg font-bold text-cyan-300">{type.replace(/^./, c=>c.toUpperCase())} Entry Details</h3>
-//         </div>
-//         <form className="flex flex-col gap-4">
-//           <input placeholder="TNBA ID" className="modern-input" />
-//           <input type="date" placeholder="Date of Birth" className="modern-input" />
-//           <input placeholder="State" className="modern-input" />
-//           <input placeholder="District" className="modern-input" />
-//           <input placeholder="City Name" className="modern-input" />
-//           {type !== "singles" && <input placeholder="Partner TNBA ID" className="modern-input" />}
-//         </form>
-//         <div className="flex justify-end mt-6">
-//           <button type="button" onClick={onClose} className="px-6 py-2 bg-gradient-to-r from-cyan-500 to-cyan-400 rounded-lg text-white font-bold shadow hover:scale-105 transition">Save</button>
-//         </div>
-//       </div>
-//       <style>{`
-//         .modern-input {
-//           width: 100%;
-//           background: rgba(27,38,61,0.87);
-//           border: 2px solid #22d3ee22;
-//           color: white;
-//           padding: 0.8rem 1.1rem;
-//           border-radius: 0.7rem;
-//           font-size: 1rem;
-//           outline: none;
-//           box-shadow: 0 2px 18px -1px rgba(38,240,254,0.08);
-//           transition: border-color 0.18s, box-shadow 0.18s, background 0.14s;
-//         }
-//         .modern-input:focus {
-//           border-color: #22d3ee; background: rgba(16,44,63,1);
-//         }
-//         @keyframes fadeIn {
-//           from { opacity: 0; transform: translateY(20px);}
-//           to   { opacity: 1; transform: none;}
-//         }
-//         .animate-fadeIn { animation: fadeIn 0.35s cubic-bezier(.57,1.05,.58,1) both;}
-//       `}</style>
-//     </div>
-//   );
-// }
-
-function EventTypeChip({ type, selected, onClick, disabled }) {
-  return (
-    <button
-      type="submit"
-      onClick={onClick}
-      disabled={disabled}
-      className={`min-w-[90px] py-2 px-4 outline-none rounded-full font-semibold shadow text-[1rem] transition-all duration-150 border-2 group relative
-        ${
-          selected
-            ? "bg-gradient-to-r from-cyan-500 to-cyan-400 border-cyan-400 text-white ring-2 ring-cyan-300"
-            : "bg-white/10 border-cyan-700 text-cyan-200 hover:border-cyan-300 hover:bg-cyan-900/20"
-        }
-        ${disabled ? "opacity-30 cursor-not-allowed" : "hover:scale-[1.08] focus:ring-2 focus:ring-cyan-400"}
-      `}
-    >
-      <span className="capitalize">{type.replace("mixed ", "Mixed ")}</span>
-      {selected && (
-        <span className="absolute -top-2 -right-2 rounded-full bg-cyan-400 text-white w-5 h-5 flex items-center justify-center shadow ring-2 ring-white">
-          <Check className="w-4 h-4" />
-        </span>
-      )}
-    </button>
-  );
-}
-
-// function StepOneEventSelection({ data, selectedEvents, setSelectedEvents, onTypeClick }) {
-//   const singlesAndDoublesCount = selectedEvents.filter(e => e.type === "singles" || e.type === "doubles").length;
-//   const mixedCount = selectedEvents.filter(e => e.type === "mixed doubles").length;
-//   const isChipDisabled = (cat, type) => {
-//     if (type === "mixed doubles" && mixedCount >= 1 && !selectedEvents.some(e => e.category === cat && e.type === "mixed doubles")) return true;
-//     if ((type === "singles" || type === "doubles") && singlesAndDoublesCount >= 2 && !selectedEvents.some(e => e.category === cat && e.type === type)) return true;
-//     if (
-//       selectedEvents.length >= 3 &&
-//       !selectedEvents.some(e => e.category === cat && e.type === type)
-//     ) return true;
-//     return false;
-//   };
-//   const isSelected = (cat, type) => selectedEvents.some(e => e.category === cat && e.type === type);
-//   const handleChip = (category, type) => {
-//     if (isSelected(category, type)) {
-//       setSelectedEvents(ev => ev.filter(e => !(e.category === category && e.type === type)));
-//     } else {
-//       setSelectedEvents(ev => [...ev, { category, type }]);
-//     }
-//   };
-
-//   return (
-//     <div className="w-full flex flex-col">
-//       <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 gap-6">
-//         {data.map((category) => (
-//           <div
-//             key={category.Category}
-//             className="bg-gradient-to-b from-[#244572]/80 to-[#181f3288] border border-cyan-800/50 rounded-2xl p-5 flex flex-col shadow-lg hover:shadow-2xl transition duration-300 group relative"
-//             tabIndex={0}
-//           >
-//             <div className="mb-2 flex items-center justify-between">
-//               <span className="font-bold text-lg text-white tracking-wider">{category.Category}</span>
-//               {category.AfterBorn && (
-//                 <span className="px-3 py-1 rounded-full bg-cyan-400/20 text-xs text-cyan-300 font-semibold ml-1">
-//                   Born after {category.AfterBorn}
-//                 </span>
-//               )}
-//             </div>
-//             <div className="flex flex-wrap gap-2 items-center justify-start mt-3">
-//               {category.types.map((type) => (
-//                 <EventTypeChip
-//                   key={type}
-//                   type={type}
-//                   selected={isSelected(category.Category, type)}
-//                   onClick={() => {
-//                     handleChip(category.Category, type);
-//                     setTimeout(() => { if (!isChipDisabled(category.Category, type)) onTypeClick(type, category.Category); }, 90);
-//                   }}
-//                   disabled={isChipDisabled(category.Category, type)}
-//                 />
-//               ))}
-//             </div>
-
-//             {/* Highlight border if any chip selected */}
-//             {(category.types.some(type => isSelected(category.Category, type))) && (
-//               <div className="absolute inset-0 rounded-2xl border-4 border-cyan-400/60 pointer-events-none animate-pulse-fast" />
-//             )}
-//           </div>
-//         ))}
-//       </div>
-//       <div className="mt-5 text-cyan-300 text-xs flex items-center gap-3">
-//         <span className="font-semibold bg-cyan-800/30 px-3 py-1 rounded-full">
-//           Max 3 Events
-//         </span>
-//         <span className="font-semibold bg-cyan-800/30 px-3 py-1 rounded-full">
-//           Max 2 Singles/Doubles
-//         </span>
-//         <span className="font-semibold bg-cyan-800/30 px-3 py-1 rounded-full">
-//           1 Mixed Doubles
-//         </span>
-//       </div>
-//       <style>{`
-//         .animate-pulse-fast { animation: pulse-fast 1s cubic-bezier(.4,0,.6,1) infinite; }
-//         @keyframes pulse-fast {
-//           0%, 100% { border-color: #8bdfff44; }
-//           50% { border-color: #22d3ee88; }
-//         }
-//       `}</style>
-//     </div>
-//   );
-// }
-
-
-/* ---- Structured Tournament Data ---- */
-const tournamentData = {
-  name: "9th Lion’s Sivakasi Open",
-  description: "State Level Badminton Tournament",
-  subTitle: "Tamil Nadu & Puduchery Players Only",
-  cashPrize: "3 Lakhs",
+export const tournamentData = {
   entryFees: { singles: 800, doubles: 1400 },
-  dates: "28,29,30 - November 2025",
-  venue: "ANSO Sports Academy, Sivakasi",
-  deadline: "25-11-2025",
-  contact: [
-    { name: "Ln.K. Nagarajan", phone: "9488700086" },
-    { name: "Ln. Amirtha Vijayan", phone: "9894177780" },
-    { name: "Ln. S. Subramanian", phone: "9843966544" },
-    { name: "Ln. M. Stephen", phone: "9171623022" },
-    { name: "Ln. P. Kamaraj", phone: "9443156784" },
-  ],
-  sendEntries: {
-    whatsapp: "9488700086",
-    email: "lionssivakasiopen@gmail.com"
-  },
-  payment: {
-    accName: "LIONS CLUB OF SIVAKASI CENTRAL",
-    bank: "TAMILNADU MERCANTILE BANK",
-    accNo: "00310050338570",
-    ifsc: "TMBL0000003"
-  },
-  prizeTable: [
-    { type: "Singles", first: 5000, second: 3000 },
-    { type: "Doubles/Mixed", first: 7000, second: 4000 },
-  ],
   categories: [
-    {
-      name: "Under 09 Boys & Girls",
-      afterBorn: 2017,
-      events: ["Singles"]
-    },
-    {
-      name: "Under 11 Boys & Girls",
-      afterBorn: 2015,
-      events: ["Singles"]
-    },
-    {
-      name: "Under 13 Boys & Girls",
-      afterBorn: 2013,
-      events: ["Singles", "Doubles"]
-    },
-    {
-      name: "Under 15 Boys & Girls",
-      afterBorn: 2011,
-      events: ["Singles", "Doubles"]
-    },
-    {
-      name: "Under 17 Boys & Girls",
-      afterBorn: 2009,
-      events: ["Singles", "Doubles"]
-    },
-    {
-      name: "Under 19 Boys & Girls",
-      afterBorn: 2007,
-      events: ["Singles", "Doubles"]
-    }
+    { name: "Under 09 Boys & Girls", afterBorn: 2017, events: ["Singles"] },
+    { name: "Under 11 Boys & Girls", afterBorn: 2015, events: ["Singles"] },
+    { name: "Under 13 Boys & Girls", afterBorn: 2013, events: ["Singles", "Doubles"] },
+    { name: "Under 15 Boys & Girls", afterBorn: 2011, events: ["Singles", "Doubles", "Mixed Doubles"] },
+    { name: "Under 17 Boys & Girls", afterBorn: 2009, events: ["Singles", "Doubles", "Mixed Doubles"] },
+    { name: "Under 19 Boys & Girls", afterBorn: 2007, events: ["Singles", "Doubles", "Mixed Doubles"] },
   ],
-  mixedDoubles: {
-    name: "Mixed Doubles (U15/U17/U19)",
-    events: ["Mixed Doubles"],
-    eligibleCategories: ["U15", "U17", "U19"]
-  },
-  rules: [
-    "BAI Rules & Regulations will be followed.",
-    "Best of 3 game 15 Points Rally system up to Quarter-finals.",
-    "Best of 3 game 21 Points Rally system in the Semi-finals, Finals.",
-    "Feather Shuttle will be used.",
-    "Copy of Age Proof & Address Proof compulsory.",
-    "Only Paid entries will be accepted.",
-    "Only Non-marking shoes allowed inside the court.",
-    "A player can participate maximum 3 events (Except: 1 Mixed Doubles).",
-    "Minimum 8 entries needed for conduct a event.",
-    "Decision of the Tournament Committee will be final."
-  ]
+  upi: "lionssivakasiopen@okicici",
 };
-/* ----------------------------------- */
 
-/* Top Panel */
-const TournamentInfo = ({ data }) => (
-  <div className="mb-6 p-4 rounded-xl bg-[#202c3a]/80 border border-cyan-400/20 shadow text-white text-center space-y-1">
-    <div className="font-extrabold text-lg md:text-2xl tracking-wide">{data.name}</div>
-    <div className="text-xs md:text-base text-cyan-200">{data.description}</div>
-    <div className="text-xs text-yellow-400 mb-1">{data.subTitle}</div>
-    <div className="flex flex-wrap justify-center items-center text-base gap-2">
-      <span className="text-cyan-300 font-semibold">Prize: ₹{data.cashPrize}</span>
-      <span className="text-zinc-200">|</span>
-      <span className="text-green-200">Entry: Singles ₹{data.entryFees.singles}, Doubles ₹{data.entryFees.doubles}</span>
-      <span className="text-zinc-200">|</span>
-      <span className="text-orange-200">Deadline: {data.deadline}</span>
-    </div>
-    <div className="text-xs text-blue-300">{data.venue}</div>
-    <div className="text-xs text-cyan-300">Dates: {data.dates}</div>
-  </div>
-);
-
-/* Stepper, PlayerDialog, EventTypeChip remain the same as your code above */
-
-/* Category List */
-function StepOneEventSelection({ categories, selectedEvents, setSelectedEvents, onTypeClick }) {
-  const singlesAndDoublesCount = selectedEvents.filter(e => e.type === "singles" || e.type === "doubles").length;
-  const mixedCount = selectedEvents.filter(e => e.type === "mixed doubles").length;
-  const isChipDisabled = (cat, type) => {
-    if (type === "mixed doubles" && mixedCount >= 1 && !selectedEvents.some(e => e.category === cat && e.type === "mixed doubles")) return true;
-    if ((type === "singles" || type === "doubles") && singlesAndDoublesCount >= 2 && !selectedEvents.some(e => e.category === cat && e.type === type)) return true;
-    if (
-      selectedEvents.length >= 3 &&
-      !selectedEvents.some(e => e.category === cat && e.type === type)
-    ) return true;
-    return false;
-  };
-  const isSelected = (cat, type) => selectedEvents.some(e => e.category === cat && e.type === type);
-  const handleChip = (category, type) => {
-    if (isSelected(category, type)) {
-      setSelectedEvents(ev => ev.filter(e => !(e.category === category && e.type === type)));
-    } else {
-      setSelectedEvents(ev => [...ev, { category, type }]);
-    }
-  };
-
-  return (
-    <div className="w-full flex flex-col">
-      <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 gap-6">
-        {categories.map((category) => (
-          <div
-            key={category.Category}
-            className="bg-gradient-to-b from-[#244572]/80 to-[#181f3288] border border-cyan-800/50 rounded-2xl p-5 flex flex-col shadow-lg hover:shadow-2xl transition duration-300 group relative"
-            tabIndex={0}
-          >
-            <div className="mb-2 flex items-center justify-between">
-              <span className="font-bold text-lg text-white tracking-wider">{category.Category}</span>
-              {category.AfterBorn && (
-                <span className="px-3 py-1 rounded-full bg-cyan-400/20 text-xs text-cyan-300 font-semibold ml-1">
-                  Born after {category.AfterBorn}
-                </span>
-              )}
-            </div>
-            <div className="flex flex-wrap gap-2 items-center justify-start mt-3">
-              {category.types.map((type) => (
-                <EventTypeChip
-                  key={type}
-                  type={type}
-                  selected={isSelected(category.Category, type)}
-                  onClick={() => {
-                    handleChip(category.Category, type);
-                    setTimeout(() => { if (!isChipDisabled(category.Category, type)) onTypeClick(type, category.Category); }, 90);
-                  }}
-                  disabled={isChipDisabled(category.Category, type)}
-                />
-              ))}
-            </div>
-
-            {/* Highlight border if any chip selected */}
-            {(category.types.some(type => isSelected(category.Category, type))) && (
-              <div className="absolute inset-0 rounded-2xl border-4 border-cyan-400/60 pointer-events-none animate-pulse-fast" />
-            )}
-          </div>
-        ))}
-      </div>
-      <div className="mt-5 text-cyan-300 text-xs flex items-center gap-3">
-        <span className="font-semibold bg-cyan-800/30 px-3 py-1 rounded-full">
-          Max 3 Events
-        </span>
-        <span className="font-semibold bg-cyan-800/30 px-3 py-1 rounded-full">
-          Max 2 Singles/Doubles
-        </span>
-        <span className="font-semibold bg-cyan-800/30 px-3 py-1 rounded-full">
-          1 Mixed Doubles
-        </span>
-      </div>
-      <style>{`
-        .animate-pulse-fast { animation: pulse-fast 1s cubic-bezier(.4,0,.6,1) infinite; }
-        @keyframes pulse-fast {
-          0%, 100% { border-color: #8bdfff44; }
-          50% { border-color: #22d3ee88; }
-        }
-      `}</style>
-    </div>
-  );
-}
-
-/* Main Dialog */
 const EntryDialog = ({ onClose }) => {
   const [step, setStep] = useState(1);
-  const steps = ["Event", "Details", "Documents"];
   const [selectedEvents, setSelectedEvents] = useState([]);
-  const [playerDialog, setPlayerDialog] = useState({ open: false, type: null, category: null });
+  const [playersData, setPlayersData] = useState({ main: {}, partners: {} });
 
-  // Compose categories array for event selection
-  const categories = [
-    ...tournamentData.categories.map(cat => ({
-      Category: cat.name,
-      types: cat.events.map(e => e.toLowerCase()),
-      AfterBorn: cat.afterBorn,
-      gender: ["boys", "girls"],
-    })),
-    {
-      Category: "Mixed Doubles (U15/U17/U19)",
-      types: ["mixed doubles"],
-      gender: ["boys", "girls"]
-    }
-  ];
+  // Construct ordered step 2 forms list: first main player, then partner forms for doubles/mixed doubles
+  const doublesEvents = selectedEvents.filter(ev => ev.type === "doubles" || ev.type === "mixed doubles");
+  const step2Forms = [{ key: "main", label: "Main Player", category: null, type: "main" }]
+    .concat(doublesEvents.map(ev => ({ key: ev.category, label: `${ev.category} Partner (${ev.type.replace(/^\w/, c=>c.toUpperCase())})`, category: ev.category, type: "partner" })));
 
-  const goNext = () => setStep((cur) => Math.min(cur + 1, steps.length));
-  const goBack = () => setStep((cur) => Math.max(cur - 1, 1));
-  const handleTypeClick = (type, category) => {
-    setPlayerDialog({ open: true, type, category });
+  // Step 2 local step to track which form is currently being shown
+  const [step2Index, setStep2Index] = useState(0);
+
+  // Update form data helpers
+  const updateMainPlayer = (key, value) => {
+    setPlayersData(prev => ({ ...prev, main: { ...prev.main, [key]: value } }));
   };
-  const handleSubmit = () => { goNext(); alert("Entry submitted!"); };
+  const updatePartner = (category, key, value) => {
+    setPlayersData(prev => ({
+      ...prev,
+      partners: {
+        ...prev.partners,
+        [category]: { ...(prev.partners[category] || {}), [key]: value },
+      },
+    }));
+  };
+
+  const onFormChange = (key, value) => {
+    if (step2Forms[step2Index].type === "main") {
+      updateMainPlayer(key, value);
+    } else {
+      updatePartner(step2Forms[step2Index].category, key, value);
+    }
+  };
+
+  // Navigate through step 2 forms
+  const goNextStep2Form = () => {
+    if (step2Index < step2Forms.length - 1) {
+      setStep2Index(step2Index + 1);
+    } else {
+      setStep(3);
+    }
+  };
+
+  const goBackStep2Form = () => {
+    if (step2Index > 0) {
+      setStep2Index(step2Index - 1);
+    } else {
+      setStep(1);
+    }
+  };
+
+  // Current form data for step 2
+  const currentForm = step2Forms[step2Index];
+  const currentFormData = currentForm.type === "main" ? playersData.main : playersData.partners[currentForm.category] || {};
 
   return (
     <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center overflow-y-auto px-2 py-4">
-      <div className="relative bg-gradient-to-br from-[#243356]/90 to-[#1b2336]/97 w-full max-w-2xl md:max-w-3xl rounded-2xl shadow-2xl p-5 md:p-8 ring-1 ring-white/10 ring-inset border border-cyan-400/10 backdrop-blur-sm overflow-y-auto">
-        <button
-          className="absolute top-5 right-5 text-cyan-400 hover:text-cyan-300 rounded-full p-1 transition"
-          onClick={onClose}
-        >
+      <div className="relative max-w-3xl w-full rounded-2xl  p-6 md:p-10 bg-gradient-to-br from-[#1f2c45]/95 to-[#182132]/95 border border-cyan-400/20 backdrop-blur-md shadow-2xl overflow-y-auto max-h-[90vh]">
+        <button onClick={onClose} className="absolute top-5 right-5 text-cyan-400 hover:text-cyan-300 rounded-full p-1 transition">
           <X className="w-7 h-7" />
         </button>
-        <TournamentInfo data={tournamentData} />
-        <h2 className="text-xl md:text-2xl font-bold mb-2 text-white tracking-wide drop-shadow text-center">
-          Tournament Entry
-        </h2>
-        <Stepper currentStep={step} steps={steps} />
-        <div className="mb-3" />
 
-        <div>
-          {step === 1 && (
-            <div>
-              <StepOneEventSelection
-                categories={categories}
-                selectedEvents={selectedEvents}
-                setSelectedEvents={setSelectedEvents}
-                onTypeClick={handleTypeClick}
-              />
-              <div className="flex justify-end mt-4">
-                <button
-                  onClick={goNext}
-                  className="px-7 py-2.5 bg-gradient-to-r from-cyan-500 to-cyan-400 rounded-xl text-white font-bold shadow-lg hover:scale-[1.06] active:scale-95 transition disabled:opacity-30 disabled:scale-100"
-                  disabled={selectedEvents.length === 0}
-                >
-                  Next
-                </button>
-              </div>
-              {/* PlayerDialog etc if required */}
+        <h2 className="text-center text-3xl font-bold text-white mb-6">Tournament Entry</h2>
+
+        <Stepper currentStep={step} steps={["Select Events", "Player Details", "Payment & Submit"]} />
+
+        {step === 1 && (
+          <>
+            <StepOneEventSelection
+              categories={tournamentData.categories}
+              selectedEvents={selectedEvents}
+              setSelectedEvents={setSelectedEvents}
+              onTypeClick={() => {}}
+            />
+            <div className="flex justify-end mt-6">
+              <button
+                disabled={!selectedEvents.length}
+                className="btn btn-primary"
+                onClick={() => {
+                  setStep(2);
+                  setStep2Index(0);
+                }}
+              >
+                Next
+              </button>
             </div>
-          )}
-          {step === 2 && (
-            <div>
-              {/* Your Step 2 Form */}
-              <p className="text-gray-300 mb-4 mt-4 text-base">
-                Step 2: Player Details form goes here.
-              </p>
-              <div className="flex justify-between gap-3">
-                <button
-                  onClick={goBack}
-                  className="px-6 py-2.5 bg-gray-700 rounded-lg text-white font-bold shadow hover:bg-gray-600 transition"
-                >
-                  Back
-                </button>
-                <button
-                  onClick={goNext}
-                  className="px-6 py-2.5 bg-gradient-to-r from-cyan-500 to-cyan-400 rounded-lg text-white font-bold shadow hover:scale-[1.06] active:scale-95 transition"
-                >
-                  Next
-                </button>
-              </div>
+          </>
+        )}
+
+        {step === 2 && (
+          <>
+            <PlayerForm
+              label={currentForm.label}
+              form={currentFormData}
+              setForm={updates => onFormChange(Object.keys(updates)[0], Object.values(updates)[0])}
+            />
+            <div className="flex justify-between mt-6">
+              <button onClick={goBackStep2Form} className="btn btn-secondary">Back</button>
+              <button onClick={goNextStep2Form} className="btn btn-primary">
+                {step2Index === step2Forms.length - 1 ? "Next" : "Next Player"}
+              </button>
             </div>
-          )}
-          {step === 3 && (
-            <div>
-              {/* Step 3: Docs/Payment */}
-              <p className="text-gray-300 mb-4 mt-4 text-base">
-                Step 3: Documents & Payment form goes here.
-              </p>
-              <div className="flex justify-between gap-3">
-                <button
-                  onClick={goBack}
-                  className="px-6 py-2.5 bg-gray-700 rounded-lg text-white font-bold shadow hover:bg-gray-600 transition"
-                >
-                  Back
-                </button>
-                <button
-                  onClick={handleSubmit}
-                  className="px-6 py-2.5 bg-gradient-to-r from-green-500 to-green-400 rounded-lg text-white font-bold shadow hover:scale-[1.06] active:scale-95 transition"
-                >
-                  Submit
-                </button>
-              </div>
+          </>
+        )}
+
+        {step === 3 && (
+          <>
+            <PaymentStep
+              selectedEvents={selectedEvents}
+              player={playersData.main}
+              partner={playersData.partners}
+              upi={tournamentData.upi}
+            />
+            <div className="flex justify-between mt-6">
+              <button onClick={() => setStep(2)} className="btn btn-secondary">Back</button>
+              <button onClick={() => alert("[translate:Entry Submitted Successfully!]")} className="btn btn-primary">Submit</button>
             </div>
-          )}
-        </div>
+          </>
+        )}
+
+        <style>{`
+          .btn-primary {
+            background-image: linear-gradient(to right, #06b6d4, #0ea5e9);
+            color: white;
+            font-weight: 600;
+            padding: 0.625rem 1.25rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 2px 14px -1px rgba(14,165,233,0.45);
+            transition: all 0.2s;
+          }
+          .btn-primary:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 32px -2px rgba(14,165,233,0.7);
+          }
+          .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
+          }
+          .btn-secondary {
+            background-color: #374151;
+            font-weight: 600;
+            padding: 0.625rem 1.25rem;
+            border-radius: 0.5rem;
+            color: white;
+            transition: background-color 0.2s ease;
+          }
+          .btn-secondary:hover {
+            background-color: #4b5563;
+          }
+        `}</style>
       </div>
     </div>
   );

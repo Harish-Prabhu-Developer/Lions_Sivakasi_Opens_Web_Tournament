@@ -31,9 +31,9 @@ const DashboardPage = () => {
   };
 
   return (
-    <div className="min-h-screen px-3 pt-28 sm:pt-32 md:pt-32 lg:pt-32 xl:pt-32 bg-gradient-to-br from-[#141C2F] to-[#16213C] text-white transition-all duration-300 relative">
+    <div className="h-full px-4 sm:px-2 md:px-1 pt-28 sm:pt-32 md:pt-32 lg:pt-32 xl:pt-32 bg-gradient-to-br from-[#141C2F] to-[#16213C] text-white transition-all duration-300 relative">
       {/* Top Section */}
-      <div className="flex flex-row items-center justify-between gap-3 sm:gap-5 mb-8 px-2 max-w-7xl mx-auto w-full">
+      <div className="flex flex-row items-center justify-between gap-3 sm:gap-5 mb-8 max-w-7xl mx-auto w-full">
         {/* Headline with icon */}
         <div className="flex items-center gap-3 min-w-0">
           <Trophy className="w-7 h-7 sm:w-8 sm:h-8 text-cyan-400 flex-shrink-0" />
@@ -71,7 +71,7 @@ const DashboardPage = () => {
       </div>
 
       {/* Entries Section */}
-      <div className="bg-[#192339]/80 rounded-xl shadow-lg border border-cyan-400/10 px-4 md:px-7 pt-8 pb-16 mb-10 max-w-7xl mx-auto transition-all duration-300">
+      <div className="bg-[#192339]/80 rounded-xl  shadow-lg border border-cyan-400/10 px-4 md:px-7 pt-8 pb-16 mb-10 max-w-7xl mx-auto transition-all duration-300">
         <div className="flex flex-col md:flex-row items-center justify-between mb-8 gap-4 md:gap-5 px-1">
           <h2 className="text-lg md:text-xl font-semibold">My Entries</h2>
           <button
