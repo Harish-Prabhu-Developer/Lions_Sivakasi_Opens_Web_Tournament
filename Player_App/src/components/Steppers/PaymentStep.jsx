@@ -32,10 +32,18 @@ const PaymentStep = ({ selectedEvents, player, partner }) => {
       <h4 className="text-lg font-semibold text-cyan-300">Payment Details</h4>
       <p>UPI ID: {tournamentData.upi}</p>
       <a
-        href={`upi://pay?pa=${tournamentData.upi}&pn=LionsSivakasi`}
+        href={`intent://pay?pa=lionssivakasiopen@okicici&pn=LionsSivakasi&am=1500.00#Intent;scheme=upi;package=com.google.android.apps.nbu.paisa.user;end
+`}
         className="inline-block mt-2 bg-gradient-to-r from-cyan-500 to-sky-400 text-white px-6 py-2 rounded-lg font-bold hover:scale-105 transition"
       >
         Pay via UPI App
+      </a>
+
+            <a
+        href={`upi://pay?pa=lionssivakasiopen@okicici&pn=LionsSivakasi&am=1500.00`}
+        className="inline-block mt-2 bg-gradient-to-r from-cyan-500 to-sky-400 text-white px-6 py-2 rounded-lg font-bold hover:scale-105 transition"
+      >
+        Pay via UPI App 1
       </a>
       <div className="flex justify-center mt-3">
         <img

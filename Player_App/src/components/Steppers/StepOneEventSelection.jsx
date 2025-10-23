@@ -9,8 +9,8 @@ function StepOneEventSelection({ categories, selectedEvents, setSelectedEvents, 
 
   const isChipDisabled = (cat, type) => {
     if (type === "mixed doubles" && mixedDoublesCount >= 1 && !selectedEvents.some(e => e.category === cat && e.type === "mixed doubles")) return true;
-    if (["singles", "doubles"].includes(type) && singlesDoublesCount >= 2 && !selectedEvents.some(e => e.category === cat && e.type === type)) return true;
-    if (selectedEvents.length >= 3 && !selectedEvents.some(e => e.category === cat && e.type === type)) return true;
+    if (["singles", "doubles"].includes(type) && singlesDoublesCount >= 3 && !selectedEvents.some(e => e.category === cat && e.type === type)) return true;
+    if (selectedEvents.length >= 4 && !selectedEvents.some(e => e.category === cat && e.type === type)) return true;
     return false;
   };
 
@@ -39,7 +39,7 @@ function StepOneEventSelection({ categories, selectedEvents, setSelectedEvents, 
         <div className="text-cyan-300 text-xs sm:text-sm font-semibold flex flex-wrap gap-2 justify-center">
            <span>Rules : </span>
           <span className="bg-cyan-900/40 px-2 py-1 rounded-full border border-cyan-600/40">Max 3 Events</span>
-          <span className="bg-cyan-900/40 px-2 py-1 rounded-full border border-cyan-600/40">Max 2 Singles/Doubles</span>
+          <span className="bg-cyan-900/40 px-2 py-1 rounded-full border border-cyan-600/40">Max 3 Singles/Doubles</span>
           <span className="bg-cyan-900/40 px-2 py-1 rounded-full border border-cyan-600/40">1 Mixed Doubles</span>
         </div>
         {totalPrice > 0 && (
