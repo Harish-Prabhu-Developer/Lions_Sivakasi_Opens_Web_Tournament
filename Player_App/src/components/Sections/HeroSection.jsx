@@ -90,17 +90,17 @@ const HeroSection = () => {
       <div className="absolute top-0 right-1/3 w-72 h-72 bg-sky-300/15 blur-[120px] rounded-full -z-10"></div>
 
       {/* Tournament Tag */}
-      <div className="flex items-center gap-2 bg-white/10 border border-cyan-400/30 backdrop-blur-lg px-7 py-2 rounded-full text-cyan-200 text-sm mt-20 md:mt-28 shadow-lg shadow-cyan-900/30 animate-fadeUp">
+      <div className="flex items-center gap-2 bg-white/10 border border-cyan-400/30 backdrop-blur-lg px-4 py-2 rounded-full text-cyan-200 text-sm mt-20 md:mt-28 shadow-lg shadow-cyan-900/30 animate-fadeUp">
         <Trophy className="w-5 h-5" />
         <span className="tracking-wide font-medium">{TOURNEY.sub}</span>
       </div>
 
       {/* Main Title */}
-      <h1 className="mt-8 text-4xl sm:text-5xl md:text-6xl font-extrabold leading-tight animate-fadeUp [animation-delay:0.2s] max-w-4xl drop-shadow-lg">
+      <h2 className="mt-8 text-4xl sm:text-5xl md:text-6xl font-extrabold leading-tight animate-fadeUp [animation-delay:0.2s] max-w-full drop-shadow-lg">
         <span className="relative inline-block">
-          <span className="shine-text text-transparent">9<sup>th</sup> Lion’s Sivakasi Open</span>
+          <span className="shine-text text-transparent">9<sup className="shine-text">th</sup> Lion’s Sivakasi Open</span>
         </span>
-      </h1>
+      </h2>
       <p className="text-lg md:text-2xl text-cyan-200 tracking-wide mt-3 animate-fadeUp [animation-delay:0.4s] font-semibold">
         Badminton Championship 2025
       </p>
@@ -127,9 +127,9 @@ const HeroSection = () => {
 
       {/* LAST DATE and Countdown */}
       <div className="flex flex-wrap justify-center items-center gap-6 mt-8 animate-fadeUp [animation-delay:0.7s]">
-        <div className="flex items-center gap-2 bg-cyan-700/15 border border-cyan-300/30 px-5 py-2 rounded-xl text-cyan-200 font-medium text-base shadow">
+        <div className="flex items-center gap-2 bg-cyan-700/15 border border-cyan-300/30 backdrop-blur-lg px-2 py-2 rounded-xl text-cyan-200 font-medium text-base shadow">
           <Clock className="w-6 h-6 text-cyan-400" />
-          <span>Last Date for Entries:</span>
+          <span className="font-bold text-sm sm:text-md">Last Date for Entries:</span>
           <span className="text-white ml-1 font-semibold tracking-wide">{new Date(TOURNEY.entryDeadline).toLocaleDateString()}</span>
           {deadlineDays !== null && (
             <span className="ml-3 px-3 py-1 bg-cyan-400/10 text-cyan-200 rounded-lg text-xs font-bold tracking-wider">
@@ -151,7 +151,7 @@ const HeroSection = () => {
         </button>)}
         <a href="#categories">
         <button
-          className="px-10 py-3.5 rounded-full font-semibold border-2 border-cyan-300/60 bg-white/5
+          className="px-10 py-3.5 rounded-full font-semibold border-2 border-cyan-300/60 bg-white/30
           text-cyan-100 hover:bg-cyan-300/20 hover:text-white
           active:scale-95 transition-all duration-300
           focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"

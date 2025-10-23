@@ -10,33 +10,64 @@ export const tournamentData = {
   categories: [
     { name: "Under 09 Boys & Girls", afterBorn: 2017, events: ["Singles"] },
     { name: "Under 11 Boys & Girls", afterBorn: 2015, events: ["Singles"] },
-    { name: "Under 13 Boys & Girls", afterBorn: 2013, events: ["Singles", "Doubles"] },
-    { name: "Under 15 Boys & Girls", afterBorn: 2011, events: ["Singles", "Doubles", "Mixed Doubles"] },
-    { name: "Under 17 Boys & Girls", afterBorn: 2009, events: ["Singles", "Doubles", "Mixed Doubles"] },
-    { name: "Under 19 Boys & Girls", afterBorn: 2007, events: ["Singles", "Doubles", "Mixed Doubles"] },
+    {
+      name: "Under 13 Boys & Girls",
+      afterBorn: 2013,
+      events: ["Singles", "Doubles"],
+    },
+    {
+      name: "Under 15 Boys & Girls",
+      afterBorn: 2011,
+      events: ["Singles", "Doubles", "Mixed Doubles"],
+    },
+    {
+      name: "Under 17 Boys & Girls",
+      afterBorn: 2009,
+      events: ["Singles", "Doubles", "Mixed Doubles"],
+    },
+    {
+      name: "Under 19 Boys & Girls",
+      afterBorn: 2007,
+      events: ["Singles", "Doubles", "Mixed Doubles"],
+    },
   ],
   upi: "lionssivakasiopen@okicici",
 };
-
+const [mainPlayer, setMainPlayer] = useState({});
 const EntryDialog = ({ onClose }) => {
   const [step, setStep] = useState(1);
   const [selectedEvents, setSelectedEvents] = useState([]);
   const [playersData, setPlayersData] = useState({ main: {}, partners: {} });
 
   // Construct ordered step 2 forms list: first main player, then partner forms for doubles/mixed doubles
-  const doublesEvents = selectedEvents.filter(ev => ev.type === "doubles" || ev.type === "mixed doubles");
-  const step2Forms = [{ key: "main", label: "Main Player", category: null, type: "main" }]
-    .concat(doublesEvents.map(ev => ({ key: ev.category, label: `${ev.category} Partner (${ev.type.replace(/^\w/, c=>c.toUpperCase())})`, category: ev.category, type: "partner" })));
+  const doublesEvents = selectedEvents.filter(
+    (ev) => ev.type === "doubles" || ev.type === "mixed doubles"
+  );
+  const step2Forms = [
+    { key: "main", label: "Our Player Details", category: null, type: "main" },
+  ].concat(
+    doublesEvents.map((ev) => ({
+      key: ev.category,
+      label: `${ev.category} Partner (${ev.type.replace(/^\w/, (c) =>
+        c.toUpperCase()
+      )})`,
+      category: ev.category,
+      type: "partner",
+    }))
+  );
 
   // Step 2 local step to track which form is currently being shown
   const [step2Index, setStep2Index] = useState(0);
 
   // Update form data helpers
   const updateMainPlayer = (key, value) => {
-    setPlayersData(prev => ({ ...prev, main: { ...prev.main, [key]: value } }));
+    setPlayersData((prev) => ({
+      ...prev,
+      main: { ...prev.main, [key]: value },
+    }));
   };
   const updatePartner = (category, key, value) => {
-    setPlayersData(prev => ({
+    setPlayersData((prev) => ({
       ...prev,
       partners: {
         ...prev.partners,
@@ -72,18 +103,29 @@ const EntryDialog = ({ onClose }) => {
 
   // Current form data for step 2
   const currentForm = step2Forms[step2Index];
-  const currentFormData = currentForm.type === "main" ? playersData.main : playersData.partners[currentForm.category] || {};
+  const currentFormData =
+    currentForm.type === ""
+      ? playersData.main
+      : playersData.partners[currentForm.category] || {};
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center overflow-y-auto px-2 py-4">
-      <div className="relative max-w-3xl w-full rounded-2xl  p-6 md:p-10 bg-gradient-to-br from-[#1f2c45]/95 to-[#182132]/95 border border-cyan-400/20 backdrop-blur-md shadow-2xl overflow-y-auto max-h-[90vh]">
-        <button onClick={onClose} className="absolute top-5 right-5 text-cyan-400 hover:text-cyan-300 rounded-full p-1 transition">
-          <X className="w-7 h-7" />
-        </button>
+    <div className="fixed inset-0 z-50 bg-black/80 flex flex-wrap items-center justify-center overflow-y-auto px-2 py-4">
+      <div className="w-[96%] sm:w-[80%] items-center md:[60%] px-4 md:px-8 py-4 max-h-max rounded-3xl bg-gradient-to-br from-[#17203a]/90 via-[#1e3358]/80 to-[#0c182a]/92 border border-cyan-600/30 shadow-2xl backdrop-blur-xl flex flex-col">
+        <div
+          onClick={onClose}
+          className="absolute top-5 right-5 text-white bg-red-500 hover:text-red-400 hover:bg-red-100 rounded-xl px-2 py-2 transition"
+        >
+          <X className="w-4 h-4 sm:w-6 sm:h-6" />
+        </div>
 
-        <h2 className="text-center text-3xl font-bold text-white mb-6">Tournament Entry</h2>
+      <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-center text-cyan-100 drop-shadow mb-5">
+        Tournament Entry
+      </h2>
 
-        <Stepper currentStep={step} steps={["Select Events", "Player Details", "Payment & Submit"]} />
+        <Stepper
+          currentStep={step}
+          steps={["Select Events", "Player Details", "Payment"]}
+        />
 
         {step === 1 && (
           <>
@@ -109,19 +151,23 @@ const EntryDialog = ({ onClose }) => {
         )}
 
         {step === 2 && (
-          <>
+          <div className="w-full md:w-6/12 ">
             <PlayerForm
               label={currentForm.label}
               form={currentFormData}
-              setForm={updates => onFormChange(Object.keys(updates)[0], Object.values(updates)[0])}
+              setForm={(updates) =>
+                onFormChange(Object.keys(updates)[0], Object.values(updates)[0])
+              }
             />
             <div className="flex justify-between mt-6">
-              <button onClick={goBackStep2Form} className="btn btn-secondary">Back</button>
+              <button onClick={goBackStep2Form} className="btn btn-secondary">
+                Back
+              </button>
               <button onClick={goNextStep2Form} className="btn btn-primary">
                 {step2Index === step2Forms.length - 1 ? "Next" : "Next Player"}
               </button>
             </div>
-          </>
+          </div>
         )}
 
         {step === 3 && (
@@ -133,8 +179,17 @@ const EntryDialog = ({ onClose }) => {
               upi={tournamentData.upi}
             />
             <div className="flex justify-between mt-6">
-              <button onClick={() => setStep(2)} className="btn btn-secondary">Back</button>
-              <button onClick={() => alert("[translate:Entry Submitted Successfully!]")} className="btn btn-primary">Submit</button>
+              <button onClick={() => setStep(2)} className="btn btn-secondary">
+                Back
+              </button>
+              <button
+                onClick={() =>
+                  alert("[translate:Entry Submitted Successfully!]")
+                }
+                className="btn btn-primary"
+              >
+                Submit
+              </button>
             </div>
           </>
         )}
