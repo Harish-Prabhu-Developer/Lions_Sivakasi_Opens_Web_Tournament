@@ -33,10 +33,11 @@ export const tournamentData = {
   ],
   upi: "lionssivakasiopen@okicici",
 };
-const [mainPlayer, setMainPlayer] = useState({});
+
 const EntryDialog = ({ onClose }) => {
   const [step, setStep] = useState(1);
   const [selectedEvents, setSelectedEvents] = useState([]);
+  const [mainPlayer, setMainPlayer] = useState({});
   const [playersData, setPlayersData] = useState({ main: {}, partners: {} });
 
   // Construct ordered step 2 forms list: first main player, then partner forms for doubles/mixed doubles
