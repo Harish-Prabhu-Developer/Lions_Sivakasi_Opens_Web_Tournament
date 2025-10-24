@@ -31,13 +31,12 @@ export const tournamentData = {
       events: ["Singles", "Doubles", "Mixed Doubles"],
     },
   ],
-  upi: "lionssivakasiopen@okicici",
+  upi: "test@oksbi",
 };
 
 const EntryDialog = ({ onClose }) => {
   const [step, setStep] = useState(1);
   const [selectedEvents, setSelectedEvents] = useState([]);
-  const [mainPlayer, setMainPlayer] = useState({});
   const [playersData, setPlayersData] = useState({ main: {}, partners: {} });
 
   // Construct ordered step 2 forms list: first main player, then partner forms for doubles/mixed doubles
@@ -45,11 +44,11 @@ const EntryDialog = ({ onClose }) => {
     (ev) => ev.type === "doubles" || ev.type === "mixed doubles"
   );
   const step2Forms = [
-    { key: "main", label: "Our Player Details", category: null, type: "main" },
+    { key: "main", label: "Your Details", category: null, type: "main" },
   ].concat(
     doublesEvents.map((ev) => ({
       key: ev.category,
-      label: `${ev.category} Partner (${ev.type.replace(/^\w/, (c) =>
+      label: `${ev.category.replace("Boys & Girls", "").trim()} Partner Details (${ev.type.replace(/^\w/, (c) =>
         c.toUpperCase()
       )})`,
       category: ev.category,
@@ -67,7 +66,7 @@ const EntryDialog = ({ onClose }) => {
       main: { ...prev.main, [key]: value },
     }));
   };
-  const updatePartner = (category, key, value) => {
+  const updatePartner = (category,key, value) => {
     setPlayersData((prev) => ({
       ...prev,
       partners: {
@@ -87,6 +86,15 @@ const EntryDialog = ({ onClose }) => {
 
   // Navigate through step 2 forms
   const goNextStep2Form = () => {
+    console.log("----------------------------------------------------------");
+    
+    console.log("Current Form : ",currentForm);
+    console.log("----------------------------------------------------------");
+    console.log("Current Form Data : ",currentFormData);
+    console.log("----------------------------------------------------------");
+    console.log("Player Data : ",playersData);
+    
+    console.log("----------------------------------------------------------");
     if (step2Index < step2Forms.length - 1) {
       setStep2Index(step2Index + 1);
     } else {
@@ -104,24 +112,27 @@ const EntryDialog = ({ onClose }) => {
 
   // Current form data for step 2
   const currentForm = step2Forms[step2Index];
+  // Determine current form data
   const currentFormData =
-    currentForm.type === ""
+    currentForm.type === "main"
       ? playersData.main
       : playersData.partners[currentForm.category] || {};
 
   return (
     <div className="fixed inset-0 z-50 bg-black/80 flex flex-wrap items-center justify-center overflow-y-auto px-2 py-4">
       <div className="w-[96%] sm:w-[80%] items-center md:[60%] px-4 md:px-8 py-4 max-h-max rounded-3xl bg-gradient-to-br from-[#17203a]/90 via-[#1e3358]/80 to-[#0c182a]/92 border border-cyan-600/30 shadow-2xl backdrop-blur-xl flex flex-col">
+      <div className="flex items-center justify-between w-full mb-6 relative">
+        <h2 className="flex-1 text-center text-2xl sm:text-3xl md:text-4xl font-bold text-cyan-100 drop-shadow">
+          Tournament Entry
+        </h2>
         <div
           onClick={onClose}
-          className="absolute top-5 right-5 text-white bg-red-500 hover:text-red-400 hover:bg-red-100 rounded-xl px-2 py-2 transition"
+          className="absolute right-0 text-white bg-red-500 hover:text-red-400 hover:bg-red-100 rounded-xl p-2 transition cursor-pointer"
         >
           <X className="w-4 h-4 sm:w-6 sm:h-6" />
         </div>
+      </div>
 
-      <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-center text-cyan-100 drop-shadow mb-5">
-        Tournament Entry
-      </h2>
 
         <Stepper
           currentStep={step}
@@ -136,10 +147,10 @@ const EntryDialog = ({ onClose }) => {
               setSelectedEvents={setSelectedEvents}
               onTypeClick={() => {}}
             />
-            <div className="flex justify-end mt-6">
+            <div className="flex justify-end w-full mt-6">
               <button
                 disabled={!selectedEvents.length}
-                className="btn btn-primary"
+                className="btn btn-primary "
                 onClick={() => {
                   setStep(2);
                   setStep2Index(0);
@@ -156,9 +167,7 @@ const EntryDialog = ({ onClose }) => {
             <PlayerForm
               label={currentForm.label}
               form={currentFormData}
-              setForm={(updates) =>
-                onFormChange(Object.keys(updates)[0], Object.values(updates)[0])
-              }
+              setForm={(key, value) => onFormChange(key, value)}
             />
             <div className="flex justify-between mt-6">
               <button onClick={goBackStep2Form} className="btn btn-secondary">
@@ -179,7 +188,7 @@ const EntryDialog = ({ onClose }) => {
               partner={playersData.partners}
               upi={tournamentData.upi}
             />
-            <div className="flex justify-between mt-6">
+            <div className="flex items-center w-full justify-between mt-6">
               <button onClick={() => setStep(2)} className="btn btn-secondary">
                 Back
               </button>

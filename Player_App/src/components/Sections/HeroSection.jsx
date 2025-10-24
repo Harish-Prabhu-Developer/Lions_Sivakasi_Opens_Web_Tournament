@@ -62,7 +62,7 @@ const HeroSection = () => {
     };
   }, [setIsLoggedIn]);
   return (
-    <section className="relative flex flex-col items-center justify-center text-center min-h-screen bg-gradient-to-b from-[#071324] via-[#122344] to-[#1c2e44] text-gray-100 overflow-hidden px-4">
+    <section className="relative flex flex-col items-center justify-center text-center min-h-screen bg-gradient-to-b from-[#071324] via-[#122344] to-[#1c2e44] text-gray-100 overflow-hidden px-2">
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap');
         * { font-family: 'Poppins', sans-serif; }
@@ -84,13 +84,13 @@ const HeroSection = () => {
         }
       `}</style>
 
-      {/* Background glows */}
-      <div className="absolute top-[28%] left-1/3 w-96 h-96 bg-cyan-400/25 blur-[140px] rounded-full -z-10 animate-floatPulse"></div>
-      <div className="absolute bottom-10 right-1/4 w-96 h-96 bg-indigo-400/25 blur-[140px] rounded-full -z-10 animate-floatPulse"></div>
-      <div className="absolute top-0 right-1/3 w-72 h-72 bg-sky-300/15 blur-[120px] rounded-full -z-10"></div>
+{/* Background glows */}
+<div className="pointer-events-none select-none absolute top-[28%] left-1/3 w-96 h-96 bg-white/20 blur-[140px] rounded-full -z-10 animate-floatPulse"></div>
+<div className="pointer-events-none select-none absolute bottom-10 right-1/4 w-96 h-96 bg-indigo-400/25 blur-[140px] rounded-full -z-10 animate-floatPulse"></div>
+<div className="pointer-events-none select-none absolute top-0 right-1/3 w-72 h-72 bg-sky-300/20 blur-[120px] rounded-full -z-10"></div>
 
       {/* Tournament Tag */}
-      <div className="flex items-center gap-2 bg-white/10 border border-cyan-400/30 backdrop-blur-lg px-4 py-2 rounded-full text-cyan-200 text-sm mt-20 md:mt-28 shadow-lg shadow-cyan-900/30 animate-fadeUp">
+      <div className="flex items-center gap-2 bg-white/10 border border-cyan-400/30 backdrop-blur-lg px-4 py-2 rounded-full text-cyan-200 text-sm mt-10 md:mt-0 shadow-lg shadow-cyan-900/30 animate-fadeUp">
         <Trophy className="w-5 h-5" />
         <span className="tracking-wide font-medium">{TOURNEY.sub}</span>
       </div>
@@ -140,7 +140,7 @@ const HeroSection = () => {
       </div>
 
       {/* CTAs */}
-      <div className="flex flex-wrap justify-center gap-6 mt-16 animate-fadeUp [animation-delay:0.8s]">
+      <div className="flex flex-wrap justify-center gap-6 mt-8 mb-20 md:mb-0 animate-fadeUp [animation-delay:0.8s]">
         {!isLoggedIn && (<button
           className="px-10 py-3.5 rounded-full font-bold bg-gradient-to-r from-cyan-500 via-sky-400 to-blue-500 shadow-lg
             text-white border-0 outline-none transition-all duration-300
@@ -162,7 +162,7 @@ const HeroSection = () => {
       </div>
 
       {/* Scroll Indicator */}
-      <div className="absolute mt-10 -bottom-4 sm:bottom-4 left-1/2 -translate-x-1/2 flex flex-col items-center animate-bounce">
+      <div className="absolute my:4 py:8 md:mt-8 bottom-2 sm:bottom-4 left-1/2 -translate-x-1/2 flex flex-col items-center animate-bounce">
         <a href="#about" className="flex flex-col items-center group">
           <span className="text-xs text-gray-400 mb-1 group-hover:text-cyan-300 transition-all">
             Scroll Down
@@ -170,6 +170,7 @@ const HeroSection = () => {
           <ArrowDown className="h-6 w-6 text-cyan-400 group-hover:text-cyan-300 transition-all" />
         </a>
       </div>
+
     </section>
   );
 };

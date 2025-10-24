@@ -33,17 +33,17 @@ function StepOneEventSelection({ categories, selectedEvents, setSelectedEvents, 
   }, 0);
 
   return (
-<div className="w-full flex flex-col items-center justify-around ">
+<div className="w-full my-4 flex flex-col items-center justify-around ">
 {/* Rules and Price Row */}
-<div className="flex flex-col sm:flex-row justify-between items-center gap-3 mb-5">
-  <div className="flex flex-wrap items-center gap-2 justify-center sm:justify-start">
+<div className="flex flex-col sm:flex-row justify-between w-full items-center gap-3 mb-5">
+  <div className="flex flex-wrap items-center gap-2 sm:gap-4 justify-center my-2 sm:justify-start">
     <span className="text-cyan-200 font-medium">Rules:</span>
     <span className="bg-cyan-800/70 border border-cyan-400/25 text-cyan-200 px-3 py-1 rounded-full text-xs">Max 3 Events</span>
     <span className="bg-cyan-800/70 border border-cyan-400/25 text-cyan-200 px-3 py-1 rounded-full text-xs">Max 3 Singles/Doubles</span>
     <span className="bg-cyan-800/70 border border-cyan-400/25 text-cyan-200 px-3 py-1 rounded-full text-xs">1 Mixed Doubles</span>
   </div>
   {totalPrice > 0 &&
-    <div className="text-lg font-bold text-cyan-50 bg-gradient-to-r from-cyan-700/40 to-cyan-600/20 rounded-xl px-5 py-2 shadow">
+    <div className="text-lg font-bold text-cyan-50 self-center my-2 bg-gradient-to-r from-cyan-700/40 to-cyan-600/20 rounded-xl px-5 py-2 shadow">
       Total Price: ₹{totalPrice}
     </div>
   }
@@ -64,7 +64,7 @@ function StepOneEventSelection({ categories, selectedEvents, setSelectedEvents, 
           </span>
         )}
       </div>
-      <div className="flex flex-wrap items-center justify-evenly gap-2 mt-2">
+      <div className="flex flex-wrap items-center justify-around gap-4 mt-2">
         {category.events.map((type) => {
           const selected = isSelected(category.name, type.toLowerCase());
           const disabled = isChipDisabled(category.name, type.toLowerCase());
@@ -74,7 +74,7 @@ function StepOneEventSelection({ categories, selectedEvents, setSelectedEvents, 
               onClick={() => toggle(category.name, type.toLowerCase())}
               disabled={disabled}
               className={`
-                px-5 py-1.5 rounded-full text-sm font-semibold border-2 transition-all
+                px-5 py-1.5 rounded-full text-sm font-semibold border-2 my-1 transition-all
                 ${
                   selected
                   ? "bg-gradient-to-r from-cyan-400 to-blue-500 border-cyan-200 text-white shadow-lg ring-2 ring-cyan-400"
