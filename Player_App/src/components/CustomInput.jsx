@@ -43,7 +43,7 @@ const CustomInput = ({
 
   // For date input, display calendar icon
   const Icon = type !== "date" ? (iconMap[type] || User) : Calendar;
-  const showIcon = type !== "date" && type !== "hidden";
+  const showIcon =  type !== "hidden";
 
   const borderColorClass = error
     ? "border-red-500"
@@ -77,15 +77,15 @@ const CustomInput = ({
       <div
         className={`relative flex items-center rounded-lg border ${borderColorClass} bg-[#13192c] min-h-[52px] px-3 transition-all duration-300`}
       >
-        {showIcon && <Icon className="w-5 h-5 mr-3 text-cyan-400" />}
+        {showIcon && <Icon size={`${type === "date" ? "20" : "22"}`} className="mr-2 text-cyan-400" />}
         <input
           ref={inputRef}
           id={name}
           type={inputType}
           name={name}
           placeholder={placeholder}
-          className={`flex-1 bg-transparent text-white outline-none text-base py-3 appearance-none
-            ${type === "date" ? "pr-0" : ""}
+          className={`flex-1 bg-transparent text-white outline-none text-base py-3 px-0 appearance-none
+            ${type === "date" ? " appearance-none pr-4" : ""}
           `}
           autoComplete={autoComplete}
           value={internalValue}
@@ -109,7 +109,7 @@ const CustomInput = ({
         {/* Date Icon (shows at end for date input only) */}
         {/* {type === "date" && (
           <Calendar className="w-5 h-5 ml-2 text-cyan-400 pointer-events-none" />
-        )} */} 
+        )}  */}
       </div>
       {error && <span className="text-red-400 text-xs mt-1 block">{error}</span>}
     </div>

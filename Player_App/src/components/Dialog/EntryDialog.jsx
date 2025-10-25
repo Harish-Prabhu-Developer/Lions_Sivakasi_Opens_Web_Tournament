@@ -37,14 +37,14 @@ export const tournamentData = {
 const EntryDialog = ({ onClose }) => {
   const [step, setStep] = useState(1);
   const [selectedEvents, setSelectedEvents] = useState([]);
-  const [playersData, setPlayersData] = useState({ main: {}, partners: {} });
+  const [playersData, setPlayersData] = useState({ player: {}, partners: {} });
 
   // Construct ordered step 2 forms list: first main player, then partner forms for doubles/mixed doubles
   const doublesEvents = selectedEvents.filter(
     (ev) => ev.type === "doubles" || ev.type === "mixed doubles"
   );
   const step2Forms = [
-    { key: "main", label: "Your Details", category: null, type: "main" },
+    { key: "player", label: "Your Details", category: null, type: "player" },
   ].concat(
     doublesEvents.map((ev) => ({
       key: ev.category,
@@ -63,7 +63,7 @@ const EntryDialog = ({ onClose }) => {
   const updateMainPlayer = (key, value) => {
     setPlayersData((prev) => ({
       ...prev,
-      main: { ...prev.main, [key]: value },
+      player: { ...prev.player, [key]: value },
     }));
   };
   const updatePartner = (category,key, value) => {
@@ -77,7 +77,7 @@ const EntryDialog = ({ onClose }) => {
   };
 
   const onFormChange = (key, value) => {
-    if (step2Forms[step2Index].type === "main") {
+    if (step2Forms[step2Index].type === "player") {
       updateMainPlayer(key, value);
     } else {
       updatePartner(step2Forms[step2Index].category, key, value);
@@ -114,8 +114,8 @@ const EntryDialog = ({ onClose }) => {
   const currentForm = step2Forms[step2Index];
   // Determine current form data
   const currentFormData =
-    currentForm.type === "main"
-      ? playersData.main
+    currentForm.type === "player"
+      ? playersData.player
       : playersData.partners[currentForm.category] || {};
 
   return (
@@ -184,58 +184,14 @@ const EntryDialog = ({ onClose }) => {
           <>
             <PaymentStep
               selectedEvents={selectedEvents}
-              player={playersData.main}
+              player={playersData.player}
               partner={playersData.partners}
               upi={tournamentData.upi}
+              setStep={() => setStep(2)}
             />
-            <div className="flex items-center w-full justify-between mt-6">
-              <button onClick={() => setStep(2)} className="btn btn-secondary">
-                Back
-              </button>
-              <button
-                onClick={() =>
-                  alert("[translate:Entry Submitted Successfully!]")
-                }
-                className="btn btn-primary"
-              >
-                Submit
-              </button>
-            </div>
           </>
         )}
 
-        <style>{`
-          .btn-primary {
-            background-image: linear-gradient(to right, #06b6d4, #0ea5e9);
-            color: white;
-            font-weight: 600;
-            padding: 0.625rem 1.25rem;
-            border-radius: 0.5rem;
-            box-shadow: 0 2px 14px -1px rgba(14,165,233,0.45);
-            transition: all 0.2s;
-          }
-          .btn-primary:hover {
-            transform: scale(1.05);
-            box-shadow: 0 8px 32px -2px rgba(14,165,233,0.7);
-          }
-          .btn-primary:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            box-shadow: none;
-            transform: none;
-          }
-          .btn-secondary {
-            background-color: #374151;
-            font-weight: 600;
-            padding: 0.625rem 1.25rem;
-            border-radius: 0.5rem;
-            color: white;
-            transition: background-color 0.2s ease;
-          }
-          .btn-secondary:hover {
-            background-color: #4b5563;
-          }
-        `}</style>
       </div>
     </div>
   );

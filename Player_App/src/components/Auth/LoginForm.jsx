@@ -43,13 +43,13 @@ const LoginForm = ({ form, setForm, remember, setRemember, onSubmit }) => {
         />
 
       <div className="flex items-center text-xs text-cyan-200 w-full mt-[-12px] mb-[8px]">
-        <label className="flex items-center cursor-pointer select-none">
+        <label className="flex items-center cursor-pointer justify-center select-none">
           <span className="mr-2 transition-all duration-200">
             <input
               type="checkbox"
               checked={remember}
               onChange={(e) => setRemember(e.target.checked)}
-              className="accent-cyan-400 scale-125 rounded border-cyan-400 mr-1"
+              className="accent-cyan-400 w-3 h-3  scale-125 rounded border-cyan-400 -mr-0"
             />
           </span>
           <span>Remember me</span>

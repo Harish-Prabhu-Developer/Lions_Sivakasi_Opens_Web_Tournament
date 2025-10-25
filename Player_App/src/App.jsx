@@ -42,6 +42,7 @@ const App = () => {
             <Route element={<ProtectRoute />}>
               <Route path="/dashboard" element={<DashboardPage />} />
 
+
             </Route>
             <Route path="/register" element={<RegisterPage />} />
             {/* Optional catch-all route: redirect unknown paths */}

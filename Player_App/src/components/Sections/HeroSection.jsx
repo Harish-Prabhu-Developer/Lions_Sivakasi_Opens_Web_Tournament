@@ -62,7 +62,7 @@ const HeroSection = () => {
     };
   }, [setIsLoggedIn]);
   return (
-    <section className="relative flex flex-col items-center justify-center text-center min-h-screen bg-gradient-to-b from-[#071324] via-[#122344] to-[#1c2e44] text-gray-100 overflow-hidden px-2">
+    <section className="relative flex flex-col items-center w-full justify-center text-center min-h-screen bg-gradient-to-b from-[#071324] via-[#122344] to-[#1c2e44] text-gray-100 overflow-hidden pt-10 md:pt-0 px-2">
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap');
         * { font-family: 'Poppins', sans-serif; }

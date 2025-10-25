@@ -26,7 +26,7 @@ const RegisterForm = ({ form, setForm, onSubmit, setActiveTab }) => {
         name="dob"
         placeholder="Select Date of Birth"
         autoComplete="bday"
-        value={form.dob || new Date().toISOString().split("T")[0]}
+        value={form.dob || ''}
         onChange={handleChange("dob")}
         error={
           form.dob && new Date(form.dob) > new Date()

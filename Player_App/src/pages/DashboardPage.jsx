@@ -31,7 +31,7 @@ const DashboardPage = () => {
   };
 
   return (
-    <div className="h-full px-4 sm:px-2 md:px-1 pt-28 sm:pt-32 md:pt-32 lg:pt-32 xl:pt-32 bg-gradient-to-br from-[#141C2F] to-[#16213C] text-white transition-all duration-300 relative">
+    <div className={`h-full px-4 sm:px-2 md:px-1 pt-28 sm:pt-32 md:pt-32 lg:pt-32 xl:pt-32 bg-gradient-to-br from-[#141C2F] to-[#16213C] text-white transition-all duration-300 relative`}>
       {/* Top Section */}
       <div className="flex flex-row items-center justify-between gap-3 sm:gap-5 mb-8 max-w-7xl mx-auto w-full">
         {/* Headline with icon */}
