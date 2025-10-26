@@ -143,7 +143,7 @@ export const ForgetPassTemplate = (name, password) => `
         <p>Please log in using the password above and change it immediately for security reasons.</p>
 
         <div style="text-align:center; margin-top:30px;">
-          <a href="https://lionsivakasiopen.netlify.app/" class="button">Login Now</a>
+          <a href="https://lionsivakasiopen.netlify.app/register" class="button">Login Now</a>
         </div>
 
         <div class="footer">
