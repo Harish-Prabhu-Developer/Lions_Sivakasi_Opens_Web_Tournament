@@ -70,10 +70,12 @@ const CustomInput = ({
   return (
     <div className="w-full">
       {label && (
-        <label className="text-gray-300 text-sm font-medium mb-1 block" htmlFor={name}>
+        <label className="text-cyan-100 font-medium spacy tracking-wide"  htmlFor={name}>
           {label}
         </label>
       )}
+      {/* Space between label and input container */}
+      <div className="p-1"/>
       <div
         className={`relative flex items-center rounded-lg border ${borderColorClass} bg-[#13192c] min-h-[52px] px-3 transition-all duration-300`}
       >

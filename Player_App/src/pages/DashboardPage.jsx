@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+// DashboardPage.jsx
+import React, { useContext, useState } from "react";
 import {
   LogOut,
   FileText,
@@ -11,6 +12,9 @@ import {
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import EntryDialog from "../components/Dialog/EntryDialog";
+import AuthContext from "../components/Auth/AuthContext";
+import { API_URL } from "../constants";
+import axios from "axios";
 
 const DashboardPage = () => {
   const [isDialogOpen, setDialogOpen] = useState(false);
@@ -23,13 +27,30 @@ const DashboardPage = () => {
   const navigate = useNavigate();
   const handleEntry = () => setDialogOpen(true);
   const handleCloseDialog = () => setDialogOpen(false);
+  const {logout}=useContext(AuthContext);
+const handleLogout = async () => {
+  try {
+    const token = localStorage.getItem("token");
+    if (token) {
+      await axios.post(
+        `${API_URL}/api/v1/auth/logout`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+    }
 
-  const handleLogout = async () => {
-    toast.success("Logout Successfully", { duration: 2000 });
-    await localStorage.clear();
+    toast.success("Logout Successful", { duration: 2000 });
+    logout(); // clears token + user from context/localStorage
     navigate("/login");
-  };
-
+  } catch (error) {
+    console.error("Logout Error:", error);
+    toast.error("Logout failed. Please try again.");
+  }
+};
   return (
     <div className={`h-full px-4 sm:px-2 md:px-1 pt-28 sm:pt-32 md:pt-32 lg:pt-32 xl:pt-32 bg-gradient-to-br from-[#141C2F] to-[#16213C] text-white transition-all duration-300 relative`}>
       {/* Top Section */}
