@@ -10,7 +10,7 @@ dotenv.config();
 const app = express();
 
 app.use(cors({
-    origin: ["http://localhost:5000", "https://lionsivakasiopen.netlify.app/","http://10.85.78.247:5173"],
+    origin: ["http://localhost:5000", "https://lionsivakasiopen.netlify.app","http://10.85.78.247:5173"],
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true
 }));
