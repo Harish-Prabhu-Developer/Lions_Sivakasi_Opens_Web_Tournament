@@ -49,7 +49,7 @@ export const register = async (req, res) => {
       dob: user.dob,
       role: user.role,
     });
-    await sendWelcomeEmail(user.email, user.name);
+     sendWelcomeEmail(user.email, user.name);
     res.status(201).json({
       success: true,
       msg: "Registration successful.",

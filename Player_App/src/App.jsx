@@ -1,11 +1,22 @@
 import "./App.css";
-import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from "react-router-dom";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+  Outlet,
+  useLocation,
+} from "react-router-dom";
+import { useEffect, useState } from "react";
+
 import HomePage from "./pages/HomePage";
 import Navbar from "./components/Navbar";
 import DashboardPage from "./pages/DashboardPage";
 import RegisterPage from "./pages/RegisterPage";
-import { useEffect, useState } from "react";
-// Simulated auth check function: replace with your real authentication logic
+import EntryDetailsPage from "./pages/EntryDetailsPage";
+import EntryPage from "./pages/EntryPage";
+
+// Simulated auth check function
 const IsLoggedIn = () => {
   const token = localStorage.getItem("token");
   return !!token;
@@ -23,8 +34,39 @@ const ProtectRoute = () => {
   return loggedIn ? <Outlet /> : <Navigate to="/register" replace />;
 };
 
+// ✅ Wrapper to handle Navbar visibility
+const Layout = ({ loggedIn }) => {
+  const location = useLocation();
+
+  // Hide Navbar on EntryDetails page
+  const hideNavbar = location.pathname.startsWith("/entrydetails/")|| location.pathname === "/entry";
+
+  return (
+    <div className="flex flex-col h-screen w-screen bg-gradient-to-b from-[#0a192f] to-[#0f223f] text-gray-100">
+      {!hideNavbar && <Navbar loggedIn={loggedIn} />}
+      <main className="flex-1 w-full overflow-y-auto">
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+
+          <Route element={<ProtectRoute />}>
+            <Route path="/dashboard" element={<DashboardPage />} />
+          </Route>
+
+          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/entry" element={<EntryPage />} />
+          <Route path="/entrydetails/:id" element={<EntryDetailsPage />} />
+
+          {/* Catch-all route */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </main>
+    </div>
+  );
+};
+
 const App = () => {
-    const [loggedIn, setLoggedIn] = useState(IsLoggedIn());
+  const [loggedIn, setLoggedIn] = useState(IsLoggedIn());
+
   useEffect(() => {
     const checkLogin = () => {
       const token = localStorage.getItem("token");
@@ -32,24 +74,10 @@ const App = () => {
     };
     checkLogin();
   }, []);
+
   return (
     <Router>
-      <div className="flex flex-col h-screen w-screen bg-gradient-to-b from-[#0a192f] to-[#0f223f] text-gray-100">
-        <Navbar loggedIn={loggedIn} />
-        <main className="flex-1 w-full">
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route element={<ProtectRoute />}>
-              <Route path="/dashboard" element={<DashboardPage />} />
-
-
-            </Route>
-            <Route path="/register" element={<RegisterPage />} />
-            {/* Optional catch-all route: redirect unknown paths */}
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </main>
-      </div>
+      <Layout loggedIn={loggedIn} />
     </Router>
   );
 };

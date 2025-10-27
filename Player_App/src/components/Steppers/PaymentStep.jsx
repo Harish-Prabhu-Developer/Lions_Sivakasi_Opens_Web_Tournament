@@ -1,10 +1,11 @@
 import React from "react";
 import { IndianRupee, QrCode } from "lucide-react";
-import { tournamentData } from "../Dialog/EntryDialog";
+
 import EXQR from "../../assets/ExQr.png";
 import UploadScreenShot from "./UploadScreenShot";
 import toast from "react-hot-toast";
 import SelectedEventCard from "./SelectedEventCard";
+import { tournamentData } from "../../pages/EntryPage";
 
 const PaymentStep = ({ selectedEvents, player, partner, setStep }) => {
   // Calculate total entry fees

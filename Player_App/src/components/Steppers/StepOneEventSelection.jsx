@@ -1,4 +1,4 @@
-import { tournamentData } from "../Dialog/EntryDialog";
+import { tournamentData } from "../../pages/EntryPage";
 
 function StepOneEventSelection({ categories, selectedEvents, setSelectedEvents, onTypeClick }) {
   const singlesDoublesCount = selectedEvents.filter(e => ["singles", "doubles"].includes(e.type)).length;
