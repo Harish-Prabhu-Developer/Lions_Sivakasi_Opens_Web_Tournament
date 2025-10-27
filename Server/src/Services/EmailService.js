@@ -3,19 +3,19 @@ import { WelcomeTemplate } from "../Utils/Template/WelcomeTemplate.js";
 import { ForgetPassTemplate } from "../Utils/Template/ForgetPassTemplate.js";
 import dotenv from "dotenv";
 dotenv.config();
-
 const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || 'smtp.gmail.com',
-  port:  587, //process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT) :
-  secure: false,    // use STARTTLS
-  requireTLS: true, // enforce STARTTLS
+  host: 'smtp.gmail.com',
+  port: 587,
+  secure: false, // Port 587 uses STARTTLS, so secure is false
+  requireTLS: true, // Enforce STARTTLS
   auth: {
     user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
+    pass: process.env.SMTP_PASS, // This MUST be an App Password
   },
-  connectionTimeout: 30000, // 30s
-  greetingTimeout: 30000,
-  socketTimeout: 60000,
+  // You can remove the timeouts; the defaults are usually fine
+  // connectionTimeout: 15000, 
+  // greetingTimeout: 5000, 
+  // socketTimeout: 5000
 });
 
 // Send Welcome Email
