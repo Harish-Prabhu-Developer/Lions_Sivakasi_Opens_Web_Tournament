@@ -22,24 +22,40 @@ export const formatDate = (dob) => {
 
 
 export const formatDateMonth = (date) => {
-  if (!date) return ""; // Handle empty values gracefully
-  
-  const parsedDate = new Date(date); // Convert string to Date object
+  if (!date) return ""; // Handle empty/null/undefined
+
+  // Support string or Date input
+  const parsedDate = (date instanceof Date)
+    ? date
+    : new Date(typeof date === "string" ? date.replace(/-/g, "/") : date);
 
   if (isNaN(parsedDate.getTime())) {
-    console.warn("Invalid date:", date); // Debugging output
-    return ""; // Return an empty string for invalid dates
+    // Invalid date
+    console.warn("Invalid date:", date);
+    return "";
   }
 
-  // Format the date
+  // Pad day with leading zero if needed
+  const day = parsedDate.getDate().toString().padStart(2, "0");
   const month = parsedDate.toLocaleString("en-US", { month: "short" });
-  const day = parsedDate.getDate();
   const year = parsedDate.getFullYear();
 
   return `${day}-${month}-${year}`;
 };
 
   
+export const toDateInputValue = (dob) => {
+  if (!dob) return "";
+  // If it's already ISO-like, return as is
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dob)) return dob;
+  // If DD-MM-YYYY, convert:
+  if (/^\d{2}-\d{2}-\d{4}$/.test(dob)) {
+    const [day, month, year] = dob.split("-");
+    return `${year}-${month}-${day}`;
+  }
+  return ""; // fallback for any other format
+};
+
   export function dateFormatter(dateString) {
     const inputDate = new Date(dateString);
   

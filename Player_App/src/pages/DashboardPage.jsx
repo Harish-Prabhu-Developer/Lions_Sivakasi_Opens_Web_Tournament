@@ -8,126 +8,191 @@ import {
   CreditCard,
   Trophy,
   Plus,
+  User,
+  Edit,
+  CalendarDays,
+  Award,
+  MapPin,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import AuthContext from "../components/Auth/AuthContext";
 import { API_URL } from "../constants";
 import axios from "axios";
+import AuthContext from "../components/Auth/AuthContext";
 import EntryCard from "../components/EntryCard";
-
+import { formatDate, formatDateMonth,toDateInputValue } from "../utils/dateUtils";
 const DashboardPage = () => {
-
   const navigate = useNavigate();
-  const { logout } = useContext(AuthContext);
+  const { logout, user } = useContext(AuthContext);
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [playerData, setPlayerData] = useState({
+    fullName: "",
+    TNBAID: "",
+    dob: "",
+    academy: "",
+    place: "",
+    district: "",
+  });
+
+  useEffect(() => {
+    if (user) {
+      setPlayerData({
+        fullName: user.name || "",
+        TNBAID: user.TNBAID || "",
+        dob: formatDate(user.dob) || "",
+        academy: user.academy || "",
+        place: user.place || "",
+        district: user.district || "",
+      });
+    }
+  }, [user, setPlayerData]);
+  // Icon mapping for labels
+  const iconMap = {
+    "Full Name": <User className="w-4 h-4 text-cyan-400" />,
+    "TNBA ID": <Award className="w-4 h-4 text-cyan-400" />,
+    "Date of Birth": <CalendarDays className="w-4 h-4 text-cyan-400" />,
+    "Academy Name": <Award className="w-4 h-4 text-cyan-400" />,
+    Place: <MapPin className="w-4 h-4 text-cyan-400" />,
+    District: <MapPin className="w-4 h-4 text-teal-300" />,
+  };
+
+  const handleEditToggle = () => setIsEditing(!isEditing);
+
+  const handleInputChange = (key, value) => {
+    setPlayerData((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleSave = () => {
+    // Your save logic (API call etc)
+    setIsEditing(false);
+    toast.success("Player details updated!", { duration: 3000 });
+  };
 
   // 🏸 Dummy Data (simulate MongoDB response)
-// 🏸 Dummy Data (simulate MongoDB response)
-const [entries, setEntries] = useState([
-  {
-    _id: "671a23f7b12d4e001a5e93ab",
-    category: "Under 17 Boys",
-    type: "Doubles",
-    status: "Approved",
-    paymentStatus: "Paid",
-    RegistrationDate: "2025-10-01T08:00:00Z",
-    Partner: {
-      fullName: "John Doe",
-      TNBAID: "TNBA456",
-      dob: "2008-05-21",
-      academy: "Elite Sports Academy",
-      place: "Chennai",
-      district: "Chengalpattu",
-    },
-    adminApproval: {
-      approvedBy: {
-        name: "Admin Rajesh Kumar",
-        phone: "+91 9876543210",
-        email: "rajesh.admin@example.com",
+  // 🏸 Dummy Data (simulate MongoDB response)
+  const [entries, setEntries] = useState([
+    {
+      _id: "671a23f7b12d4e001a5e93ab",
+      category: "Under 17 Boys",
+      type: "Doubles",
+      status: "Approved",
+      paymentStatus: "Paid",
+      RegistrationDate: "2025-10-01T08:00:00Z",
+      Partner: {
+        fullName: "John Doe",
+        TNBAID: "TNBA456",
+        dob: "2008-05-21",
+        academy: "Elite Sports Academy",
+        place: "Chennai",
+        district: "Chengalpattu",
       },
-      approvedDate: "2025-10-05T12:00:00Z",
-      paymentApp: "Google Pay",
-      paymentAmount: 800,
-      paymentDate: "2025-10-06T09:00:00Z",
+      adminApproval: {
+        approvedBy: {
+          name: "Admin Rajesh Kumar",
+          phone: "+91 9876543210",
+          email: "rajesh.admin@example.com",
+        },
+        approvedDate: "2025-10-05T12:00:00Z",
+        paymentApp: "Google Pay",
+        paymentAmount: 800,
+        paymentDate: "2025-10-06T09:00:00Z",
+      },
     },
-  },
-  // {
-  //   _id: "671a24b0b12d4e001a5e93ad",
-  //   category: "Under 19 Boys",
-  //   type: "Singles",
-  //   status: "Pending Review",
-  //   paymentStatus: "Unpaid",
-  //   RegistrationDate: "2025-10-10T10:00:00Z",
-  // },
-  // {
-  //   _id: "671a24d0b12d4e001a5e93ae",
-  //   category: "Under 17 Boys",
-  //   type: "Mixed Doubles",
-  //   status: "Approved",
-  //   paymentStatus: "Paid",
-  //   RegistrationDate: "2025-10-12T12:00:00Z",
-  // },
-  // {
-  //   _id: "671a250fb12d4e001a5e93b1",
-  //   category: "Under 19 Boys",
-  //   type: "Singles",
-  //   status: "Approved",
-  //   paymentStatus: "Paid",
-  //   RegistrationDate: "2025-10-20T09:30:00Z",
-  //   adminApproval: {
-  //     approvedBy: {
-  //       name: "Admin Priya Sharma",
-  //       phone: "+91 9012345678",
-  //       email: "priya.admin@example.com",
-  //     },
-  //     approvedDate: "2025-10-22T15:00:00Z",
-  //     paymentApp: "PhonePe",
-  //     paymentAmount: 700,
-  //     paymentDate: "2025-10-23T08:30:00Z",
-  //   },
-  // },
-]);
+    // {
+    //   _id: "671a24b0b12d4e001a5e93ad",
+    //   category: "Under 19 Boys",
+    //   type: "Singles",
+    //   status: "Pending Review",
+    //   paymentStatus: "Unpaid",
+    //   RegistrationDate: "2025-10-10T10:00:00Z",
+    // },
+    // {
+    //   _id: "671a24d0b12d4e001a5e93ae",
+    //   category: "Under 17 Boys",
+    //   type: "Mixed Doubles",
+    //   status: "Approved",
+    //   paymentStatus: "Paid",
+    //   RegistrationDate: "2025-10-12T12:00:00Z",
+    // },
+    // {
+    //   _id: "671a250fb12d4e001a5e93b1",
+    //   category: "Under 19 Boys",
+    //   type: "Singles",
+    //   status: "Approved",
+    //   paymentStatus: "Paid",
+    //   RegistrationDate: "2025-10-20T09:30:00Z",
+    //   adminApproval: {
+    //     approvedBy: {
+    //       name: "Admin Priya Sharma",
+    //       phone: "+91 9012345678",
+    //       email: "priya.admin@example.com",
+    //     },
+    //     approvedDate: "2025-10-22T15:00:00Z",
+    //     paymentApp: "PhonePe",
+    //     paymentAmount: 700,
+    //     paymentDate: "2025-10-23T08:30:00Z",
+    //   },
+    // },
+  ]);
 
   // 🧮 Stats (computed dynamically)
   const stats = [
-    { name: "Total Entries", value: entries.length, icon: FileText, color: "text-cyan-400" },
-    { name: "Pending Review", value: entries.filter(e => e.status === "Pending Review").length, icon: Clock, color: "text-yellow-300" },
-    { name: "Approved", value: entries.filter(e => e.status === "Approved").length, icon: CheckCircle, color: "text-green-400" },
-    { name: "Paid", value: entries.filter(e => e.paymentStatus === "Paid").length, icon: CreditCard, color: "text-teal-300" },
+    {
+      name: "Total Entries",
+      value: entries.length,
+      icon: FileText,
+      color: "text-cyan-400",
+    },
+    {
+      name: "Pending Review",
+      value: entries.filter((e) => e.status === "Pending Review").length,
+      icon: Clock,
+      color: "text-yellow-300",
+    },
+    {
+      name: "Approved",
+      value: entries.filter((e) => e.status === "Approved").length,
+      icon: CheckCircle,
+      color: "text-green-400",
+    },
+    {
+      name: "Paid",
+      value: entries.filter((e) => e.paymentStatus === "Paid").length,
+      icon: CreditCard,
+      color: "text-teal-300",
+    },
   ];
 
   // 📩 Entry Restrictions Logic
   const totalEntries = entries.length;
   const singlesOrDoublesCount = entries.filter(
-    (e) => e.type.toLowerCase() === "singles" || e.type.toLowerCase() === "doubles"
+    (e) =>
+      e.type.toLowerCase() === "singles" || e.type.toLowerCase() === "doubles"
   ).length;
   const mixedDoublesCount = entries.filter(
     (e) => e.type.toLowerCase() === "mixed doubles"
   ).length;
 
   const canAddNewEntry =
-    totalEntries < 4 &&
-    singlesOrDoublesCount < 3 &&
-    mixedDoublesCount < 1;
+    totalEntries < 4 && singlesOrDoublesCount < 3 && mixedDoublesCount < 1;
 
   // 📩 Handlers
-const handleEntry = () => {
-  if (!canAddNewEntry) {
-    let reason = "";
-    if (totalEntries >= 4)
-      reason = "You have reached the maximum of 4 total entries.";
-    else if (singlesOrDoublesCount >= 3)
-      reason = "You can only register for up to 3 Singles or Doubles events.";
-    else if (mixedDoublesCount >= 1)
-      reason = "You can register for only one Mixed Doubles event.";
-    toast.error(reason, { duration: 4000 });
-    return;
-  }
+  const handleEntry = () => {
+    if (!canAddNewEntry) {
+      let reason = "";
+      if (totalEntries >= 4)
+        reason = "You have reached the maximum of 4 total entries.";
+      else if (singlesOrDoublesCount >= 3)
+        reason = "You can only register for up to 3 Singles or Doubles events.";
+      else if (mixedDoublesCount >= 1)
+        reason = "You can register for only one Mixed Doubles event.";
+      toast.error(reason, { duration: 4000 });
+      return;
+    }
 
-  navigate("/entry"); // ✅ Fixed: use absolute path
-};
-
-
+    navigate("/entry"); // ✅ Fixed: use absolute path
+  };
 
   const handleLogout = async () => {
     try {
@@ -170,10 +235,117 @@ const handleEntry = () => {
         </div>
       </div>
 
-      <h2 className="text-sm sm:text-base md:text-lg text-gray-300 mb-8 max-w-7xl mx-auto px-1">
-        Welcome back,
-      </h2>
+      {/* Player Details */}
+      {/* Player Details */}
+      {!isEditing ? (
+        <div className="bg-gradient-to-br from-[#1e2533] to-[#16213C] rounded-2xl shadow-xl border border-cyan-400/20 px-7 py-7 mb-10 max-w-7xl mx-auto flex flex-col sm:flex-row items-center sm:items-start justify-between gap-6 sm:gap-14 transition-all duration-300">
+          {/* Profile Icon and Info */}
+          <div className="flex items-center w-full sm:w-auto gap-5">
+            <div className="flex items-center justify-center w-16 h-16 px-4 rounded-full bg-cyan-950/90 text-cyan-400 shadow-md border-2 border-cyan-400/20">
+              <User className="w-9 h-9" />
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="text-2xl font-extrabold tracking-tight text-white">
+                {playerData.fullName}
+              </span>
+              {playerData.TNBAID && (
+                <span className="text-xs font-bold rounded px-2 py-1 bg-cyan-900 text-cyan-300 shadow border border-cyan-800 w-fit">
+                  {playerData.TNBAID}
+                </span>
+              )}
+              <div className="flex flex-wrap gap-2 mt-1">
+                {playerData.academy && (
+                  <span className="px-2 py-0.5 rounded-full text-xs bg-cyan-700/70 text-white font-semibold tracking-wide shadow">
+                    {playerData.academy}
+                  </span>
+                )}
+                {playerData.place && (
+                  <span className="px-2 py-0.5 rounded-full text-xs bg-cyan-800/80 text-cyan-200 font-semibold tracking-wide">
+                    {playerData.place}
+                  </span>
+                )}
+                {playerData.district && (
+                  <span className="px-2 py-0.5 rounded-full text-xs bg-cyan-900/70 text-cyan-300 font-semibold tracking-wide">
+                    {playerData.district}
+                  </span>
+                )}
+              </div>
+              <span className="text-sm text-gray-400 mt-2">
+                DOB:{" "}
+                {playerData.dob ? (
+                  <span className="text-gray-200 font-semibold">
+                    {formatDateMonth(playerData.dob)}
+                  </span>
+                ) : (
+                  <span className="italic text-gray-500">Not set</span>
+                )}
+              </span>
+            </div>
+          </div>
+          <button
+            onClick={handleEditToggle}
+            className="flex items-center gap-2 px-6 py-2 rounded-lg bg-gradient-to-tr from-cyan-500 to-cyan-400 text-white font-bold shadow hover:scale-105 transition-transform"
+          >
+            <Edit className="w-5 h-5" />
+            <span>Edit</span>
+          </button>
+        </div>
+      ) : (
+        <div className="bg-gradient-to-br from-[#1e2533] to-[#16213C] border border-cyan-400/20 rounded-2xl shadow-xl p-7 max-w-7xl mx-auto mb-10">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-3">
+            <h3 className="text-xl font-bold text-white flex items-center gap-2 mb-2 sm:mb-0">
+              <User className="w-5 h-5 text-cyan-400" /> Edit Player Details
+            </h3>
+            <button
+              onClick={handleEditToggle}
+              className="flex items-center gap-2 px-5 py-2 rounded-lg border border-cyan-200 text-cyan-300 font-bold shadow bg-[#1E2533] hover:bg-cyan-900 transition-all"
+            >
+              <Edit className="w-4 h-4" />
+              <span>Cancel</span>
+            </button>
+          </div>
+          <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 gap-7">
+            {[
+              { label: "Full Name", key: "fullName" },
+              { label: "TNBA ID", key: "TNBAID" },
+              { label: "Date of Birth", key: "dob" },
+              { label: "Academy Name", key: "academy" },
+              { label: "Place", key: "place" },
+              { label: "District", key: "district" },
+            ].map(({ label, key }) => (
+              <div key={key} className="flex flex-col">
+                <label className="text-sm text-cyan-300 font-semibold flex items-center gap-2 pb-2">
+                  {iconMap[label]} <span>{label}</span>
+                </label>
+                <input
+                type={label === "Date of Birth" ? "date" : "text"}
+                value={
+                  label === "Date of Birth"
+                    ? toDateInputValue(playerData[key])
+                    : playerData[key] || ""
+                }
+                onChange={(e) => handleInputChange(key,
+                  label === "Date of Birth"
+                    ? e.target.value // store as ISO, or convert to DD-MM-YYYY on save
+                    : e.target.value
+                )}
+                className="px-3 py-3 rounded-lg bg-[#141C2F] border border-cyan-800 text-gray-200 font-medium focus:outline-none focus:ring-2 focus:ring-cyan-400 transition-all"
+                placeholder={`Enter ${label}`}
+              />
 
+              </div>
+            ))}
+          </div>
+          <div className="mt-10 flex justify-end">
+            <button
+              onClick={handleSave}
+              className="px-8 py-3 rounded-lg bg-gradient-to-r from-cyan-500 to-cyan-400 text-white font-bold shadow-lg hover:scale-105 transition-transform"
+            >
+              Save Changes
+            </button>
+          </div>
+        </div>
+      )}
       {/* Stats Cards */}
       <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 max-w-7xl mx-auto mb-10 px-1">
         {stats.map((stat) => (
@@ -229,8 +401,6 @@ const handleEntry = () => {
           </div>
         )}
       </div>
-
-
     </div>
   );
 };
