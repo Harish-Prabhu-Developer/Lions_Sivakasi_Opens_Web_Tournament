@@ -30,28 +30,36 @@ const fieldsArray = Object.keys(fieldsObject).map((key) => ({
   [key]: fieldsObject[key],
 }));
 
-const PlayerForm = ({ label, form = {}, setForm }) => {
+const PlayerForm = ({ currentForm, form = {}, setForm }) => {
   const { user } = useContext(AuthContext); // ✅ Get user from context
   const [initialized, setInitialized] = useState(false);
 
   // ✅ Auto-fill player details from logged-in user (only first time)
 useEffect(() => {
   if (user && !initialized) {
-    const defaultValues = {
-      "Full Name": user.name || "",
-      "Date of Birth": formatDate(user.dob) || "",
-      "Academy Name": user.academy || "",
-      "Place": user.place || "",
-      "District": user.district || "",
-    };
+    let defaultValues = {};
 
+    // 🧠 Only fill defaultValues for player form
+    if (currentForm.type === "player") {
+      defaultValues = {
+        "Full Name": user.name || "",
+        "TNBA ID": user.TNBAID || "",
+        "Date of Birth": formatDate(user.dob) || "",
+        "Academy Name": user.academy || "",
+        "Place": user.place || "",
+        "District": user.district || "",
+      };
+    }
+
+    // 🧩 Populate form fields
     Object.keys(defaultValues).forEach((key) => {
       if (defaultValues[key]) setForm(key, defaultValues[key]);
     });
 
     setInitialized(true);
   }
-}, [user, initialized, setForm]);
+}, [user, initialized, setForm, currentForm.type]);
+
 
 const handleChange = (field) => (e) => {
   let value = e.target.value;
@@ -64,7 +72,7 @@ const handleChange = (field) => (e) => {
   return (
     <div className="w-full my-2 px-2 bg-gradient-to-br from-[#202a43]/80 via-[#1d2842]/80 to-[#141d2f]/90 border border-cyan-400/20 rounded-2xl p-1 space-y-3 shadow-xl">
       <h3 className="text-cyan-200 bg-cyan-800/20 rounded-xl font-bold text-lg px-3 py-2 mb-2 tracking-wide shadow text-center">
-        {label}
+        {currentForm.label}
       </h3>
 
       {fieldsArray.map((obj) => {

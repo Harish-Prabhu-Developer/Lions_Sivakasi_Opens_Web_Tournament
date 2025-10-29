@@ -166,7 +166,7 @@ const EntryPage = () => {
         {step === 2 && (
           <div className="w-full">
             <PlayerForm
-              label={currentForm.label}
+              currentForm={currentForm}
               form={currentFormData}
               setForm={(key, value) => onFormChange(key, value)}
             />

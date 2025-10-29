@@ -178,7 +178,7 @@ const UploadScreenShot = ({ expectedAmount, expectedUPI, setStep }) => {
           </div>
           <div className="flex-1 min-w-0">
             <h2 className="text-lg md:text-xl lg:text-2xl text-cyan-200 font-bold truncate">
-              Payment Verification
+              Payment Screenshot Verification
             </h2>
             <p className="text-xs md:text-sm text-cyan-300/90 mt-0.5 md:mt-1">
               Upload your payment screenshot for verification
@@ -368,7 +368,7 @@ const UploadScreenShot = ({ expectedAmount, expectedUPI, setStep }) => {
         <button
           disabled={!selectedFile || validationStatus !== "success" || !uploadProgress}
           onClick={() => {
-            toast.success("Payment Successfully Submitted!", { duration: 3000 });
+            toast.success("Entry Successfully Submitted!", { duration: 3000 });
           }}
           className="btn btn-primary"
         >

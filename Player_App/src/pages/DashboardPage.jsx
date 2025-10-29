@@ -21,10 +21,15 @@ import axios from "axios";
 import AuthContext from "../components/Auth/AuthContext";
 import EntryCard from "../components/EntryCard";
 import { formatDate, formatDateMonth,toDateInputValue } from "../utils/dateUtils";
+import {useDispatch, useSelector} from "react-redux";
+import { clearPlayerState, updatePlayerForm } from "../redux/Slices/PlayerSlice";
 const DashboardPage = () => {
   const navigate = useNavigate();
   const { logout, user } = useContext(AuthContext);
-
+  const dispatch = useDispatch();
+  
+  // 🔹 Redux state
+  const { loading, error, success } = useSelector((state) => state.player);
   const [isEditing, setIsEditing] = useState(false);
   const [playerData, setPlayerData] = useState({
     fullName: "",
@@ -63,11 +68,73 @@ const DashboardPage = () => {
     setPlayerData((prev) => ({ ...prev, [key]: value }));
   };
 
-  const handleSave = () => {
-    // Your save logic (API call etc)
-    setIsEditing(false);
-    toast.success("Player details updated!", { duration: 3000 });
+// 🔹 Save player updates
+const handleSave = async () => {
+  const formData = {
+    name: playerData.fullName,
+    dob: playerData.dob,
+    TnBaId: playerData.TNBAID,
+    academyName: playerData.academy,
+    place: playerData.place,
+    district: playerData.district,
   };
+
+  try {
+  const resultAction = await dispatch(updatePlayerForm(formData));
+
+  if (updatePlayerForm.fulfilled.match(resultAction)) {
+    const updatedUser = resultAction.payload.data.user;
+
+    // ✅ Parse the stored user correctly
+    const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+
+    // ✅ Merge updated fields
+    const newUserData = {
+      ...storedUser,
+      name: updatedUser.name,
+      dob: formatDate(updatedUser.dob),
+      TNBAID: updatedUser.TnBaId,
+      academy: updatedUser.academyName,
+      place: updatedUser.place,
+      district: updatedUser.district,
+    };
+
+    // ✅ Save the merged user object
+    localStorage.setItem("user", JSON.stringify(newUserData));
+
+    // ✅ Update local state for UI
+    setPlayerData({
+      fullName: updatedUser.name,
+      TNBAID: updatedUser.TnBaId,
+      dob:formatDate(updatedUser.dob),
+      academy: updatedUser.academyName,
+      place: updatedUser.place,
+      district: updatedUser.district,
+    });
+
+    setIsEditing(false);
+    toast.success("Player details updated successfully!");
+  } else {
+    throw new Error(resultAction.payload || "Update failed");
+  }
+} catch (err) {
+  console.log("Error : ", err);
+  toast.error(err.message || "Failed to update player details");
+}
+};
+
+useEffect(() => {
+  if (success) {
+    // toast.success("Player updated successfully!");
+    dispatch(clearPlayerState());
+  }
+  if (error) {
+    console.log("Error : ",error);
+    
+    toast.error(error);
+    dispatch(clearPlayerState());
+  }
+}, [success, error, dispatch]);
 
   // 🏸 Dummy Data (simulate MongoDB response)
   // 🏸 Dummy Data (simulate MongoDB response)
@@ -339,10 +406,16 @@ const DashboardPage = () => {
           <div className="mt-10 flex justify-end">
             <button
               onClick={handleSave}
-              className="px-8 py-3 rounded-lg bg-gradient-to-r from-cyan-500 to-cyan-400 text-white font-bold shadow-lg hover:scale-105 transition-transform"
+              disabled={loading}
+              className={`px-8 py-3 rounded-lg font-bold shadow-lg transition-transform ${
+                loading
+                  ? "bg-gray-600 cursor-not-allowed"
+                  : "bg-gradient-to-r from-cyan-500 to-cyan-400 hover:scale-105 text-white"
+              }`}
             >
-              Save Changes
+              {loading ? "Saving..." : "Save Changes"}
             </button>
+
           </div>
         </div>
       )}

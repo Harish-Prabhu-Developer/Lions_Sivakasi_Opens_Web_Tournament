@@ -1,7 +1,10 @@
 import crypto from "crypto";
 import UserModel from "../Models/UserModel.js";
 import generateToken from "../Config/jwthelper.js";
-import { sendForgetPasswordEmail, sendWelcomeEmail } from "../Services/EmailService.js";
+import {
+  sendForgetPasswordEmail,
+  sendWelcomeEmail,
+} from "../Services/EmailService.js";
 
 // ================= REGISTER USER =================
 export const register = async (req, res) => {
@@ -39,17 +42,20 @@ export const register = async (req, res) => {
       role,
     });
 
-    // Generate JWT
-    const token = generateToken({
+// 🔹 Define base payload for token
+    const tokenPayload = {
       id: user._id,
-      email: user.email,
       name: user.name,
+      email: user.email,
       phone: user.phone,
       gender: user.gender,
       dob: user.dob,
       role: user.role,
-    });
-     sendWelcomeEmail(user.email, user.name);
+    };
+    // 🔹 Generate JWT token
+    const token = generateToken(tokenPayload);
+
+    sendWelcomeEmail(user.email, user.name);
     res.status(201).json({
       success: true,
       msg: "Registration successful.",
@@ -126,16 +132,19 @@ export const login = async (req, res) => {
     user.lastLogin = new Date();
     await user.save();
 
-    const token = generateToken({
+// 🔹 Define base payload for token
+    const tokenPayload = {
       id: user._id,
-      email: user.email,
       name: user.name,
+      email: user.email,
       phone: user.phone,
       gender: user.gender,
       dob: user.dob,
       role: user.role,
-    });
-     
+    };
+
+    const token = generateToken(tokenPayload);
+
     res.status(200).json({
       success: true,
       msg: "Login successful.",
@@ -150,6 +159,10 @@ export const login = async (req, res) => {
           role: user.role,
           isVerified: user.isVerified,
           lastLogin: user.lastLogin,
+          TNBAID :user.TnBaId||null,
+          academy : user.academyName||null,
+          place : user.place||null,
+          district : user.district||null
         },
         token,
       },

@@ -71,6 +71,18 @@ const UserModel = new mongoose.Schema(
       type: Date,
       select: false,
     },
+    TnBaId:{
+      type: String,
+    },
+    academyName: {
+      type: String,
+    },
+    place: {
+      type: String,
+    },
+    district: {
+      type: String,
+    },
     entries: [
       {
         type: mongoose.Schema.Types.ObjectId,

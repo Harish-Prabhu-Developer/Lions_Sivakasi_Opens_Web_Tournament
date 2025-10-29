@@ -22,20 +22,47 @@ export const formatDate = (dob) => {
 
 
 export const formatDateMonth = (date) => {
-  if (!date) return ""; // Handle empty/null/undefined
+  if (!date) return ""; // Handle null/undefined/empty
 
-  // Support string or Date input
-  const parsedDate = (date instanceof Date)
-    ? date
-    : new Date(typeof date === "string" ? date.replace(/-/g, "/") : date);
+  let parsedDate;
+
+  // 🧠 Case 1: Already a Date object
+  if (date instanceof Date) {
+    parsedDate = date;
+  } 
+  // 🧠 Case 2: String — handle multiple formats
+  else if (typeof date === "string") {
+    // Trim whitespace
+    const cleanDate = date.trim();
+
+    // Case: DD-MM-YYYY or DD/MM/YYYY
+    const dmyMatch = cleanDate.match(/^(\d{2})[-/](\d{2})[-/](\d{4})$/);
+    if (dmyMatch) {
+      const [_, day, month, year] = dmyMatch;
+      parsedDate = new Date(`${year}-${month}-${day}`); // Convert to ISO-safe
+    } 
+    // Case: YYYY-MM-DD or YYYY/MM/DD
+    else if (/^\d{4}[-/]\d{2}[-/]\d{2}$/.test(cleanDate)) {
+      parsedDate = new Date(cleanDate.replace(/-/g, "/"));
+    } 
+    // Fallback
+    else {
+      parsedDate = new Date(cleanDate);
+    }
+  } 
+  // 🧠 Case 3: Timestamp number
+  else if (typeof date === "number") {
+    parsedDate = new Date(date);
+  } 
+  else {
+    return "";
+  }
 
   if (isNaN(parsedDate.getTime())) {
-    // Invalid date
     console.warn("Invalid date:", date);
     return "";
   }
 
-  // Pad day with leading zero if needed
   const day = parsedDate.getDate().toString().padStart(2, "0");
   const month = parsedDate.toLocaleString("en-US", { month: "short" });
   const year = parsedDate.getFullYear();

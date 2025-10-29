@@ -1,32 +1,15 @@
 import express from "express";
-import {
-  createEntry,
-  getAllEntries,
-  getUserEntries,
-  getEntryById,
-  updateEntry,
-  deleteEntry,
-  approveEvent,
-  rejectEvent,
-  verifyPayment,
-  updateEntryStatus,
-} from "../Controllers/EntryController.js";
 import { protect } from "../Middleware/authMiddleware.js";
 import { authorize } from "../Middleware/roleMiddleware.js";
+import { approveRejectEvent, createEntry, getEntries, updateEntry} from "../Controllers/EntryController.js";
 
 const EntryRoute = express.Router();
 
-EntryRoute.post("/", protect, createEntry);
-EntryRoute.get("/me", protect, getUserEntries);
-EntryRoute.get("/:id", protect, getEntryById);
-EntryRoute.put("/:id", protect, updateEntry);
-EntryRoute.delete("/:id", protect, deleteEntry);
-
+// Player routes
+EntryRoute.post("/create", protect,createEntry );
+    
 // Admin routes
-EntryRoute.get("/", protect, authorize("admin", "superadmin"), getAllEntries);
-EntryRoute.post("/approve-event", protect, authorize("admin", "superadmin"), approveEvent);
-EntryRoute.post("/reject-event", protect, authorize("admin", "superadmin"), rejectEvent);
-EntryRoute.post("/verify-payment", protect, authorize("admin", "superadmin"), verifyPayment);
-EntryRoute.post("/status", protect, authorize("admin", "superadmin"), updateEntryStatus);
-
+EntryRoute.get("/me", protect, getEntries);
+EntryRoute.put("/approve/:entryId/:eventId", protect, authorize("admin"), approveRejectEvent);
+EntryRoute.put("/update/:entryId", protect, updateEntry);
 export default EntryRoute;
