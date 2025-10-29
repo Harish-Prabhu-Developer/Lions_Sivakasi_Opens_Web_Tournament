@@ -1,4 +1,4 @@
-// EntryModel.js
+// Models/EntryModel.js
 import mongoose from "mongoose";
 
 export const PlayerEntrySchema = new mongoose.Schema({
@@ -42,16 +42,64 @@ export const EventSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-const EntryModel = new mongoose.Schema(
+const EntrySchema = new mongoose.Schema(
   {
     player: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
     },
-    events: [EventSchema],
+    events: {
+      type: [EventSchema],
+      validate: {
+        validator: function (events) {
+          if (!events || events.length === 0) {
+            return true;
+          }
+
+          const singlesDoublesCount = events.filter(e =>
+            ["singles", "doubles"].includes(e.type)
+          ).length;
+
+          const mixedDoublesCount = events.filter(
+            e => e.type === "mixed doubles"
+          ).length;
+
+          if (events.length > 4) {
+            throw new Error("Maximum 4 events allowed per player");
+          }
+          if (singlesDoublesCount > 3) {
+            throw new Error("Maximum 3 singles or doubles events allowed");
+          }
+          if (mixedDoublesCount > 1) {
+            throw new Error("Only 1 mixed doubles event allowed");
+          }
+
+          return true;
+        },
+        message: props =>
+          props.reason?.message || "Invalid event configuration",
+      },
+    },
   },
   { timestamps: true }
 );
 
-export default mongoose.model("Entry", EntryModel);
+// ✅ Clean error handler — removes “Validation failed: events:” text
+EntrySchema.post("save", function (error, doc, next) {
+  if (error.name === "ValidationError" && error.errors.events) {
+    const msg = error.errors.events.reason?.message || error.errors.events.message;
+    return next({ success: false, msg });
+  }
+  next(error);
+});
+
+EntrySchema.post("validate", function (error, doc, next) {
+  if (error.name === "ValidationError" && error.errors.events) {
+    const msg = error.errors.events.reason?.message || error.errors.events.message;
+    return next({ success: false, msg });
+  }
+  next(error);
+});
+
+export default mongoose.model("Entry", EntrySchema);

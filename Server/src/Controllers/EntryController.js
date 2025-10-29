@@ -2,44 +2,93 @@ import EntryModel from "../Models/EntryModel.js";
 import PaymentModel from "../Models/PaymentModel.js";
 
 /**
- * Create a new tournament entry for a player
+ * Add events to player's entry (Add to Cart style)
  * @param {*} req
  * @param {*} res
  */
-
-export const createEntry = async (req, res) => {
+export const addToEvents = async (req, res) => {
   try {
     const { playerId, events } = req.body;
-    
-    // Validate player and events constraints...
-    // (max 4 events, max 3 singles/doubles, only 1 mixed doubles)
-    let singlesDoublesCount = events.filter(e =>
-      ["singles", "doubles"].includes(e.type)
-    ).length;
-    let mixedDoublesCount = events.filter(e =>
-      e.type === "mixed doubles"
-    ).length;
 
-    if (events.length > 4) {
-      return res.status(400).json({ success: false,msg: "Maximum 4 events allowed per player" });
+    if (!playerId || !Array.isArray(events) || !events.length) {
+      return res
+        .status(400)
+        .json({ success: false, msg: "Player ID and events are required" });
     }
-    if (singlesDoublesCount > 3) {
-      return res.status(400).json({ success: false,msg: "Maximum 3 singles/doubles events allowed" });
-    }
-    if (mixedDoublesCount > 1) {
-      return res.status(400).json({ success: false,msg: "Only 1 mixed doubles event allowed" });
-    }
-    const entry = await EntryModel.create({ player:playerId, events });
 
-    res.status(201).json({ success: true, data: entry });
+    // Find existing entry for player
+    let entry = await EntryModel.findOne({ player: playerId });
+
+    if (entry) {
+      // Filter out duplicate events (same category & type)
+      const existingEvents = entry.events.map((ev) =>
+        `${ev.category}-${ev.type}`.toLowerCase()
+      );
+
+      const newEvents = events.filter(
+        (ev) =>
+          !existingEvents.includes(`${ev.category}-${ev.type}`.toLowerCase())
+      );
+
+      if (newEvents.length === 0) {
+        return res.status(400).json({
+          success: false,
+          msg: "All selected events already exist in the entry",
+        });
+      }
+
+      // Combine old + new events
+      const updatedEvents = [...entry.events, ...newEvents];
+
+      // Max 4 events check
+      if (updatedEvents.length > 4) {
+        return res.status(400).json({
+          success: false,
+          msg: "Maximum 4 events allowed per player",
+        });
+      }
+
+      entry.events = updatedEvents;
+      await entry.save();
+
+      return res.status(200).json({
+        success: true,
+        msg: "Events added to existing entry successfully",
+        data: entry,
+      });
+    } else {
+      // No entry exists — create new one
+      if (events.length > 4) {
+        return res.status(400).json({
+          success: false,
+          msg: "Maximum 4 events allowed per player",
+        });
+      }
+
+      const newEntry = await EntryModel.create({ player: playerId, events });
+
+      return res.status(201).json({
+        success: true,
+        msg: "New entry created successfully",
+        data: newEntry,
+      });
+    }
   } catch (err) {
-    console.log("Create Entry Error : ",err.message);
-    
+    console.log("Create Entry Error:", err);
+
+    // Ensure all validation-style errors return 400
+    if (err.success === false || err.name === "ValidationError") {
+      return res.status(400).json({
+        success: false,
+        msg:
+          err.msg || err.message.replace(/^Validation failed: events:\s*/i, ""),
+      });
+    }
+
+    // Other server errors
     res.status(500).json({ success: false, msg: err.message });
   }
 };
-
-
 
 /**
  * Get all entries for the logged-in user
@@ -52,13 +101,13 @@ export const getPlayerEntries = async (req, res) => {
       .populate("events.payment");
 
     // If no entries or all events arrays empty, send empty response.
-    if (!entries.length || !entries.some(e => e.events.length)) {
+    if (!entries.length || !entries.some((e) => e.events.length)) {
       return res.status(200).json({ player: req.user.id, events: [] });
     }
 
     // Flatten and collect only approved events for the user
     const approvedEvents = entries
-      .map(e => e.events.filter(ev => ev.status === "approved"))
+      .map((e) => e.events.filter((ev) => ev.status === "approved"))
       .flat();
 
     if (!approvedEvents.length) {
@@ -75,41 +124,101 @@ export const getPlayerEntries = async (req, res) => {
   }
 };
 
-
 /** * Get all entries (Admin)
  * @param {*} req
  * @param {*} res
  */
 export const getEntries = async (req, res) => {
   try {
-    const entries = await EntryModel.find().populate("player", "name TnBaId academyName place district").populate("events.payment");
+    const entries = await EntryModel.find()
+      .populate("player", "name TnBaId academyName place district")
+      .populate("events.payment");
     res.status(200).json({ success: true, data: entries });
   } catch (err) {
     res.status(500).json({ success: false, msg: err.message });
-  } 
-}
+  }
+};
 
-/** * update an entry (Admin)
+/**
+ * Update a specific event item in a player's entry (like updating a cart item)
  * @param {*} req
  * @param {*} res
  */
-export const updateEntry = async (req, res) => {
+export const updateEventItem = async (req, res) => {
   try {
-    const { entryId } = req.params;
-    const entry = await EntryModel.findByIdAndUpdate(entryId, req.body, {
-      new: true,
-      runValidators: true,
-    });
+    const playerId = req.user.id || req.body.playerId; // supports both protected route & manual playerId
+    const updatedEvent = req.body.events?.[0]; // handle the first event in array
+
+    if (!updatedEvent || !updatedEvent.category || !updatedEvent.type) {
+      return res.status(400).json({
+        success: false,
+        msg: "Category and type are required to update an event",
+      });
+    }
+
+    // Find the player's entry
+    const entry = await EntryModel.findOne({ player: playerId });
     if (!entry) {
       return res.status(404).json({ success: false, msg: "Entry not found" });
     }
-    res.status(200).json({ success: true, data: entry });
+
+    // Find the event by category + type
+    const event = entry.events.find(
+      (ev) => ev.category === updatedEvent.category && ev.type === updatedEvent.type
+    );
+
+    if (!event) {
+      return res.status(404).json({
+        success: false,
+        msg: "Event not found for given category and type",
+      });
+    }
+
+    // ✅ Update fields
+    if (updatedEvent.partner) {
+      event.partner = {
+        ...event.partner?.toObject?.() || {},
+        ...updatedEvent.partner,
+      };
+      entry.markModified(`events.${entry.events.indexOf(event)}.partner`);
+    }
+
+    if (updatedEvent.status) event.status = updatedEvent.status;
+    if (updatedEvent.payment) event.payment = updatedEvent.payment;
+    if (updatedEvent.ApprovedBy) event.ApprovedBy = updatedEvent.ApprovedBy;
+
+    // ✅ Validation
+    if (entry.events.length > 4) {
+      return res.status(400).json({
+        success: false,
+        msg: "Maximum 4 events allowed per player",
+      });
+    }
+
+    await entry.save();
+
+    res.status(200).json({
+      success: true,
+      msg: "Event item updated successfully",
+      data: entry,
+    });
+
   } catch (err) {
-    console.log("Update Entry Error : ",err.message);
-    
+    console.log("Update Event Item Error:", err.message);
+
+    // Validation error
+    if (err.name === "ValidationError") {
+      return res.status(400).json({
+        success: false,
+        msg: err.message.replace(/^Validation failed: events:\s*/i, ""),
+      });
+    }
+
+    // Other errors
     res.status(500).json({ success: false, msg: err.message });
   }
-}
+};
+
 
 /** * approve or reject an entry event (Admin)
  * @param {*} req
@@ -123,7 +232,7 @@ export const approveRejectEvent = async (req, res) => {
     if (!entry) {
       return res.status(404).json({ success: false, msg: "Entry not found" });
     }
-    const event = entry.events.find(e => e._id.toString() === eventId);
+    const event = entry.events.find((e) => e._id.toString() === eventId);
     if (!event) {
       return res.status(404).json({ success: false, msg: "Event not found" });
     }
@@ -134,6 +243,4 @@ export const approveRejectEvent = async (req, res) => {
   } catch (err) {
     res.status(500).json({ success: false, msg: err.message });
   }
-}
-
-
+};

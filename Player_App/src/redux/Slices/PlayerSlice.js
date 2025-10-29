@@ -4,7 +4,7 @@ import axios from "axios";
 import { API_URL } from "../../constants/index";
 
 // 🔹 Helper to include JWT in headers
-const getHeaders = () => ({
+export const getHeaders = () => ({
   headers: {
     Authorization: `Bearer ${localStorage.getItem("token")}`,
     "Content-Type": "application/json",

@@ -9,7 +9,9 @@ function StepOneEventSelection({ categories, selectedEvents, setSelectedEvents, 
     MAX_MIXED: 1,
   };
 
+
   const isChipDisabled = (cat, type) => {
+    
     if (type === "mixed doubles" && mixedDoublesCount >= DATA_LIMIT.MAX_MIXED && !selectedEvents.some(e => e.category === cat && e.type === "mixed doubles")) return true;
     if (["singles", "doubles"].includes(type) && singlesDoublesCount >= DATA_LIMIT.MAX_EACH && !selectedEvents.some(e => e.category === cat && e.type === type)) return true;
     if (selectedEvents.length >= DATA_LIMIT.MAX_TOTAL && !selectedEvents.some(e => e.category === cat && e.type === type)) return true;
@@ -23,6 +25,8 @@ function StepOneEventSelection({ categories, selectedEvents, setSelectedEvents, 
         : [...prev, { category: cat, type }]
     );
     onTypeClick && onTypeClick(type, cat);
+    console.log("Selected step : ",selectedEvents);
+    
   };
 
   const isSelected = (cat, type) => selectedEvents.some(e => e.category === cat && e.type === type);
@@ -66,12 +70,12 @@ function StepOneEventSelection({ categories, selectedEvents, setSelectedEvents, 
       </div>
       <div className="flex flex-wrap items-center justify-around gap-4 mt-2">
         {category.events.map((type) => {
-          const selected = isSelected(category.name, type.toLowerCase());
-          const disabled = isChipDisabled(category.name, type.toLowerCase());
+          const selected = isSelected(category.name.replace("Boys & Girls", "").trim(), type.toLowerCase());
+          const disabled = isChipDisabled(category.name.replace("Boys & Girls", "").trim(), type.toLowerCase());
           return (
             <button
               key={type}
-              onClick={() => toggle(category.name, type.toLowerCase())}
+              onClick={() => toggle(category.name.replace("Boys & Girls", "").trim(), type.toLowerCase())}
               disabled={disabled}
               className={`
                 px-5 py-1.5 rounded-full text-sm font-semibold border-2 my-1 transition-all

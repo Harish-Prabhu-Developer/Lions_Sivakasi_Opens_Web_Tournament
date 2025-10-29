@@ -16,7 +16,7 @@ const iconMap = {
 };
 
 // Original JSON fields
-const fieldsObject = {
+export const fieldsObject = {
   "Full Name": "",
   "TNBA ID": "",
   "Date of Birth": "",

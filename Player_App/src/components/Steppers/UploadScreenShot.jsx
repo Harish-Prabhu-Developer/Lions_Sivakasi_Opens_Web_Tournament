@@ -164,6 +164,8 @@ const UploadScreenShot = ({ expectedAmount, expectedUPI, setStep }) => {
 
   const handleUpload = () => {
     setUploadProgress(true);
+      // ✅ Log Base64 data of the uploaded image
+  console.log("🖼️ Uploaded Image Base64 Data:", preview);
     toast.success("Screenshot uploaded successfully!");
   };
 

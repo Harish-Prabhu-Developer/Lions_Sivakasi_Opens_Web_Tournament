@@ -1,3 +1,4 @@
+// EntryPage.jsx
 import React, { useState } from "react";
 import Stepper from "../components/Steppers/Stepper";
 import StepOneEventSelection from "../components/Steppers/StepOneEventSelection";
@@ -5,9 +6,16 @@ import PlayerForm from "../components/PlayerForm";
 import PaymentStep from "../components/Steppers/PaymentStep";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
-
+import { useContext } from "react";
+import AuthContext from "../components/Auth/AuthContext";
+import { formatDate } from "../utils/dateUtils";
+import { useDispatch, useSelector } from "react-redux";
+import { addToEvents, clearMessages, getPlayerEntries } from "../redux/Slices/EntriesSlice";
+import toast from "react-hot-toast";
+import { useEffect } from "react";
 export const tournamentData = {
   entryFees: { singles: 800, doubles: 1400 },
+
   categories: [
     { name: "Under 09 Boys & Girls", afterBorn: 2017, events: ["Singles"] },
     { name: "Under 11 Boys & Girls", afterBorn: 2015, events: ["Singles"] },
@@ -36,15 +44,48 @@ export const tournamentData = {
 };
 
 const EntryPage = () => {
+  const dispatch = useDispatch();
+  const { loading, error, successMessage, } = useSelector(
+    (state) => state.entries
+  );
+
   const [step, setStep] = useState(1);
   const [selectedEvents, setSelectedEvents] = useState([]);
   const [playersData, setPlayersData] = useState({ player: {}, partners: {} });
   const navigate = useNavigate();
-
+  const { user } = useContext(AuthContext);
   // Handle doubles/mixed doubles partner forms
   const doublesEvents = selectedEvents.filter(
     (ev) => ev.type === "doubles" || ev.type === "mixed doubles"
   );
+
+useEffect(() => {
+  const fetchEvents = async () => {
+    try {
+      const response = await dispatch(getPlayerEntries()).unwrap();
+      const playerEntries = response.data;
+
+      if (Array.isArray(playerEntries) && playerEntries.length > 0) {
+        // Flatten all events from each player entry
+        const mappedEvents = playerEntries.flatMap((entry) =>
+          entry.events.map((ev) => ({
+            category: ev.category,
+            type: ev.type,
+          }))
+        );
+
+        console.log("Mapped Events:", mappedEvents);
+        // setSelectedEvents(mappedEvents);
+        console.log("Selected ",selectedEvents);
+        
+      }
+    } catch (error) {
+      console.error("Error fetching player entries:", error);
+    }
+  };
+
+  fetchEvents();
+}, [dispatch]);
 
   const step2Forms = [
     { key: "player", label: "Your Details", category: null, type: "player" },
@@ -53,7 +94,9 @@ const EntryPage = () => {
       key: ev.category,
       label: `${ev.category
         .replace("Boys & Girls", "")
-        .trim()} Partner Details (${ev.type.replace(/^\w/, (c) => c.toUpperCase())})`,
+        .trim()} Partner Details (${ev.type.replace(/^\w/, (c) =>
+        c.toUpperCase()
+      )})`,
       category: ev.category,
       type: "partner",
     }))
@@ -66,6 +109,9 @@ const EntryPage = () => {
       ...prev,
       player: { ...prev.player, [key]: value },
     }));
+
+    console.log("Player : ",playersData.player);
+    
   };
 
   const updatePartner = (category, key, value) => {
@@ -102,6 +148,52 @@ const EntryPage = () => {
     }
   };
 
+  const handleStepOneSubmit = async () => {
+    if (selectedEvents.length === 0) {
+      toast.error("Please select at least one event.");
+      return;
+    }
+
+    // Clean category names
+    const cleanedEvents = selectedEvents.map((event) => ({
+      ...event,
+      category: event.category.replace(/\s*Boys\s*&\s*Girls\s*/gi, "").trim(),
+    }));
+
+    // console.log(`
+    // playerId: ${user.id},
+    // events: ${JSON.stringify(cleanedEvents)}`);
+
+    const payload = {
+      playerId: user.id,
+      events: cleanedEvents,
+    };
+
+    // try {
+    //   const resultAction = await dispatch(addToEvents(payload));
+
+    //   if (addToEvents.fulfilled.match(resultAction)) {
+    //     const message =
+    //       resultAction.payload?.msg || "Events added successfully!";
+    //     toast.success(message);
+        setStep(2);
+        setStep2Index(0);
+    //   } else if (addToEvents.rejected.match(resultAction)) {
+    //     const errorMsg =
+    //       resultAction.payload ||
+    //       resultAction.error?.message ||
+    //       "Failed to add events.";
+    //     toast.error(errorMsg);
+    //   }
+    // } catch (err) {
+    //   console.error("Error dispatching addToEvents:", err);
+    //   toast.error("Something went wrong. Please try again.");
+    // } finally {
+    //   // Optional: clear redux messages after showing toast
+    //   setTimeout(() => dispatch(clearMessages()), 2000);
+    // }
+  };
+
   const currentForm = step2Forms[step2Index];
   const currentFormData =
     currentForm.type === "player"
@@ -113,13 +205,13 @@ const EntryPage = () => {
       {/* Header */}
       <div className="w-full max-w-6xl bg-[#192339]/80 border border-cyan-400/10 rounded-2xl shadow-xl p-6 sm:p-8 backdrop-blur-md mb-10 flex flex-col sm:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-3 w-full sm:w-auto">
-<button
-          onClick={() => navigate("/dashboard")}
-          className="flex items-center gap-2 btn btn-secondary transition-all"
-        >
-          <ArrowLeft className="w-3 h-3 sm:w-5 sm:h-5" />
-          <span className="font-medium">Back</span>
-        </button>
+          <button
+            onClick={() => navigate("/dashboard")}
+            className="flex items-center gap-2 btn btn-secondary transition-all"
+          >
+            <ArrowLeft className="w-3 h-3 sm:w-5 sm:h-5" />
+            <span className="font-medium">Back</span>
+          </button>
           <h2 className="text-xl md:text-3xl text-center font-bold text-cyan-300 tracking-wide w-full sm:w-auto">
             Tournament Entry
           </h2>
@@ -146,18 +238,15 @@ const EntryPage = () => {
             />
             <div className="flex justify-end w-full mt-8">
               <button
-                disabled={!selectedEvents.length}
+                // disabled={loading || !selectedEvents.length}
+                onClick={handleStepOneSubmit}
                 className={`px-8 py-2 font-semibold rounded-lg transition-all duration-200 shadow-md ${
-                  !selectedEvents.length
+                  !selectedEvents.length || loading
                     ? "bg-gray-600 cursor-not-allowed"
                     : "bg-gradient-to-r from-cyan-500 to-cyan-400 hover:scale-105"
                 }`}
-                onClick={() => {
-                  setStep(2);
-                  setStep2Index(0);
-                }}
               >
-                Next →
+                {loading ? "Processing..." : "Next →"}
               </button>
             </div>
           </>

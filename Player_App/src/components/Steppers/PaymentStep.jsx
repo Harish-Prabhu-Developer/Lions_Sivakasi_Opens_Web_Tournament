@@ -113,7 +113,7 @@ const PaymentStep = ({ selectedEvents, player, partner, setStep }) => {
       </div>
 
       {/* Upload Screenshot */}
-      <UploadScreenShot expectedAmount={`₹800`} setStep={setStep} />
+      <UploadScreenShot expectedAmount={totalFee} setStep={setStep} />
     </div>
   );
 };
