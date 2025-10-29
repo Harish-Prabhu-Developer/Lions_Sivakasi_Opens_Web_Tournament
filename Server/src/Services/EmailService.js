@@ -1,3 +1,4 @@
+// Services/EmailService.js
 import nodemailer from "nodemailer";
 import { WelcomeTemplate } from "../Utils/Template/WelcomeTemplate.js";
 import { ForgetPassTemplate } from "../Utils/Template/ForgetPassTemplate.js";
