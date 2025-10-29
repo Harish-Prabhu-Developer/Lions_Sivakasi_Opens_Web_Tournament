@@ -55,7 +55,7 @@ export const register = async (req, res) => {
     // 🔹 Generate JWT token
     const token = generateToken(tokenPayload);
 
-    sendWelcomeEmail(user.email, user.name);
+    await sendWelcomeEmail(user.email, user.name);
     res.status(201).json({
       success: true,
       msg: "Registration successful.",
