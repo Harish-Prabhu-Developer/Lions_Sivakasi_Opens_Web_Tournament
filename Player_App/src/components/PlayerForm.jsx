@@ -44,7 +44,7 @@ useEffect(() => {
       defaultValues = {
         "Full Name": user.name || "",
         "TNBA ID": user.TNBAID || "",
-        "Date of Birth": formatDate(user.dob) || "",
+        "Date of Birth": user.dob || "",
         "Academy Name": user.academy || "",
         "Place": user.place || "",
         "District": user.district || "",

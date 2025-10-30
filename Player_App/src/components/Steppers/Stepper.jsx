@@ -1,3 +1,4 @@
+// Stepper.jsx
 import { Check } from 'lucide-react'
 import React from 'react'
 

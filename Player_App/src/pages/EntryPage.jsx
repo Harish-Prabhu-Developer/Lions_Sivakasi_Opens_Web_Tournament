@@ -48,9 +48,11 @@ const EntryPage = () => {
   const { loading, error, successMessage, } = useSelector(
     (state) => state.entries
   );
+  
 
   const [step, setStep] = useState(1);
   const [selectedEvents, setSelectedEvents] = useState([]);
+  const [formData, setFormData] = useState({});
   const [playersData, setPlayersData] = useState({ player: {}, partners: {} });
   const navigate = useNavigate();
   const { user } = useContext(AuthContext);
@@ -66,18 +68,20 @@ useEffect(() => {
       const playerEntries = response.data;
 
       if (Array.isArray(playerEntries) && playerEntries.length > 0) {
-        // Flatten all events from each player entry
+        // Flatten and clean up the events
         const mappedEvents = playerEntries.flatMap((entry) =>
           entry.events.map((ev) => ({
-            category: ev.category,
-            type: ev.type,
+            category: ev.category.replace(/\s*Boys\s*&\s*Girls\s*/gi, "").trim(),
+            type: ev.type.toLowerCase(),
           }))
         );
 
         console.log("Mapped Events:", mappedEvents);
-        // setSelectedEvents(mappedEvents);
-        console.log("Selected ",selectedEvents);
-        
+
+        // ✅ Set mapped events as default selectedEvents
+        setSelectedEvents(mappedEvents);
+      } else {
+        setSelectedEvents([]); // no entries yet
       }
     } catch (error) {
       console.error("Error fetching player entries:", error);
@@ -86,6 +90,7 @@ useEffect(() => {
 
   fetchEvents();
 }, [dispatch]);
+
 
   const step2Forms = [
     { key: "player", label: "Your Details", category: null, type: "player" },
@@ -133,6 +138,21 @@ useEffect(() => {
   };
 
   const goNextStep2Form = () => {
+  const currentForm = step2Forms[step2Index];
+  const currentKey = currentForm.key;
+  const currentType = currentForm.type;
+
+  // ✅ Get data for current key from form data state
+  const currentData = formData[currentKey] || {};
+
+  // ✅ Log label for clarity
+  if (currentType === "player" || currentKey === "player") {
+    console.log("🧍 Main Player Data:", currentData);
+  } else {
+    console.log(`🤝 Partner Data for ${currentKey}:`, currentData);
+  }
+
+
     if (step2Index < step2Forms.length - 1) {
       setStep2Index(step2Index + 1);
     } else {
@@ -169,29 +189,31 @@ useEffect(() => {
       events: cleanedEvents,
     };
 
-    // try {
-    //   const resultAction = await dispatch(addToEvents(payload));
+    console.log("Payload : ",payload);
+    
+    try {
+      const resultAction = await dispatch(addToEvents(payload));
 
-    //   if (addToEvents.fulfilled.match(resultAction)) {
-    //     const message =
-    //       resultAction.payload?.msg || "Events added successfully!";
-    //     toast.success(message);
+      if (addToEvents.fulfilled.match(resultAction)) {
+        const message =
+          resultAction.payload?.msg || "Events added successfully!";
+        toast.success(message);
         setStep(2);
         setStep2Index(0);
-    //   } else if (addToEvents.rejected.match(resultAction)) {
-    //     const errorMsg =
-    //       resultAction.payload ||
-    //       resultAction.error?.message ||
-    //       "Failed to add events.";
-    //     toast.error(errorMsg);
-    //   }
-    // } catch (err) {
-    //   console.error("Error dispatching addToEvents:", err);
-    //   toast.error("Something went wrong. Please try again.");
-    // } finally {
-    //   // Optional: clear redux messages after showing toast
-    //   setTimeout(() => dispatch(clearMessages()), 2000);
-    // }
+      } else if (addToEvents.rejected.match(resultAction)) {
+        const errorMsg =
+          resultAction.payload ||
+          resultAction.error?.message ||
+          "Failed to add events.";
+        toast.error(errorMsg);
+      }
+    } catch (err) {
+      console.error("Error dispatching addToEvents:", err);
+      toast.error("Something went wrong. Please try again.");
+    } finally {
+      // Optional: clear redux messages after showing toast
+      setTimeout(() => dispatch(clearMessages()), 2000);
+    }
   };
 
   const currentForm = step2Forms[step2Index];

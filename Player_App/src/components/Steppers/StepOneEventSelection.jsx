@@ -1,3 +1,4 @@
+// StepOneEventSelection.jsx
 import { tournamentData } from "../../pages/EntryPage";
 
 function StepOneEventSelection({ categories, selectedEvents, setSelectedEvents, onTypeClick }) {

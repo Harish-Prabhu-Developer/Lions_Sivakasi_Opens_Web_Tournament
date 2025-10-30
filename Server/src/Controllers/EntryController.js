@@ -2,7 +2,7 @@ import EntryModel from "../Models/EntryModel.js";
 import PaymentModel from "../Models/PaymentModel.js";
 
 /**
- * Add events to player's entry (Add to Cart style)
+ * Add or update player's events (Add to Cart style)
  * @param {*} req
  * @param {*} res
  */
@@ -11,53 +11,17 @@ export const addToEvents = async (req, res) => {
     const { playerId, events } = req.body;
 
     if (!playerId || !Array.isArray(events) || !events.length) {
-      return res
-        .status(400)
-        .json({ success: false, msg: "Player ID and events are required" });
+      return res.status(400).json({
+        success: false,
+        msg: "Player ID and events are required",
+      });
     }
 
-    // Find existing entry for player
+    // Find the existing entry
     let entry = await EntryModel.findOne({ player: playerId });
 
-    if (entry) {
-      // Filter out duplicate events (same category & type)
-      const existingEvents = entry.events.map((ev) =>
-        `${ev.category}-${ev.type}`.toLowerCase()
-      );
-
-      const newEvents = events.filter(
-        (ev) =>
-          !existingEvents.includes(`${ev.category}-${ev.type}`.toLowerCase())
-      );
-
-      if (newEvents.length === 0) {
-        return res.status(400).json({
-          success: false,
-          msg: "All selected events already exist in the entry",
-        });
-      }
-
-      // Combine old + new events
-      const updatedEvents = [...entry.events, ...newEvents];
-
-      // Max 4 events check
-      if (updatedEvents.length > 4) {
-        return res.status(400).json({
-          success: false,
-          msg: "Maximum 4 events allowed per player",
-        });
-      }
-
-      entry.events = updatedEvents;
-      await entry.save();
-
-      return res.status(200).json({
-        success: true,
-        msg: "Events added to existing entry successfully",
-        data: entry,
-      });
-    } else {
-      // No entry exists — create new one
+    // If no entry found, create a new one
+    if (!entry) {
       if (events.length > 4) {
         return res.status(400).json({
           success: false,
@@ -69,26 +33,46 @@ export const addToEvents = async (req, res) => {
 
       return res.status(201).json({
         success: true,
-        msg: "New entry created successfully",
+        msg: "Event Added Successfully",
         data: newEntry,
       });
     }
-  } catch (err) {
-    console.log("Create Entry Error:", err);
 
-    // Ensure all validation-style errors return 400
-    if (err.success === false || err.name === "ValidationError") {
+    // ✅ Clear existing events
+    entry.events = [];
+
+    // ✅ Push new events
+    entry.events.push(...events);
+
+    // ✅ Max 4 events validation
+    if (entry.events.length > 4) {
       return res.status(400).json({
         success: false,
-        msg:
-          err.msg || err.message.replace(/^Validation failed: events:\s*/i, ""),
+        msg: "Maximum 4 events allowed per player",
       });
     }
 
-    // Other server errors
+    await entry.save();
+
+    return res.status(200).json({
+      success: true,
+      msg: "Event Added Successfully",
+      data: entry,
+    });
+  } catch (err) {
+    console.log("AddToEvents Error:", err);
+
+    if (err.name === "ValidationError") {
+      return res.status(400).json({
+        success: false,
+        msg: err.message.replace(/^Validation failed: events:\s*/i, ""),
+      });
+    }
+
     res.status(500).json({ success: false, msg: err.message });
   }
 };
+
 
 /**
  * Get all entries for the logged-in user

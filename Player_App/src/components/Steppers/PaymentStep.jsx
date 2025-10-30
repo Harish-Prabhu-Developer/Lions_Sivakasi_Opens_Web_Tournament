@@ -1,3 +1,4 @@
+// PaymentStep.jsx
 import React from "react";
 import { IndianRupee, QrCode } from "lucide-react";
 
