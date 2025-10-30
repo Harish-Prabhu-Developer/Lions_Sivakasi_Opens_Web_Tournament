@@ -128,8 +128,10 @@ const EntriesSlice = createSlice({
       .addCase(getPlayerEntries.fulfilled, (state, action) => {
         state.loading = false;
         // Backend returns { success, player, events }
-        state.player = action.payload.player || null;
-        state.events = action.payload.events || [];
+        console.log("action :" ,action.payload);
+        
+        state.player = action.payload.data.player || null;
+        state.events = action.payload.data.events || [];
       })
       .addCase(getPlayerEntries.rejected, (state, action) => {
         state.loading = false;

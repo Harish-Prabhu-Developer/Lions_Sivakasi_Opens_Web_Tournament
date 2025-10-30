@@ -1,9 +1,11 @@
 import { ImagePlus, X, CheckCircle2, AlertCircle, Loader2, Upload } from "lucide-react";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { PiFileImageBold } from "react-icons/pi";
 import Tesseract from "tesseract.js";
 import { paymentApps } from "../../utils/Payment";
+import { useDispatch, useSelector } from "react-redux";
+import { getPlayerEntries } from "../../redux/Slices/EntriesSlice";
 
 const UploadScreenShot = ({ expectedAmount, expectedUPI, setStep }) => {
   const [selectedFile, setSelectedFile] = useState(null);
@@ -13,6 +15,8 @@ const UploadScreenShot = ({ expectedAmount, expectedUPI, setStep }) => {
   const [extractedData, setExtractedData] = useState(null);
   const [progress, setProgress] = useState(0);
   const [uploadProgress, setUploadProgress] = useState(false);
+  const dispatch=useDispatch();
+
 
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
@@ -169,6 +173,18 @@ const UploadScreenShot = ({ expectedAmount, expectedUPI, setStep }) => {
     toast.success("Screenshot uploaded successfully!");
   };
 
+  const handleSubmit=async() => {
+            try {
+                      const response = await dispatch(getPlayerEntries()).unwrap();
+                      const playerEntries = response;
+                      console.log(playerEntries);
+                      
+            } catch (error) {
+              
+            }
+            
+            toast.success("Entry Successfully Submitted!", { duration: 3000 });
+          }
   return (
     <div className="w-full space-y-6">
       {/* Upload Card */}
@@ -369,9 +385,7 @@ const UploadScreenShot = ({ expectedAmount, expectedUPI, setStep }) => {
         </button>
         <button
           disabled={!selectedFile || validationStatus !== "success" || !uploadProgress}
-          onClick={() => {
-            toast.success("Entry Successfully Submitted!", { duration: 3000 });
-          }}
+          onClick={handleSubmit}
           className="btn btn-primary"
         >
           Submit Entry

@@ -3,7 +3,10 @@ import { LogOut, Menu, X } from "lucide-react";
 import Tooltip from "./Tooltip";
 import { MENU_ITEMS } from "../constants/menuItems";
 import { IMAGES } from "../constants/images";
-
+import {useNavigate} from "react-router-dom"
+import { API_URL } from "../../../Player_App/src/constants";
+import axios from "axios";
+import {toast} from "react-hot-toast"
 const Sidebar = ({
   isMobileOpen,
   setIsMobileOpen,
@@ -12,7 +15,7 @@ const Sidebar = ({
 }) => {
   const user = { name: "Nina Ergemia", userLevel: "Senior Developer" };
   const isExpanded = !isDesktopCollapsed;
-
+  const navigate=useNavigate();
   const linkClasses = useMemo(
     () =>
       "flex items-center gap-4 p-3 rounded-xl text-gray-700 " +
@@ -27,7 +30,27 @@ const Sidebar = ({
     []
   );
 
-  const handleLogout = () => alert("Logged out!");
+    const handleLogout = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (token) {
+        await axios.post(
+          `${API_URL}/api/v1/auth/logout`,
+          {},
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+      }
+      toast.success("Logout Successful", { duration: 2000 });
+      // logout();
+      navigate("/login");
+    } catch (error) {
+      console.error("Logout Error:", error);
+      toast.error("Logout failed. Please try again.");
+    }
+  };
+
 
   return (
     <>

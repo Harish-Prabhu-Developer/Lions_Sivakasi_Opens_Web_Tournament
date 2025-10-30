@@ -44,7 +44,7 @@ useEffect(() => {
       defaultValues = {
         "Full Name": user.name || "",
         "TNBA ID": user.TNBAID || "",
-        "Date of Birth": user.dob || "",
+        "Date of Birth": formatDate(user.dob) || "",
         "Academy Name": user.academy || "",
         "Place": user.place || "",
         "District": user.district || "",
@@ -64,7 +64,7 @@ useEffect(() => {
 const handleChange = (field) => (e) => {
   let value = e.target.value;
   if (field === "Date of Birth") {
-    value = formatDate(value); // ✅ store back as "DD-MM-YYYY"
+    // value = formatDate(value); // ✅ store back as "DD-MM-YYYY"
   }
   setForm(field, value);
 };

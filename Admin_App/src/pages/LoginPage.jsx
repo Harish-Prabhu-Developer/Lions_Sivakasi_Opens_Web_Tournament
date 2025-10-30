@@ -3,7 +3,8 @@ import React, { useState, useCallback, useEffect } from "react";
 import toast from "react-hot-toast";
 import { decryptData, encryptData } from "../utils/cryptoUtils";
 import { useNavigate } from "react-router-dom";
-
+import { API_URL } from "../config";
+import axios from "axios";
 const LoginPage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -37,28 +38,41 @@ const LoginPage = () => {
       setError("");
       setLoading(true);
 
-      // Simulated API call delay
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      try {
+        // Simulated API call delay
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+        const res = await axios.post(`${API_URL}/api/v1/auth/login`, {
+          identifier: email,
+          password: password,
+        });
 
-      // Simulated Admin Authentication Logic
-      const mockEmail = "admin@admin.com";
-      const mockPassword = "admin123";
+        if (res.data.success) {
+          const { user, token } = res.data.data;
+          localStorage.setItem("token", token);
+          localStorage.setItem("user", JSON.stringify(user)); // ✅ store user too
+          // setUser(user);
+          // setIsLoggedIn(true); // ✅ optional, ensures immediate UI sync
 
-      if (email === mockEmail && password === mockPassword) {
-        toast.success("Login successful!");
-        navigate("/");
-        // Remember Me logic
-        if (rememberMe) {
-          localStorage.setItem(
-            "rememberedLogin",
-            encryptData({ email, password })
-          );
-        } else {
-          localStorage.removeItem("rememberedLogin");
+          // Remember Me on LoginSuccess logic
+          if (rememberMe) {
+            localStorage.setItem(
+              "rememberedLogin",
+              encryptData({ email, password })
+            );
+          } else {
+            localStorage.removeItem("rememberedLogin");
+          }
+          toast.success(res.data.msg || "Login successful!");
+          navigate("/");
         }
-      } else {
-        setError("Invalid email or password");
-        toast.error("Invalid email or password");
+      } catch (error) {
+        console.error("Login Error:", error);
+        const serverMsg =
+          error.response?.data?.msg ||
+          (error.response?.status === 500
+            ? "Server error. Please try again later."
+            : "Network error. Check your connection.");
+        toast.error(serverMsg);
       }
 
       setLoading(false);
@@ -139,7 +153,7 @@ const LoginPage = () => {
 
             {/* Remember Me + Forgot Password */}
             <div className="flex items-center justify-between">
-              <div className="flex items-center">
+              <div className="flex items-center" >
                 <input
                   type="checkbox"
                   checked={rememberMe}
