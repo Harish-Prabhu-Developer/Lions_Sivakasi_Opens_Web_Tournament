@@ -4,12 +4,12 @@ export const CRYPTO_SECRET=import.meta.env.VITE_CRYPTO_SECRET || "TestSecretKey1
   export const tournamentData = {
   entryFees: { singles: 800, doubles: 1400 }, // doubles fee covers Doubles and Mixed Doubles
   categories: [
-    { name: "Under 09 Boys & Girls", afterBorn: 2017, events: ["Singles"] },
-    { name: "Under 11 Boys & Girls", afterBorn: 2015, events: ["Singles"] },
-    { name: "Under 13 Boys & Girls", afterBorn: 2013, events: ["Singles", "Doubles"] },
-    { name: "Under 15 Boys & Girls", afterBorn: 2011, events: ["Singles", "Doubles", "Mixed Doubles"] },
-    { name: "Under 17 Boys & Girls", afterBorn: 2009, events: ["Singles", "Doubles", "Mixed Doubles"] },
-    { name: "Under 19 Boys & Girls", afterBorn: 2007, events: ["Singles", "Doubles", "Mixed Doubles"] },
+    { name: "Under 09", afterBorn: 2017, events: ["singles"] },
+    { name: "Under 11", afterBorn: 2015, events: ["singles"] },
+    { name: "Under 13", afterBorn: 2013, events: ["singles", "doubles"] },
+    { name: "Under 15", afterBorn: 2011, events: ["singles", "doubles", "mixed doubles"] },
+    { name: "Under 17", afterBorn: 2009, events: ["singles", "doubles", "mixed doubles"] },
+    { name: "Under 19", afterBorn: 2007, events: ["singles", "doubles", "mixed doubles"] },
   ],
   upi: "test@oksbi",
   upiQrUrl: "https://placehold.co/150x150/0000FF/FFFFFF/png?text=Mock+UPI+QR",

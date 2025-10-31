@@ -34,6 +34,17 @@ const ProtectRoute = () => {
   return loggedIn ? <Outlet /> : <Navigate to="/register" replace />;
 };
 
+const PublicRoute = () => {
+  const [loggedIn, setLoggedIn] = useState(IsLoggedIn());
+  useEffect(() => {
+    const checkLogin = () => {
+      const token = localStorage.getItem("token");
+      setLoggedIn(!!token);
+    };
+    checkLogin();
+  }, []);
+  return loggedIn ? <Navigate to="/register" replace />:<Outlet /> ;
+}
 // ✅ Wrapper to handle Navbar visibility
 const Layout = ({ loggedIn }) => {
   const location = useLocation();
@@ -46,15 +57,16 @@ const Layout = ({ loggedIn }) => {
       {!hideNavbar && <Navbar loggedIn={loggedIn} />}
       <main className="flex-1 w-full overflow-y-auto">
         <Routes>
+            {/* No auth routes and public routes */}
           <Route path="/" element={<HomePage />} />
-
+          {/* Protected routes and public routes */}
           <Route element={<ProtectRoute />}>
             <Route path="/dashboard" element={<DashboardPage />} />
-          </Route>
-
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/entry" element={<EntryPage />} />
           <Route path="/entrydetails/:id" element={<EntryDetailsPage />} />
+          </Route>
+
 
           {/* Catch-all route */}
           <Route path="*" element={<Navigate to="/" replace />} />

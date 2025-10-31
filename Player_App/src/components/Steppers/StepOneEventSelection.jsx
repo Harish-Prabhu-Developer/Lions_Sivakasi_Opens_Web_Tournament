@@ -6,12 +6,12 @@ const StepOneEventSelection = ({ categories, selectedEvents, setSelectedEvents, 
   const MIXED_DOUBLES_LIMIT = 1;
   const TOTAL_EVENTS_LIMIT = 4;
 
-  const singlesDoublesCount = selectedEvents.filter(e => e.type !== 'Mixed Doubles').length;
-  const mixedDoublesCount = selectedEvents.filter(e => e.type === 'Mixed Doubles').length;
+  const singlesDoublesCount = selectedEvents.filter(e => e.type !== 'mixed doubles').length;
+  const mixedDoublesCount = selectedEvents.filter(e => e.type === 'mixed doubles').length;
   const totalCount = selectedEvents.length;
 
   const totalFee = selectedEvents.reduce((acc, event) => {
-    const feeKey = event.type === 'Singles' ? 'singles' : 'doubles';
+    const feeKey = event.type === 'singles' ? 'singles' : 'doubles';
     return acc + entryFees[feeKey];
   }, 0);
 
@@ -21,7 +21,7 @@ const StepOneEventSelection = ({ categories, selectedEvents, setSelectedEvents, 
   const canSelectEvent = (type) => {
     if (totalCount >= TOTAL_EVENTS_LIMIT) return false;
 
-    if (type === 'Mixed Doubles') {
+    if (type === 'mixed doubles') {
       return mixedDoublesCount < MIXED_DOUBLES_LIMIT;
     } else { // Singles or Doubles
       return singlesDoublesCount < SINGLES_DOUBLES_LIMIT;
@@ -39,7 +39,7 @@ const StepOneEventSelection = ({ categories, selectedEvents, setSelectedEvents, 
         setSelectedEvents(prev => [...prev, newEvent]);
       } else {
         let message = `Cannot select more than ${TOTAL_EVENTS_LIMIT} total events.`;
-        if (type === 'Mixed Doubles' && mixedDoublesCount >= MIXED_DOUBLES_LIMIT) {
+        if (type === 'mixed doubles' && mixedDoublesCount >= MIXED_DOUBLES_LIMIT) {
           message = `Maximum ${MIXED_DOUBLES_LIMIT} Mixed Doubles event allowed.`;
         } else if (singlesDoublesCount >= SINGLES_DOUBLES_LIMIT) {
           message = `Maximum ${SINGLES_DOUBLES_LIMIT} Singles/Doubles events allowed.`;
@@ -84,7 +84,7 @@ const StepOneEventSelection = ({ categories, selectedEvents, setSelectedEvents, 
                     onClick={() => handleToggleEvent(category.name, type)}
                     disabled={!canBeSelected && !isSelected}
                     className={`
-                      w-full py-2 rounded-lg font-semibold transition-all duration-200
+                      w-full capitalize py-2 rounded-lg font-semibold transition-all duration-200
                       ${isSelected
                         ? 'bg-cyan-500 hover:bg-cyan-600 text-white shadow-lg shadow-cyan-500/50 transform scale-[1.02]'
                         : canBeSelected
