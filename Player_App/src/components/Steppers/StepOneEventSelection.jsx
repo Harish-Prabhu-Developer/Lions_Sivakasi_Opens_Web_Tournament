@@ -1,105 +1,121 @@
-// StepOneEventSelection.jsx
-import { tournamentData } from "../../pages/EntryPage";
+import toast from "react-hot-toast";
 
-function StepOneEventSelection({ categories, selectedEvents, setSelectedEvents, onTypeClick }) {
-  const singlesDoublesCount = selectedEvents.filter(e => ["singles", "doubles"].includes(e.type)).length;
-  const mixedDoublesCount = selectedEvents.filter(e => e.type === "mixed doubles").length;
-  const DATA_LIMIT = {
-    MAX_TOTAL: 4,
-    MAX_EACH: 3,
-    MAX_MIXED: 1,
-  };
+// 2. StepOneEventSelection Component
+const StepOneEventSelection = ({ categories, selectedEvents, setSelectedEvents, entryFees, onNext }) => {
+  const SINGLES_DOUBLES_LIMIT = 3;
+  const MIXED_DOUBLES_LIMIT = 1;
+  const TOTAL_EVENTS_LIMIT = 4;
 
+  const singlesDoublesCount = selectedEvents.filter(e => e.type !== 'Mixed Doubles').length;
+  const mixedDoublesCount = selectedEvents.filter(e => e.type === 'Mixed Doubles').length;
+  const totalCount = selectedEvents.length;
 
-  const isChipDisabled = (cat, type) => {
-    
-    if (type === "mixed doubles" && mixedDoublesCount >= DATA_LIMIT.MAX_MIXED && !selectedEvents.some(e => e.category === cat && e.type === "mixed doubles")) return true;
-    if (["singles", "doubles"].includes(type) && singlesDoublesCount >= DATA_LIMIT.MAX_EACH && !selectedEvents.some(e => e.category === cat && e.type === type)) return true;
-    if (selectedEvents.length >= DATA_LIMIT.MAX_TOTAL && !selectedEvents.some(e => e.category === cat && e.type === type)) return true;
-    return false;
-  };
-
-  const toggle = (cat, type) => {
-    setSelectedEvents(prev =>
-      prev.some(e => e.category === cat && e.type === type)
-        ? prev.filter(e => !(e.category === cat && e.type === type))
-        : [...prev, { category: cat, type }]
-    );
-    onTypeClick && onTypeClick(type, cat);
-    console.log("Selected step : ",selectedEvents);
-    
-  };
-
-  const isSelected = (cat, type) => selectedEvents.some(e => e.category === cat && e.type === type);
-
-  const totalPrice = selectedEvents.reduce((sum, e) => {
-    if (e.type === "singles") return sum + tournamentData.entryFees.singles;
-    return sum + tournamentData.entryFees.doubles;
+  const totalFee = selectedEvents.reduce((acc, event) => {
+    const feeKey = event.type === 'Singles' ? 'singles' : 'doubles';
+    return acc + entryFees[feeKey];
   }, 0);
 
-  return (
-<div className="w-full my-4 flex flex-col items-center justify-around ">
-{/* Rules and Price Row */}
-<div className="flex flex-col sm:flex-row justify-between w-full items-center gap-3 mb-5">
-  <div className="flex flex-wrap items-center gap-2 sm:gap-4 justify-center my-2 sm:justify-start">
-    <span className="text-cyan-200 font-medium">Rules:</span>
-    <span className="bg-cyan-800/70 border border-cyan-400/25 text-cyan-200 px-3 py-1 rounded-full text-xs">Max 3 Events</span>
-    <span className="bg-cyan-800/70 border border-cyan-400/25 text-cyan-200 px-3 py-1 rounded-full text-xs">Max 3 Singles/Doubles</span>
-    <span className="bg-cyan-800/70 border border-cyan-400/25 text-cyan-200 px-3 py-1 rounded-full text-xs">1 Mixed Doubles</span>
-  </div>
-  {totalPrice > 0 &&
-    <div className="text-lg font-bold text-cyan-50 self-center my-2 bg-gradient-to-r from-cyan-700/40 to-cyan-600/20 rounded-xl px-5 py-2 shadow">
-      Total Price: ₹{totalPrice}
-    </div>
-  }
-</div>
-  {/* Event Categories & Types */}
-  <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-6 w-full">
-  {categories.map((category) => (
-    <div
-      key={category.name}
-      className="rounded-2xl bg-gradient-to-br from-[#162a44]/90 via-[#143054]/80 to-[#0f1c35]/90 border border-cyan-700/30
-        p-5 shadow-xl hover:shadow-cyan-400/20 transition-all duration-200 relative"
-    >
-      <div className="flex justify-between items-center gap-2 mb-3">
-        <span className="text-cyan-100 font-bold text-base">{category.name}</span>
-        {category.afterBorn && (
-          <span className="bg-cyan-600/30 text-cyan-200 text-center text-xs font-medium rounded-full px-3 py-1">
-            After {category.afterBorn}
-          </span>
-        )}
-      </div>
-      <div className="flex flex-wrap items-center justify-around gap-4 mt-2">
-        {category.events.map((type) => {
-          const selected = isSelected(category.name.replace("Boys & Girls", "").trim(), type.toLowerCase());
-          const disabled = isChipDisabled(category.name.replace("Boys & Girls", "").trim(), type.toLowerCase());
-          return (
-            <button
-              key={type}
-              onClick={() => toggle(category.name.replace("Boys & Girls", "").trim(), type.toLowerCase())}
-              disabled={disabled}
-              className={`
-                px-5 py-1.5 rounded-full text-sm font-semibold border-2 my-1 transition-all
-                ${
-                  selected
-                  ? "bg-gradient-to-r from-cyan-400 to-blue-500 border-cyan-200 text-white shadow-lg ring-2 ring-cyan-400"
-                  : "bg-white/5 border-cyan-700 text-cyan-200 hover:border-cyan-400 hover:bg-cyan-900/25"
-                }
-                ${disabled ? "opacity-40 cursor-not-allowed" : "hover:scale-105 focus:ring-2 focus:ring-cyan-400"}
-                `}
-            >
-              {type}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  ))}
-</div>
+  const isEventSelected = (categoryName, type) => 
+    selectedEvents.some(e => e.category === categoryName && e.type === type);
 
-</div>
+  const canSelectEvent = (type) => {
+    if (totalCount >= TOTAL_EVENTS_LIMIT) return false;
 
+    if (type === 'Mixed Doubles') {
+      return mixedDoublesCount < MIXED_DOUBLES_LIMIT;
+    } else { // Singles or Doubles
+      return singlesDoublesCount < SINGLES_DOUBLES_LIMIT;
+    }
+  };
+
+  const handleToggleEvent = (categoryName, type) => {
+    const newEvent = { category: categoryName, type: type };
+    const isCurrentlySelected = isEventSelected(categoryName, type);
+
+    if (isCurrentlySelected) {
+      setSelectedEvents(prev => prev.filter(e => !(e.category === categoryName && e.type === type)));
+    } else {
+      if (canSelectEvent(type)) {
+        setSelectedEvents(prev => [...prev, newEvent]);
+      } else {
+        let message = `Cannot select more than ${TOTAL_EVENTS_LIMIT} total events.`;
+        if (type === 'Mixed Doubles' && mixedDoublesCount >= MIXED_DOUBLES_LIMIT) {
+          message = `Maximum ${MIXED_DOUBLES_LIMIT} Mixed Doubles event allowed.`;
+        } else if (singlesDoublesCount >= SINGLES_DOUBLES_LIMIT) {
+          message = `Maximum ${SINGLES_DOUBLES_LIMIT} Singles/Doubles events allowed.`;
+        }
+        toast.error(message);
+      }
+    }
+  };
+
+  const RuleTag = ({ label, count, limit }) => (
+    <div className={`px-3 py-1 text-sm rounded-full font-medium ${count > limit ? 'bg-red-600 text-white' : 'bg-cyan-600 text-white'}`}>
+      {label}: {count}/{limit}
+    </div>
   );
-}
+
+  return (
+    <div>
+      <div className="flex flex-wrap justify-between items-center mb-8 gap-4 p-4 bg-[#0d162a] rounded-xl border border-cyan-400/20">
+        <RuleTag label="Total Events" count={totalCount} limit={TOTAL_EVENTS_LIMIT} />
+        <RuleTag label="Singles/Doubles" count={singlesDoublesCount} limit={SINGLES_DOUBLES_LIMIT} />
+        <RuleTag label="Mixed Doubles" count={mixedDoublesCount} limit={MIXED_DOUBLES_LIMIT} />
+        <div className="text-xl font-bold text-yellow-300">Total Price: ₹{totalFee}</div>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {categories.map((category) => (
+          <div
+            key={category.name}
+            className="bg-[#0f1d38] p-5 rounded-xl border border-gray-700 shadow-lg hover:shadow-cyan-500/30 transition-shadow duration-300"
+          >
+            <h3 className="text-lg font-bold text-cyan-300 mb-1">{category.name.replace('Boys & Girls', '').trim()}</h3>
+            <p className="text-sm text-gray-400 mb-4">After Born: {category.afterBorn}</p>
+            
+            <div className="flex flex-col gap-2">
+              {category.events.map((type) => {
+                const isSelected = isEventSelected(category.name, type);
+                const canBeSelected = canSelectEvent(type) || isSelected; // Can click if already selected
+
+                return (
+                  <button
+                    key={type}
+                    onClick={() => handleToggleEvent(category.name, type)}
+                    disabled={!canBeSelected && !isSelected}
+                    className={`
+                      w-full py-2 rounded-lg font-semibold transition-all duration-200
+                      ${isSelected
+                        ? 'bg-cyan-500 hover:bg-cyan-600 text-white shadow-lg shadow-cyan-500/50 transform scale-[1.02]'
+                        : canBeSelected
+                        ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
+                        : 'bg-gray-800 text-gray-500 cursor-not-allowed opacity-60'
+                      }
+                    `}
+                  >
+                    {type}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="flex justify-end w-full mt-8">
+        <button
+          disabled={selectedEvents.length === 0}
+          onClick={onNext}
+          className={`px-8 py-2 font-semibold rounded-lg transition-all duration-200 shadow-md ${
+            selectedEvents.length === 0
+              ? "bg-gray-600 cursor-not-allowed"
+              : "bg-gradient-to-r from-cyan-500 to-cyan-400 hover:scale-105"
+          }`}
+        >
+          Next →
+        </button>
+      </div>
+    </div>
+  );
+};
 
 export default StepOneEventSelection;

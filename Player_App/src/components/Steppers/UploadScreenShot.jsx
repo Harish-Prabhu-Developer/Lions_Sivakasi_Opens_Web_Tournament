@@ -176,7 +176,7 @@ const UploadScreenShot = ({ expectedAmount, expectedUPI, setStep }) => {
   const handleSubmit=async() => {
             try {
                       const response = await dispatch(getPlayerEntries()).unwrap();
-                      const playerEntries = response;
+                      const playerEntries = response.data.events;
                       console.log(playerEntries);
                       
             } catch (error) {

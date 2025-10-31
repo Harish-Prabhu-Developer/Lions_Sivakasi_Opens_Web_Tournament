@@ -1,49 +1,38 @@
-// Stepper.jsx
-import { Check } from 'lucide-react'
-import React from 'react'
+import { Check } from "lucide-react";
+import React from "react";
 
-const Stepper = ({ currentStep, steps }) => {
-  return (
-    <div className="w-full flex flex-col items-center mb-3">
-    <div className="flex w-full justify-between items-center">
-      {steps.map((step, i) => (
-        <React.Fragment key={step}>
-          {i > 0 && (
-            <div
-              className={`flex-1 h-1 w-full rounded-full ${
-                i < currentStep ? "bg-cyan-400" : "bg-gray-600/30"
-              }`}
-            />
+const Stepper = ({ currentStep, steps }) => (
+  <div className="flex justify-between items-center w-full relative">
+    {steps.map((label, index) => {
+      const stepNumber = index + 1;
+      const isCompleted = stepNumber < currentStep;
+      const isActive = stepNumber === currentStep;
+
+      return (
+        <React.Fragment key={label}>
+          {index > 0 && (
+            <div className={`flex h-1 absolute top-2  -mr-3 transition-all duration-500 ${isCompleted ? 'bg-cyan-400' : 'bg-gray-700'} ${index === 0 ? 'left-0' : 'left-0'} ${index === steps.length - 1 ? 'right-0' : ''}`} style={{ left: `calc(${100 / (steps.length - 1) * index}% - 60px)`, right: `calc(${100 / (steps.length - 1) * (steps.length - 1 - index)}% - 60px)` }}></div>
           )}
-          <div className="flex flex-col items-center">
+          <div className="flex flex-col items-center z-10 w-1/3">
             <div
-              className={`flex items-center justify-center w-6 h-6 text-center text-xs sm:text-sm sm:w-11 sm:h-11 rounded-full font-bold border-2 transition-all duration-300 ${
-                i + 1 < currentStep
-                  ? "bg-cyan-500 border-cyan-400 text-white shadow-md"
-                  : i + 1 === currentStep
-                  ? "bg-white/20 border-cyan-400 text-cyan-200 scale-110 shadow-lg"
-                  : "bg-white/15 border-gray-400 text-gray-400"
+              className={`w-10 h-10 flex items-center justify-center rounded-full font-bold transition-all duration-300 border-2 ${
+                isCompleted
+                  ? 'bg-cyan-400 border-cyan-400 text-[#0a192f]'
+                  : isActive
+                  ? 'bg-transparent border-cyan-400 text-cyan-400'
+                  : 'bg-gray-700 border-gray-700 text-gray-400'
               }`}
             >
-              <span>{i + 1 < currentStep ? <Check className="w-3 h-3 sm:w-5 sm:h-5" /> : i + 1}</span>
+              {isCompleted ? <Check className="w-5 h-5" /> : stepNumber}
             </div>
-            <span
-              className={`mt-2 text-xs sm:text-sm font-medium ${
-                i + 1 === currentStep
-                  ? "text-cyan-400"
-                  : i + 1 < currentStep
-                  ? "text-cyan-300"
-                  : "text-gray-500"
-              }`}
-            >
-              {step.split(" ").join("\n")}
+            <span className={`text-xs mt-2 text-center transition-colors duration-300 ${isActive ? 'text-cyan-300' : 'text-gray-400'}`}>
+              {label}
             </span>
           </div>
         </React.Fragment>
-      ))}
-    </div>
+      );
+    })}
   </div>
-  )
-}
+);
 
-export default Stepper
+export default Stepper;

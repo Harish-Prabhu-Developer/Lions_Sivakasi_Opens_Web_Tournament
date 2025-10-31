@@ -1,255 +1,145 @@
-// EntryPage.jsx
-import React, { useState } from "react";
+import { ArrowLeft } from "lucide-react";
+import { useCallback, useMemo, useState } from "react";
+import { toast } from "react-hot-toast";
 import Stepper from "../components/Steppers/Stepper";
 import StepOneEventSelection from "../components/Steppers/StepOneEventSelection";
-import PlayerForm, { fieldsObject } from "../components/PlayerForm";
+import PlayerForm from "../components/PlayerForm";
 import PaymentStep from "../components/Steppers/PaymentStep";
-import { useNavigate } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
-import { useContext } from "react";
-import AuthContext from "../components/Auth/AuthContext";
-import { formatDate } from "../utils/dateUtils";
-import { useDispatch, useSelector } from "react-redux";
-import {
-  addToEvents,
-  clearMessages,
-  getPlayerEntries,
-} from "../redux/Slices/EntriesSlice";
-import toast from "react-hot-toast";
-import { useEffect } from "react";
-import { updatePlayerForm } from "../redux/Slices/PlayerSlice";
-export const tournamentData = {
-  entryFees: { singles: 800, doubles: 1400 },
-
-  categories: [
-    { name: "Under 09 Boys & Girls", afterBorn: 2017, events: ["Singles"] },
-    { name: "Under 11 Boys & Girls", afterBorn: 2015, events: ["Singles"] },
-    {
-      name: "Under 13 Boys & Girls",
-      afterBorn: 2013,
-      events: ["Singles", "Doubles"],
-    },
-    {
-      name: "Under 15 Boys & Girls",
-      afterBorn: 2011,
-      events: ["Singles", "Doubles", "Mixed Doubles"],
-    },
-    {
-      name: "Under 17 Boys & Girls",
-      afterBorn: 2009,
-      events: ["Singles", "Doubles", "Mixed Doubles"],
-    },
-    {
-      name: "Under 19 Boys & Girls",
-      afterBorn: 2007,
-      events: ["Singles", "Doubles", "Mixed Doubles"],
-    },
-  ],
-  upi: "test@oksbi",
-};
+import { mockUser, tournamentData } from "../constants";
 
 const EntryPage = () => {
-  const dispatch = useDispatch();
-  const { loading, error, successMessage } = useSelector(
-    (state) => state.entries
-  );
-
   const [step, setStep] = useState(1);
+  const [loading, setLoading] = useState(false);
   const [selectedEvents, setSelectedEvents] = useState([]);
-
   const [step2Index, setStep2Index] = useState(0);
-  const navigate = useNavigate();
-  const { user } = useContext(AuthContext);
 
-  // State
-  const [playersData, setPlayersData] = useState({ player: {}, partners: {} });
+  // Main state holding player and partner data
+  const [playersData, setPlayersData] = useState({
+    player: {
+      fullName: mockUser.name,
+      tnbaId: mockUser.TNBAID,
+      dob: mockUser.dob,
+      academyName: mockUser.academy,
+      place: mockUser.place,
+      district: mockUser.district,
+    },
+    // Partners now keyed by a unique combination of category and event type
+    partners: {}, // Keyed by: 'Category|EventType' (e.g., 'Under 15 Boys & Girls|Doubles')
+  });
 
-  // Handle doubles/mixed doubles partner forms
-  const doublesEvents = selectedEvents.filter(
-    (ev) => ev.type === "doubles" || ev.type === "mixed doubles"
-  );
+  // --- Step 2 Logic Configuration ---
 
-  const step2Forms = [
-    { key: "player", label: "Your Details", category: null, type: "player" },
-  ].concat(
-    doublesEvents.map((ev) => ({
-      key: ev.category,
-      label: `${ev.category
-        .replace("Boys & Girls", "")
-        .trim()} Partner Details (${ev.type.replace(/^\w/, (c) =>
-        c.toUpperCase()
-      )})`,
-      category: ev.category,
-      type: "partner",
-    }))
-  );
+  const doublesEvents = useMemo(() => selectedEvents.filter(
+    (ev) => ev.type === "Doubles" || ev.type === "Mixed Doubles"
+  ), [selectedEvents]);
+  
+  const step2Forms = useMemo(() => {
+    // 1. Main Player Form
+    let forms = [
+      { key: "player", label: "Your Details", type: "player" },
+    ];
+    
+    // 2. Partner Forms - Generate a unique form entry for each selected doubles event
+    forms = forms.concat(
+      doublesEvents.map((ev) => {
+        // Create a unique key for the partner data state
+        const partnerKey = `${ev.category}|${ev.type}`;
+        
+        // Clean up the label for display
+        const categoryLabel = ev.category.replace("Boys & Girls", "").trim();
+        const eventLabel = ev.type.replace(/\s/g, ''); // Doubles, MixedDoubles
+        
+        return {
+          key: partnerKey,
+          label: `${categoryLabel} Partner Details (${ev.type})`,
+          category: ev.category,
+          type: "partner",
+          eventType: ev.type, // Store event type for clarity
+        };
+      })
+    );
 
-  // 🧩 Determine current form dynamically
-  const currentForm = step2Forms[step2Index];
-  const currentFormData =
-    currentForm.type === "player"
-      ? playersData.player
-      : playersData.partners[currentForm.category] || {};
+    // Add isLast flag for proper navigation title in PlayerForm
+    if (forms.length > 0) {
+      forms[forms.length - 1].isLast = true;
+    }
+    
+    return forms;
+  }, [doublesEvents]);
 
-  useEffect(() => {
-    const fetchEvents = async () => {
-      try {
-        const response = await dispatch(getPlayerEntries()).unwrap();
-        const playerEntries = response.data;
 
-        if (Array.isArray(playerEntries) && playerEntries.length > 0) {
-          // Flatten and clean up the events
-          const mappedEvents = playerEntries.flatMap((entry) =>
-            entry.events.map((ev) => ({
-              category: ev.category
-                .replace(/\s*Boys\s*&\s*Girls\s*/gi, "")
-                .trim(),
-              type: ev.type.toLowerCase(),
-            }))
-          );
+  // 🧩 Determine current form data and definition
+  const currentFormDef = step2Forms[step2Index];
 
-          console.log("Mapped Events:", mappedEvents);
+  const currentFormData = useMemo(() => {
+    if (!currentFormDef) return {};
+    
+    if (currentFormDef.type === "player") {
+      // Return the main player data
+      return playersData.player;
+    } else if (currentFormDef.type === "partner") {
+      // Return the specific partner data based on the unique key
+      return playersData.partners[currentFormDef.key] || {};
+    }
+    return {};
+  }, [currentFormDef, playersData]);
 
-          // ✅ Set mapped events as default selectedEvents
-          setSelectedEvents(mappedEvents);
-        } else {
-          setSelectedEvents([]); // no entries yet
-        }
-      } catch (error) {
-        console.error("Error fetching player entries:", error);
-      }
-    };
 
-    fetchEvents();
-  }, [dispatch]);
+  // --- State Update Handlers ---
 
-  // Update functions
-  const updateMainPlayer = (key, value) => {
-    setPlayersData((prev) => ({
-      ...prev,
-      player: { ...prev.player, [key]: value },
-    }));
-  };
+  const onFormChange = useCallback((key, value) => {
+    if (!currentFormDef) return;
 
-  const updatePartner = (category, key, value) => {
-    setPlayersData((prev) => ({
-      ...prev,
-      partners: {
-        ...prev.partners,
-        [category]: {
-          ...(prev.partners[category] || {}),
-          [key]: value,
+    if (currentFormDef.type === "player") {
+      // Update the main player data
+      setPlayersData(prev => ({
+        ...prev,
+        player: { ...prev.player, [key]: value }
+      }));
+    } else if (currentFormDef.type === "partner") {
+      // Update the specific partner data using the unique key
+      const partnerKey = currentFormDef.key;
+      setPlayersData(prev => ({
+        ...prev,
+        partners: {
+          ...prev.partners,
+          [partnerKey]: {
+            ...(prev.partners[partnerKey] || {}),
+            [key]: value,
+          },
         },
-      },
-    }));
-  };
-
-  // Handle form input changes
-  const onFormChange = (key, value) => {
-    const currentForm = step2Forms[step2Index];
-    if (currentForm.type === "player") {
-      updateMainPlayer(key, value);
-    } else {
-      updatePartner(currentForm.category, key, value);
+      }));
     }
-  };
+  }, [currentFormDef]);
 
-  // Go Next button handler
-  const goNextStep2Form = async () => {
-    const currentForm = step2Forms[step2Index];
-    const currentType = currentForm.type;
-    const currentKey = currentForm.label;
 
-    const currentData =
-      currentType === "player"
-        ? playersData.player
-        : playersData.partners[currentForm.category] || {};
+  // --- Navigation Handlers ---
 
-    if (currentType === "player") {
-      console.log("🧍 Main Player Data:", currentData);
-
-      const formData = {
-        name: currentData["Full Name"] || "",
-        TNBAID: currentData["TNBA ID"] || "",
-        dob: currentData["Date of Birth"] || "",
-        academyName: currentData["Academy Name"] || "",
-        place: currentData["Place"] || "",
-        district: currentData["District"] || "",
-      };
-
-      try {
-        const resultAction = await dispatch(updatePlayerForm(formData));
-
-        if (updatePlayerForm.fulfilled.match(resultAction)) {
-          const updatedUser = resultAction.payload.data.user;
-
-          // ✅ Parse the stored user correctly
-          const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
-
-          // ✅ Merge updated fields
-          const newUserData = {
-            ...storedUser,
-            name: updatedUser.name,
-            dob: formatDate(updatedUser.dob),
-            TNBAID: updatedUser.TnBaId,
-            academy: updatedUser.academyName,
-            place: updatedUser.place,
-            district: updatedUser.district,
-          };
-
-          // ✅ Save the merged user object
-          localStorage.setItem("user", JSON.stringify(newUserData));
-          toast.success("Player details updated successfully!");
-        } else {
-          throw new Error(resultAction.payload || "Update failed");
-        }
-      } catch (err) {
-        console.log("Error : ", err);
-        toast.error(err.message || "Failed to update player details");
-      }
-      console.log("🧾 FormData (For Backend):", formData);
-    } else {
-      // 🧩 Build final payload structure
-      const finalPayload = {
-        playerId: user.id,
-        events: selectedEvents.map((event) => {
-          const partnerData = playersData.partners[event.category]; // Match category partner
-          let eventObj = {
-            category: event.category,
-            type: event.type,
-          };
-
-          // Only attach partner if available
-          if (
-            partnerData &&
-            (event.type === "doubles" || event.type === "mixed doubles")
-          ) {
-            eventObj.partner = {
-              fullname: partnerData["Full Name"] || "",
-              dob: partnerData["Date of Birth"] || "",
-              TnBaId: partnerData["TNBA ID"] || "",
-              academyName: partnerData["Academy Name"] || "",
-              place: partnerData["Place"] || "",
-              district: partnerData["District"] || "",
-            };
-          }
-
-          return eventObj;
-        }),
-      };
-
-      // 🧾 Debug log
-      console.log("🎯 Final Payload for Backend:", finalPayload);
-
-      // console.log(`🤝 Partner Data (${currentKey}):`, currentData);
+  const handleStepOneSubmit = () => {
+    if (selectedEvents.length === 0) {
+      toast.error("Please select at least one event.");
+      return;
     }
-
-    // ✅ After last form → show all data together
+    
+    setLoading(true);
+    // Mock API call for adding events
+    setTimeout(() => {
+      setLoading(false);
+      toast.success("Events saved successfully! Please enter player details.");
+      setStep(2);
+      setStep2Index(0); // Start at the first form (Player's own details)
+    }, 500);
+  };
+  
+  const goNextStep2Form = () => {
+    // Note: Validation is inside PlayerForm component, this runs on successful form submit
+    
     if (step2Index === step2Forms.length - 1) {
-      console.log("🎯 All Selected Events:", selectedEvents);
-      console.log("🧍 Final Main Player Data:", playersData.player);
-
-      console.log("🤝 Final Partner Data:", playersData.partners);
+      console.log("FINAL PAYLOAD GENERATED:", { 
+          player: playersData.player, 
+          partners: playersData.partners, // Contains separate partner data
+          events: selectedEvents 
+      });
       setStep(3);
     } else {
       setStep2Index(step2Index + 1);
@@ -260,71 +150,42 @@ const EntryPage = () => {
     if (step2Index > 0) {
       setStep2Index(step2Index - 1);
     } else {
-      setStep(1);
+      setStep(1); // Back to Step 1
     }
   };
+  
+  const handlePaymentBack = () => {
+      setStep(2);
+      setStep2Index(step2Forms.length - 1); // Go back to the last partner form
+  }
 
-  const handleStepOneSubmit = async () => {
-    if (selectedEvents.length === 0) {
-      toast.error("Please select at least one event.");
-      return;
-    }
-
-    // Clean category names
-    const cleanedEvents = selectedEvents.map((event) => ({
-      ...event,
-      category: event.category.replace(/\s*Boys\s*&\s*Girls\s*/gi, "").trim(),
-    }));
-
-    // console.log(`
-    // playerId: ${user.id},
-    // events: ${JSON.stringify(cleanedEvents)}`);
-
-    const payload = {
-      playerId: user.id,
-      events: cleanedEvents,
-    };
-
-    console.log("Payload : ", payload);
-
-    try {
-      const resultAction = await dispatch(addToEvents(payload));
-
-      if (addToEvents.fulfilled.match(resultAction)) {
-        const message =
-          resultAction.payload?.msg || "Events added successfully!";
-        toast.success(message);
-        setStep(2);
-        setStep2Index(0);
-      } else if (addToEvents.rejected.match(resultAction)) {
-        const errorMsg =
-          resultAction.payload ||
-          resultAction.error?.message ||
-          "Failed to add events.";
-        toast.error(errorMsg);
-      }
-    } catch (err) {
-      console.error("Error dispatching addToEvents:", err);
-      toast.error("Something went wrong. Please try again.");
-    } finally {
-      // Optional: clear redux messages after showing toast
-      setTimeout(() => dispatch(clearMessages()), 2000);
-    }
-  };
+  const handleEntrySubmit = () => {
+    setLoading(true);
+    // Mock Final Submission
+    setTimeout(() => {
+        setLoading(false);
+        toast.success("Entry successfully submitted!");
+        // Reset state or navigate away in a real app
+        setStep(1);
+        setSelectedEvents([]);
+    }, 1500);
+  }
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-br from-[#0a192f] to-[#0f223f] text-white flex flex-col items-center py-8 px-4 sm:px-6 md:px-10 transition-all duration-300">
-      {/* Header */}
-      <div className="w-full max-w-6xl bg-[#192339]/80 border border-cyan-400/10 rounded-2xl shadow-xl p-6 sm:p-8 backdrop-blur-md mb-10 flex flex-col sm:flex-row items-center justify-between gap-4">
+    <div className="min-h-screen w-full bg-gradient-to-br from-[#0a192f] to-[#0f223f] text-white flex flex-col items-center py-8 px-4 sm:px-6 md:px-10 font-[Inter] transition-all duration-300">
+
+      {/* Header (Mock navigation back to dashboard) */}
+      <div className="w-full max-w-6xl bg-[#192339]/80 border border-cyan-400/10 rounded-2xl shadow-xl p-6 sm:p-8 backdrop-blur-md mb-10 flex flex-col sm:flex-row items-center justify-start gap-4">
         <div className="flex items-center gap-3 w-full sm:w-auto">
+          {/* Mocked navigation back button */}
           <button
-            onClick={() => navigate("/dashboard")}
-            className="flex items-center gap-2 btn btn-secondary transition-all"
+            onClick={() => console.log('Navigating to dashboard...')} 
+            className="flex items-center gap-2 px-4 py-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition-all text-sm sm:text-base"
           >
-            <ArrowLeft className="w-3 h-3 sm:w-5 sm:h-5" />
+            <ArrowLeft className="w-4 h-4" />
             <span className="font-medium">Back</span>
           </button>
-          <h2 className="text-xl md:text-3xl text-center font-bold text-cyan-300 tracking-wide w-full sm:w-auto">
+          <h2 className="text-xl md:text-3xl font-bold text-cyan-300 tracking-wide">
             Tournament Entry
           </h2>
         </div>
@@ -338,68 +199,51 @@ const EntryPage = () => {
         />
       </div>
 
-      {/* Step Content */}
-      <div className="w-full max-w-4xl bg-[#192339]/80 border border-cyan-400/10 rounded-2xl shadow-xl p-6 sm:p-8 backdrop-blur-md">
+      {/* Step Content Card */}
+      <div className="w-full max-w-4xl bg-[#192339]/80 border border-cyan-400/10 rounded-2xl shadow-xl p-6 sm:p-8 backdrop-blur-md min-h-[500px]">
+        {/* Step 1: Event Selection */}
         {step === 1 && (
-          <>
-            <StepOneEventSelection
-              categories={tournamentData.categories}
-              selectedEvents={selectedEvents}
-              setSelectedEvents={setSelectedEvents}
-              onTypeClick={() => {}}
-            />
-            <div className="flex justify-end w-full mt-8">
-              <button
-                // disabled={loading || !selectedEvents.length}
-                onClick={handleStepOneSubmit}
-                className={`px-8 py-2 font-semibold rounded-lg transition-all duration-200 shadow-md ${
-                  !selectedEvents.length || loading
-                    ? "bg-gray-600 cursor-not-allowed"
-                    : "bg-gradient-to-r from-cyan-500 to-cyan-400 hover:scale-105"
-                }`}
-              >
-                {loading ? "Processing..." : "Next →"}
-              </button>
-            </div>
-          </>
+          <StepOneEventSelection
+            categories={tournamentData.categories}
+            selectedEvents={selectedEvents}
+            setSelectedEvents={setSelectedEvents}
+            entryFees={tournamentData.entryFees}
+            onNext={handleStepOneSubmit}
+            loading={loading}
+          />
         )}
 
-        {step === 2 && (
-          <div className="w-full">
-            <PlayerForm
-              currentForm={currentForm}
-              form={currentFormData}
-              setForm={(key, value) => onFormChange(key, value)}
-            />
-            <div className="flex flex-col sm:flex-row justify-between mt-8 gap-4">
-              <button
-                onClick={goBackStep2Form}
-                className="px-6 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded-lg font-medium transition-all duration-200 w-full sm:w-auto"
-              >
-                ← Back
-              </button>
-              <button
-                onClick={goNextStep2Form}
-                className="px-8 py-2 bg-gradient-to-r from-cyan-500 to-cyan-400 hover:scale-105 text-white font-semibold rounded-lg transition-all duration-200 w-full sm:w-auto"
-              >
-                {step2Index === step2Forms.length - 1
-                  ? "Next →"
-                  : "Next Player →"}
-              </button>
-            </div>
-          </div>
+        {/* Step 2: Player/Partner Details */}
+        {step === 2 && currentFormDef && (
+          <PlayerForm
+            currentForm={currentFormDef}
+            form={currentFormData}
+            onFormChange={onFormChange}
+            onNext={goNextStep2Form}
+            onBack={goBackStep2Form}
+          />
         )}
-
+        
+        {/* Step 3: Summary & Payment */}
         {step === 3 && (
           <PaymentStep
             selectedEvents={selectedEvents}
             player={playersData.player}
-            partner={playersData.partners}
+            partners={playersData.partners}
             upi={tournamentData.upi}
-            setStep={() => setStep(2)}
+            upiQrUrl={tournamentData.upiQrUrl}
+            onBack={handlePaymentBack}
+            onSubmit={handleEntrySubmit}
           />
         )}
       </div>
+
+      {/* Mock Toast/Message Area
+      {loading && (
+        <div className="fixed bottom-4 right-4 bg-cyan-600 text-white p-3 rounded-lg shadow-2xl font-semibold">
+          {step === 1 ? "Processing events..." : "Submitting Entry..."}
+        </div>
+      )} */}
     </div>
   );
 };

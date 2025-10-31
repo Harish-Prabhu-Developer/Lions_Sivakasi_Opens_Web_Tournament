@@ -130,8 +130,8 @@ const EntriesSlice = createSlice({
         // Backend returns { success, player, events }
         console.log("action :" ,action.payload);
         
-        state.player = action.payload.data.player || null;
-        state.events = action.payload.data.events || [];
+        state.player = action.payload.player || null;
+        state.events = action.payload.events || [];
       })
       .addCase(getPlayerEntries.rejected, (state, action) => {
         state.loading = false;

@@ -117,7 +117,7 @@ export const getEntries = async (req, res) => {
     const entries = await EntryModel.find()
       .populate("player", "name TnBaId academyName place district")
       .populate("events.payment");
-    res.status(200).json({ success: true, data: entries });
+    res.status(200).json({ success: true,data: entries[0] });
   } catch (err) {
     res.status(500).json({ success: false, msg: err.message });
   }
