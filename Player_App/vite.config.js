@@ -6,8 +6,9 @@ import tailwindcss from "@tailwindcss/vite";
 export default defineConfig({
   plugins: [react(), tailwindcss()],
    server: {
-    host: "10.181.228.247",//"10.85.78.247", // e.g. "192.168.1.100"
-    port: 5173, // Optional: specify port if you want to override default
-    strictPort: true, // Optional: fail if port is already used
+    host: "0.0.0.0", // Listen on all network interfaces
+    port: 5173,      // Set your desired port
+    strictPort: true // Fail if port is already used
+
   },
 });

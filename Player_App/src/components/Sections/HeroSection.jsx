@@ -1,3 +1,4 @@
+// HeroSection.jsx
 import React, { useContext, useEffect, useState } from "react";
 import { Calendar, MapPin, IndianRupee, Trophy, ArrowDown, Clock } from "lucide-react";
 import AuthContext from "../Auth/AuthContext";

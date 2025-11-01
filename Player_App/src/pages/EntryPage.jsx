@@ -24,7 +24,7 @@ const EntryPage = () => {
     player: {
       fullName: user.name,
       tnbaId: user.TNBAID,
-      dob: formatDate(user.dob),
+      dob: user.dob,
       academyName: user.academy,
       place: user.place,
       district: user.district,
@@ -158,7 +158,7 @@ const EntryPage = () => {
     }
   };
 
-  const goNextStep2Form = () => {
+  const goNextStep2Form = async() => {
     // Note: Validation is inside PlayerForm component, this runs on successful form submit
     console.log("STEP 2 PAYLOAD GENERATED:", playersData.player);
     // reStructure player data
@@ -166,14 +166,25 @@ const EntryPage = () => {
 
     const playerPayload = {
       name: fullName,
-      nBaId: tnbaId,
+      TnBaId: tnbaId,
       dob,
       academyName,
       place,
       district,
     };
-
-    
+    // condition based CurrentFromDef==="player"
+    if (currentFormDef.type==="player") {
+      //Update Player Form
+      console.log("Player : ",playersData.player);
+      toast.success("Your Details Saved!")
+    }else if (currentFormDef.type==="partner") {
+      //add the Events
+      console.log("Player Partner : ",playersData.partners);
+      // give that msg based Category and type like Under 11 doubles Event added
+      // toast.success()
+    }
+      
+    // use the diapatch updatePlayerForm
     console.log("FORMATTED PLAYER PAYLOAD:", playerPayload);
 
     if (step2Index === step2Forms.length - 1) {

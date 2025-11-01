@@ -1,3 +1,4 @@
+// EntryCard.jsx
 import React from "react";
 import { CheckCircle, Clock, XCircle, CreditCard, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
