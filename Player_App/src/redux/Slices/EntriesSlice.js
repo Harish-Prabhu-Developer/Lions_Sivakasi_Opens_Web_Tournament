@@ -69,6 +69,28 @@ export const addPartnerToEvent = createAsyncThunk(
   }
 );
 
+// ✅ Add Payment Proof
+export const addPayment = createAsyncThunk(
+  "entries/addPayment",
+  async (payload, { rejectWithValue }) => {
+    try {
+      const res = await axios.post(
+        `${API_URL}/api/v1/payment/add-payment`,
+        payload,
+        getHeaders(),
+        {
+          withCredentials: true,
+        }
+      );
+      return res.data;
+    } catch (err) {
+      return rejectWithValue(
+        err.response?.data || { success: false, msg: "Server Error" }
+      );
+    }
+  }
+);
+
 // 3️⃣ Get player's entries
 export const getPlayerEntries = createAsyncThunk(
   "entries/getPlayerEntries",
@@ -160,6 +182,23 @@ const EntriesSlice = createSlice({
         state.error = action.payload;
       });
 
+    // Add Payment
+    builder
+      .addCase(addPayment.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(addPayment.fulfilled, (state, action) => {
+        state.loading = false;
+        state.successMessage = action.payload.msg;
+        if (action.payload.data) {
+          state.entry = action.payload.data;
+          state.events = action.payload.data.events;
+        }
+      })
+      .addCase(addPayment.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      });
     // 🟢 getPlayerEntries
     builder
       .addCase(getPlayerEntries.pending, (state) => {

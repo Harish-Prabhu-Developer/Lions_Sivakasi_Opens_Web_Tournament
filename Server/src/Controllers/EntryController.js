@@ -1,7 +1,7 @@
 // EntryController.js
 import EntryModel from "../Models/EntryModel.js";
 import PaymentModel from "../Models/PaymentModel.js";
-
+import mongoose from "mongoose";
 /**
  * Add or update player's events (Add to Cart style)
  * @param {*} req
@@ -83,7 +83,7 @@ export const getPlayerEntries = async (req, res) => {
   try {
     const entries = await EntryModel.find({ player: req.user.id })
       .populate("player", "name TnBaId academyName place district")
-      .populate("events.payment");
+      .populate("events.payment").populate("events.ApproverdBy");
 
     // If no entries or all events arrays empty, send empty response.
     if (!entries.length || !entries.some((e) => e.events.length)) {
@@ -204,31 +204,61 @@ export const updateEventItem = async (req, res) => {
   }
 };
 
-
 /** * approve or reject an entry event (Admin)
- * @param {*} req
- * @param {*} res
- */
+ * @param {*} req
+ * @param {*} res
+ */
 export const approveRejectEvent = async (req, res) => {
-  try {
-    const { entryId, eventId } = req.params;
-    const { status } = req.body;
-    const entry = await EntryModel.findById(entryId);
-    if (!entry) {
-      return res.status(404).json({ success: false, msg: "Entry not found" });
+  try {
+    // --- FIX START: Validate and cast IDs ---
+
+    // 1. Validate and cast Admin ID (Approver)
+    const approverIdString = req.user.id;
+    if (!mongoose.Types.ObjectId.isValid(approverIdString)) {
+        console.error("❌ Invalid Admin ID provided by request context:", approverIdString);
+        return res.status(401).json({ success: false, msg: "Authentication failed: Invalid Admin ID format." });
     }
-    const event = entry.events.find((e) => e._id.toString() === eventId);
-    if (!event) {
-      return res.status(404).json({ success: false, msg: "Event not found" });
+    const approverId = new mongoose.Types.ObjectId(approverIdString);
+    
+    // 2. Validate Entry ID from params
+    const { entryId, eventId } = req.params;
+    
+    if (!mongoose.Types.ObjectId.isValid(entryId)) {
+        console.error("❌ Invalid Entry ID format in request params:", entryId);
+        return res.status(400).json({ success: false, msg: "Invalid Entry ID format provided." });
     }
-    event.ApproverdBy = req.user.id;
-    event.status = status;
-    await entry.save();
-    res.status(200).json({ success: true, data: entry });
-  } catch (err) {
-    res.status(500).json({ success: false, msg: err.message });
-  }
+    // --- FIX END ---
+
+    const { status } = req.body;
+    
+    // Use the validated entryId string
+    const entry = await EntryModel.findById(entryId).populate("events.payment").populate("events.ApproverdBy").populate("player");
+    
+    if (!entry) {
+      return res.status(404).json({ success: false, msg: "Entry not found" });
+    }
+    
+    // 3. Find event using Mongoose's .equals() for robust comparison
+    const event = entry.events.find((e) => e._id.equals(eventId));
+    
+    if (!event) {
+      return res.status(404).json({ success: false, msg: "Event not found" });
+    }
+
+    // 4. Update fields using the casted Admin ID
+    event.ApproverdBy = approverId;
+    event.status = status;
+    
+    await entry.save();
+    
+    res.status(200).json({ success: true, data: entry });
+    
+  } catch (err) {
+    console.error("❌ Error in approveRejectEvent:", err);
+    res.status(500).json({ success: false, msg: err.message });
+  }
 };
+
 
 /**
  * ✅ Add or update partner details for a specific player's event
@@ -249,7 +279,7 @@ export const addPartnerToEvent = async (req, res) => {
       });
     }
 
-    const playerId = req.user._id; // ✅ Logged-in player's ID from token
+    const playerId = req.user.id; // ✅ Logged-in player's ID from token
 
     // 1️⃣ Find the player's entry
     const entry = await EntryModel.findOne({ player: playerId });

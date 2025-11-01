@@ -31,20 +31,50 @@ const EntryPage = () => {
       place: user?.place || "",
       district: user?.district || "",
     },
+
     // Partners now keyed by a unique combination of category and event type
     partners: {}, // Keyed by: 'Category|EventType' (e.g., 'Under 15 Boys & Girls|Doubles')
   });
 
-  useEffect(() => {
-    const fetchEvents = async () => {
-      try {
-        const res = await dispatch(getPlayerEntries()).unwrap();
-        console.log("response : ", res.data);
-        await setSelectedEvents(res.data.events);
-      } catch (error) {}
-    };
-    fetchEvents();
-  }, [dispatch]);
+useEffect(() => {
+  const fetchEvents = async () => {
+    try {
+      const res = await dispatch(getPlayerEntries()).unwrap();
+      const events = res?.data?.events || res?.events || [];
+
+      setSelectedEvents(events);
+
+      // 🧠 Extract partner data from fetched events
+      const partnersMap = {};
+      events.forEach((ev) => {
+        if (ev.partner) {
+          const key = `${ev.category}|${ev.type}`;
+          partnersMap[key] = {
+            fullName: ev.partner.fullname || "",
+            tnbaId: ev.partner.TnBaId || "",
+            dob: ev.partner.dob || "",
+            academyName: ev.partner.academyName || "",
+            place: ev.partner.place || "",
+            district: ev.partner.district || "",
+          };
+        }
+      });
+
+      // 👫 Initialize partners in playersData
+      setPlayersData((prev) => ({
+        ...prev,
+        partners: partnersMap,
+      }));
+
+      console.log("✅ Initialized partnersData:", partnersMap);
+    } catch (error) {
+      console.error("❌ Error fetching player entries:", error);
+    }
+  };
+
+  fetchEvents();
+}, [dispatch]);
+
   // --- Step 2 Logic Configuration ---
 
   const doublesEvents = useMemo(
@@ -105,33 +135,51 @@ const EntryPage = () => {
 
   // --- State Update Handlers ---
 
-  const onFormChange = useCallback(
-    (key, value) => {
-      if (!currentFormDef) return;
+const onFormChange = useCallback(
+  (key, value) => {
+    if (!currentFormDef) return;
 
-      if (currentFormDef.type === "player") {
-        // Update the main player data
-        setPlayersData((prev) => ({
-          ...prev,
-          player: { ...prev.player, [key]: value },
-        }));
-      } else if (currentFormDef.type === "partner") {
-        // Update the specific partner data using the unique key
-        const partnerKey = currentFormDef.key;
-        setPlayersData((prev) => ({
-          ...prev,
-          partners: {
-            ...prev.partners,
-            [partnerKey]: {
-              ...(prev.partners[partnerKey] || {}),
-              [key]: value,
-            },
+    if (currentFormDef.type === "player") {
+      // 🧍 Update main player details
+      setPlayersData((prev) => ({
+        ...prev,
+        player: { ...prev.player, [key]: value },
+      }));
+    } else if (currentFormDef.type === "partner") {
+      const partnerKey = currentFormDef.key;
+
+      // 👫 Update partner details in playersData
+      setPlayersData((prev) => ({
+        ...prev,
+        partners: {
+          ...prev.partners,
+          [partnerKey]: {
+            ...(prev.partners[partnerKey] || {}),
+            [key]: value,
           },
-        }));
-      }
-    },
-    [currentFormDef]
-  );
+        },
+      }));
+
+      // 🆕 Also update partner info inside selectedEvents
+      setSelectedEvents((prev) =>
+        prev.map((event) => {
+          const eventKey = `${event.category}|${event.type}`;
+          if (eventKey === partnerKey) {
+            return {
+              ...event,
+              partner: {
+                ...(event.partner || {}),
+                [key]: value,
+              },
+            };
+          }
+          return event;
+        })
+      );
+    }
+  },
+  [currentFormDef]
+);
 
   // --- Navigation Handlers ---
 
@@ -177,6 +225,8 @@ const EntryPage = () => {
     };
     // condition based CurrentFromDef==="player"
     if (currentFormDef.type === "player") {
+      console.log("Player Payload : ",playerPayload);
+      
       try {
         setLoading(true);
         const resultAction = await dispatch(updatePlayerForm(playerPayload));
@@ -210,7 +260,7 @@ const EntryPage = () => {
         setLoading(false);
       }
     } else if (currentFormDef.type === "partner") {
-      const partnerKey = currentFormDef.key;
+       const partnerKey = currentFormDef.key;
       const partnerData = playersData.partners[partnerKey];
 
       const { category, eventType } = currentFormDef;

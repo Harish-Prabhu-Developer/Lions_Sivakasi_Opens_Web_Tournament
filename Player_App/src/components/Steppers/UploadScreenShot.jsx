@@ -6,9 +6,10 @@ import { PiFileImageBold } from "react-icons/pi";
 import Tesseract from "tesseract.js";
 import { paymentApps } from "../../utils/Payment";
 import { useDispatch, useSelector } from "react-redux";
-import { getPlayerEntries } from "../../redux/Slices/EntriesSlice";
+import { addPayment, getPlayerEntries } from "../../redux/Slices/EntriesSlice";
+import { useNavigate } from "react-router-dom";
 
-const UploadScreenShot = ({ expectedAmount, expectedUPI, setStep }) => {
+const UploadScreenShot = ({ expectedAmount, expectedUPI, onBack,selectedEvents }) => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [preview, setPreview] = useState(null);
   const [validationStatus, setValidationStatus] = useState(null);
@@ -16,7 +17,7 @@ const UploadScreenShot = ({ expectedAmount, expectedUPI, setStep }) => {
   const [extractedData, setExtractedData] = useState(null);
   const [progress, setProgress] = useState(0);
   const dispatch=useDispatch();
-
+  const navigate=useNavigate();
 
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
@@ -166,32 +167,60 @@ const UploadScreenShot = ({ expectedAmount, expectedUPI, setStep }) => {
     setProgress(0);
   };
 
-  const handleUpload = () => {
-    
-      // ✅ Log Base64 data of the uploaded image
-  console.log("🖼️ Uploaded Image Base64 Data:", preview);
-    toast.success("Screenshot uploaded successfully!");
-  };
 
-  const handleSubmit=async() => {
-  // try {
+
+const handleSubmit = async () => {
+  if (!preview) {
+    toast.error("Please upload a screenshot first.");
+    return;
+  }
+
+  if (!selectedFile || validationStatus !== "success") {
+    toast.error("Please upload a valid payment screenshot.");
+    return;
+  }
+
+  if (!selectedEvents || selectedEvents.length === 0) {
+    toast.error("No events selected to link payment!");
+    return;
+  }
+
+  
+  
+  try {
+    // ✅ Build payload for backend
     const payload = {
-      // entryId: playerEntryId,
-      paymentProof: preview, // base64 string
-      paymentApp: extractedData.app,
-      paymentAmount: extractedData.amount,
-      senderUpiId: extractedData.senderUPI,
-      // paymentBy: user._id,
+      entryId: selectedEvents.map((e) => e._id), // list of entry IDs
+      paymentProof: preview, // base64 image
+      status: "Paid",
+      metadata: {
+        paymentApp: extractedData.app,
+        paymentAmount: extractedData.amount,
+        senderUpiId: extractedData.senderUPI,
+      },
     };
 
-    console.log("Payment Payload : ",payload);
+    console.log("💳 Sending Payment Payload:", payload);
+
+    // ✅ Dispatch Redux thunk
+    const res = await dispatch(addPayment(payload)).unwrap();
+    console.log("Payment res : ",res);
     
-    // const res = await axios.post(`${API_URL}/payments/add`, payload);
-    // if (res.data.success) toast.success("Payment successfully submitted!");
-  // } catch (error) {
-  //   toast.error("Failed to submit payment");
-  // }
-          }
+    if (res.success) {
+      toast.success("Event payment submitted successfully!");
+      toast.success(res.msg);
+
+      dispatch(getPlayerEntries()); // refresh player entries
+      navigate("/dashboard");
+    } else {
+      toast.error(res.msg || "Failed to upload payment.");
+    }
+  } catch (err) {
+    console.error("❌ Payment Error:", err);
+    toast.error(err.msg || "Error submitting payment.");
+  }
+};
+
   return (
     <div className="w-full space-y-6">
       {/* Upload Card */}
@@ -365,35 +394,17 @@ const UploadScreenShot = ({ expectedAmount, expectedUPI, setStep }) => {
           </div>
         )}
 
-        {/* Action Buttons */}
-        <div className="mt-4 md:mt-6 flex gap-6 md:gap-3 justify-center">
-          <button
-            type="button"
-            onClick={handleRemoveFile}
-            className="px-3 md:px-4 py-2 md:py-2.5 text-sm md:text-base bg-gray-700/40 hover:bg-gray-600/50 border border-gray-500/40 hover:border-gray-400/50 active:scale-95 transition-all text-gray-300 hover:text-white rounded-xl font-semibold shadow-lg"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={handleUpload}
-            disabled={!selectedFile || validationStatus !== "success"}
-            className="px-3 md:px-4 py-2 md:py-2.5 text-sm md:text-base bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed disabled:opacity-50 active:scale-95 transition-all text-white rounded-xl font-bold shadow-xl shadow-cyan-500/30 disabled:shadow-none"
-          >
-            {validationStatus === "validating" ? "Verifying..." : "Confirm Upload"}
-          </button>
-        </div>
       </div>
 
       {/* Navigation Buttons */}
       <div className="flex items-center justify-between gap-3 md:gap-4 pt-2">
-        <button onClick={() => setStep(2)} className="btn btn-secondary">
+        <button onClick={onBack} className="btn btn-secondary">
           Back
         </button>
         <button
-          disabled={!selectedFile || validationStatus !== "success" }
+          
           onClick={handleSubmit}
-          className="btn btn-primary"
+          className="btn btn-primary disabled:pointer-events-auto disabled:opacity-50"
         >
           Submit Entry
         </button>

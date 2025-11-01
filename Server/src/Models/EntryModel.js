@@ -49,6 +49,7 @@ const EntrySchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+  
     events: {
       type: [EventSchema],
       validate: {

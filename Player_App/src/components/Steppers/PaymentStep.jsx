@@ -90,7 +90,8 @@ const PaymentStep = ({
       <UploadScreenShot
         expectedAmount={totalFee}
         expectedUPI={upi}
-        setStep={() => {}}
+        onBack={onBack}
+        selectedEvents={selectedEvents}
       />
 
 

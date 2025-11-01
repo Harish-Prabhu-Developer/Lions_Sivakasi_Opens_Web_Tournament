@@ -6,7 +6,6 @@ import LoginForm from "../components/Auth/LoginForm";
 import RegisterForm from "../components/Auth/RegisterForm";
 import AuthTabs from "../components/Auth/AuthTabs";
 import axios from "axios";
-import { useContext } from "react";
 
 import { decryptData, encryptData } from "../utils/cryptoUtils";
 import { API_URL } from "../constants";

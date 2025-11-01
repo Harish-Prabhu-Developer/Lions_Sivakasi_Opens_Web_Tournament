@@ -161,12 +161,13 @@ const DashboardPage = () => {
   useEffect(() => {
     const fetchEntries = async () => {
       try {
-        const res =await dispatch(getPlayerEntries());
-        console.log("Res : ",res.payload.data);
+        const res = await dispatch(getPlayerEntries()).unwrap();
+        const events = res?.data?.events || res?.events || [];
         
-        setEntries(res.payload.data.events);
+        setEntries(events);
       } catch (err) {
-        console.error(err);
+        toast.error("Server Down",{duration: 7000});
+        console.error("Error fetchEntries:",err);
       }
     };
     fetchEntries();
@@ -210,23 +211,33 @@ const DashboardPage = () => {
     (e) => e.type.toLowerCase() === "mixed doubles"
   ).length;
 
-  const canAddNewEntry =
-    totalEntries < 4 && singlesOrDoublesCount < 3 && mixedDoublesCount < 1;
+//   console.log("🔎 Debug Entry Counts:");
+// console.log("Total Entries:", totalEntries);
+// console.log("Singles/Doubles Count:", singlesOrDoublesCount);
+// console.log("Mixed Doubles Count:", mixedDoublesCount);
+
+// const canAddNewEntry =
+//   totalEntries < 4 && singlesOrDoublesCount < 3 && mixedDoublesCount < 1;
+const canAddNewEntry =
+  totalEntries < 4 &&
+  (singlesOrDoublesCount < 3 || mixedDoublesCount < 1);
+
+// console.log("✅ Can Add New Entry:", canAddNewEntry);
 
   // 📩 Handlers
-  const handleEntry = () => {
-    if (!canAddNewEntry) {
-      let reason = "";
-      if (totalEntries >= 4)
-        reason = "You have reached the maximum of 4 total entries.";
-      else if (singlesOrDoublesCount >= 3)
-        reason = "You can only register for up to 3 Singles or Doubles events.";
-      else if (mixedDoublesCount >= 1)
-        reason = "You can register for only one Mixed Doubles event.";
-      toast.error(reason, { duration: 4000 });
-      return;
-    }
+const handleEntry = () => {
+  if (!canAddNewEntry) {
+    let reason = "";
+    if (totalEntries >= 4)
+      reason = "You have reached the maximum of 4 total entries.";
+    else if (singlesOrDoublesCount >= 3)
+      reason = "You can only register for up to 3 Singles or Doubles events.";
+    else if (mixedDoublesCount >= 1)
+      reason = "You can register for only one Mixed Doubles event.";
 
+    toast.error(reason, { duration: 4000 });
+    return;
+  }
     navigate("/entry"); // ✅ Fixed: use absolute path
   };
 
@@ -415,6 +426,7 @@ const handleLogout = async () => {
             <Plus className="w-5 h-5" />
             <span className="hidden xs:inline">New Entry</span>
           </button>
+
         </div>
 
         {/* Entries List */}
@@ -426,7 +438,7 @@ const handleLogout = async () => {
             </p>
             <button
               className="px-8 py-3 bg-gradient-to-r from-cyan-500 to-cyan-400 text-white rounded-full font-semibold shadow-md hover:scale-105 transition-all text-base sm:text-lg"
-              onClick={handleEntry}
+              disabled={!canAddNewEntry}onClick={handleEntry}
             >
               Register for Tournament
             </button>

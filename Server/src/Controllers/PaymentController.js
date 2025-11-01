@@ -1,137 +1,96 @@
-// Controllers/PaymentController.js
-import Payment from "../Models/PaymentModel.js";
-import Entry from "../Models/EntryModel.js";
+import PaymentModel from "../Models/PaymentModel.js";
+import EntryModel from "../Models/EntryModel.js";
+import mongoose from "mongoose"; // <-- ADDED: Needed for explicit ObjectId validation and casting
 
-// ✅ 1. Create & Link Payment
-export const addPayment = async (req, res) => {
-  try {
-    const {
-      entryId,             // 🆔 Related Entry document
-      paymentProof,        // base64 or uploaded image URL
-      paymentApp,          // from OCR (GPay, PhonePe, etc.)
-      paymentAmount,       // from OCR extracted amount
-      senderUpiId,         // from OCR sender ID
-      paymentBy,           // user._id
-    } = req.body;
+export const addToEventPayment = async (req, res) => {
+  try {
+    const playerId = req.user.id;
+    const { paymentProof, status, metadata } = req.body;
+    // Renaming input 'entryId' to 'eventSubIdList' internally to clarify its contents (event sub-document IDs)
+    let { entryId: eventSubIdList } = req.body;
 
-    if (!entryId || !paymentProof || !paymentAmount || !paymentBy) {
-      return res.status(400).json({
-        success: false,
-        message: "Missing required fields: entryId, paymentProof, amount, or paymentBy.",
-      });
+    // ✅ Step 1: Sanitize and validate event sub-document IDs
+    if (Array.isArray(eventSubIdList)) {
+      eventSubIdList = eventSubIdList
+        .map(id => {
+          // Check if the string is a valid ObjectId format
+          if (mongoose.Types.ObjectId.isValid(id)) {
+            return new mongoose.Types.ObjectId(id);
+          }
+          return null; // Filter out invalid IDs
+        })
+        .filter(id => id !== null); // Remove nulls
+    } else {
+      eventSubIdList = []; // Default to empty array if input isn't an array
+    }
+    
+    // Check to prevent creating payment if no valid IDs were found
+    if (eventSubIdList.length === 0) {
+        return res.status(400).json({
+            success: false,
+            msg: "No valid event IDs were provided to link the payment."
+        });
     }
 
-    // ✅ Create Payment document
-    const newPayment = await Payment.create({
-      paymentProof,
-      status: "Paid",
-      metadata: {
-        paymentApp,
-        paymentAmount,
-        senderUpiId,
-      },
-      paymentBy,
-      entryId,
+    // ✅ Step 2: Find the parent Entry documents associated with these event sub-document IDs
+    const entriesToUpdate = await EntryModel.find({
+        // Find Entry documents that have an 'events' sub-document matching any of the provided IDs
+        "events._id": { $in: eventSubIdList },
+        player: playerId // Crucial: ensure we only update the current player's entries
     });
 
-    // ✅ Link Payment -> Entry
-    await Entry.findByIdAndUpdate(
-      entryId,
-      { $set: { "events.$[].payment": newPayment._id } }, // links all events
-      { new: true }
-    );
-
-    res.status(201).json({
-      success: true,
-      message: "Payment added successfully and linked to entry.",
-      payment: newPayment,
-    });
-  } catch (error) {
-    console.error("❌ addPayment Error:", error);
-    res.status(500).json({ success: false, message: error.message });
-  }
-};
-
-// ✅ 2. Get all Payments
-export const getPayments = async (req, res) => {
-  try {
-    const payments = await Payment.find()
-      .populate("paymentBy", "fullName email")
-      .populate("entryId", "_id")
-      .sort({ createdAt: -1 });
-
-    res.status(200).json({ success: true, count: payments.length, data: payments });
-  } catch (error) {
-    console.error("❌ getPayments Error:", error);
-    res.status(500).json({ success: false, message: error.message });
-  }
-};
-
-// ✅ 3. Get Payment by ID
-export const getPaymentById = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const payment = await Payment.findById(id)
-      .populate("paymentBy", "fullName email")
-      .populate("entryId", "_id events");
-
-    if (!payment) {
-      return res.status(404).json({ success: false, message: "Payment not found." });
+    if (entriesToUpdate.length === 0) {
+        return res.status(404).json({
+            success: false,
+            msg: "No entries found for the current player matching the provided event IDs."
+        });
     }
 
-    res.status(200).json({ success: true, data: payment });
-  } catch (error) {
-    console.error("❌ getPaymentById Error:", error);
-    res.status(500).json({ success: false, message: error.message });
-  }
-};
+    // Extract unique top-level Entry IDs. This is what the Payment.entryId field should store.
+    const uniqueParentEntryIds = entriesToUpdate.map(entry => entry._id);
 
-// ✅ 4. Update Payment Status
-export const updatePaymentStatus = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { status } = req.body;
+    // ✅ Step 3: Create a new Payment record, linking to the PARENT Entry IDs
+    const payment = await PaymentModel.create({
+      paymentProof,
+      entryId: uniqueParentEntryIds, // Use the unique PARENT Entry IDs
+      status: status || "Paid",
+      metadata,
+      paymentBy: playerId,
+    });
 
-    if (!["Paid", "Pending", "Failed"].includes(status)) {
-      return res.status(400).json({ success: false, message: "Invalid payment status." });
-    }
+    // ✅ Step 4: Update each Entry document, but only the specific events paid for
+    for (const entry of entriesToUpdate) {
+        let entryWasModified = false;
+        entry.events.forEach((event) => {
+            // Check if this specific event sub-document ID is in the list of paid-for IDs
+            const isPaidEvent = eventSubIdList.some(id => id.equals(event._id));
 
-    const updatedPayment = await Payment.findByIdAndUpdate(
-      id,
-      { status },
-      { new: true }
-    );
+            // Only assign if the event was paid for AND no payment is already linked
+            if (isPaidEvent && !event.payment) {
+              event.payment = payment._id;
+                entryWasModified = true;
+            }
+        });
 
-    if (!updatedPayment) {
-      return res.status(404).json({ success: false, message: "Payment not found." });
-    }
+        // Only save the document if any of its events were modified
+        if (entryWasModified) {
+          await entry.save();
+        }
+    }
 
-    res.status(200).json({ success: true, message: "Payment status updated.", data: updatedPayment });
-  } catch (error) {
-    console.error("❌ updatePaymentStatus Error:", error);
-    res.status(500).json({ success: false, message: error.message });
-  }
-};
+    // ✅ Step 5: Fetch updated entries for response
+    const entries = await EntryModel.find({ player: req.user.id })
+      .populate("player", "name TnBaId academyName place district")
+      .populate("events.payment");
 
-// ✅ 5. Delete Payment (Optional)
-export const deletePayment = async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const deleted = await Payment.findByIdAndDelete(id);
-    if (!deleted) {
-      return res.status(404).json({ success: false, message: "Payment not found." });
-    }
-
-    // Optional cleanup: unlink payment in entries
-    await Entry.updateMany(
-      { "events.payment": id },
-      { $unset: { "events.$[].payment": "" } }
-    );
-
-    res.status(200).json({ success: true, message: "Payment deleted successfully." });
-  } catch (error) {
-    console.error("❌ deletePayment Error:", error);
-    res.status(500).json({ success: false, message: error.message });
-  }
+    res.status(200).json({
+      success: true,
+      msg: "Payment added and linked to all specified entry events successfully.",
+      data: entries,
+      payment:payment
+    });
+  } catch (err) {
+    console.error("❌ Error in addToEventPayment:", err);
+    res.status(500).json({ success: false, msg: err.message });
+  }
 };

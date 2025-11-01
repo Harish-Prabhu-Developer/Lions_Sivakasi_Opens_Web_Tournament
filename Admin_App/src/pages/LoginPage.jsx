@@ -48,10 +48,8 @@ const LoginPage = () => {
 
         if (res.data.success) {
           const { user, token } = res.data.data;
-          localStorage.setItem("token", token);
-          localStorage.setItem("user", JSON.stringify(user)); // ✅ store user too
-          // setUser(user);
-          // setIsLoggedIn(true); // ✅ optional, ensures immediate UI sync
+        localStorage.setItem("token", token);
+        localStorage.setItem("user", JSON.stringify(user)); // ✅ store user too
 
           // Remember Me on LoginSuccess logic
           if (rememberMe) {
@@ -67,6 +65,13 @@ const LoginPage = () => {
         }
       } catch (error) {
         console.error("Login Error:", error);
+        if (error.response?.status===401) {
+          console.log("Error : ",error.response.data.msg);
+          setError(error.response.data.msg);
+        } else if (error.response?.status===404) {
+            console.log("Error : ",error.response.data.msg);
+          setError(error.response.data.msg);
+        }
         const serverMsg =
           error.response?.data?.msg ||
           (error.response?.status === 500

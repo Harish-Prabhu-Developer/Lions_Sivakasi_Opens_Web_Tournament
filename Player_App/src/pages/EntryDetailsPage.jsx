@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ArrowLeft, Edit, CheckCircle, CreditCard, Shield,User, Hash, Calendar, School, MapPin, LocateIcon } from "lucide-react";
 import { toast } from "react-hot-toast";
@@ -16,9 +16,16 @@ const iconMap = {
   const location = useLocation();
   const navigate = useNavigate();
   const entry = location.state?.entry;
-
+  useEffect(() => {
+    console.log("entry : ",entry);
+    
+    if (!entry) {
+      navigate("/dashboard");
+    }
+  }, [])
+  
   const [isEditing, setIsEditing] = useState(false);
-  const [partnerData, setPartnerData] = useState(entry?.Partner || {});
+  const [partnerData, setPartnerData] = useState(entry?.partner || {});
 
   if (!entry) {
     return (
@@ -80,6 +87,23 @@ const iconMap = {
             year: "numeric",
           })}
         </p>
+        {/* Status */}
+        <div>
+          <p className="text-sm text-gray-300">
+            Status:{" "}
+            <span
+              className={`font-semibold ${
+                entry.status === "Approved"
+                  ? "text-green-400"
+                  : entry.status === "Pending Review"
+                  ? "text-yellow-400"
+                  : "text-red-400"
+              }`}
+            >
+              {entry.status}
+            </span>
+          </p>
+        </div>
       </div>
 
       {/* Partner Details */}
@@ -100,10 +124,10 @@ const iconMap = {
         {/* 🔹 Map labels to actual partnerData keys */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           {[
-            { label: "Full Name", key: "fullName" },
-            { label: "TNBA ID", key: "TNBAID" },
+            { label: "Full Name", key: "fullname" },
+            { label: "TNBA ID", key: "TnBaId" },
             { label: "Date of Birth", key: "dob" },
-            { label: "Academy Name", key: "academy" },
+            { label: "Academy Name", key: "academyName" },
             { label: "Place", key: "place" },
             { label: "District", key: "district" },
           ].map(({ label, key }) => (
@@ -140,6 +164,8 @@ const iconMap = {
 
 
       {/* Admin Approval Details */}
+      {entry?.ApproverdBy&&(
+
       <div className="bg-[#192339]/80 border border-cyan-400/10 rounded-xl shadow-md p-6">
         <h3 className="text-lg md:text-xl font-semibold text-white flex items-center gap-2 mb-4">
           <Shield className="w-5 h-5 text-cyan-400" /> Admin Approval
@@ -186,6 +212,7 @@ const iconMap = {
           </div>
         </div>
       </div>
+      )}
     </div>
   );
 };

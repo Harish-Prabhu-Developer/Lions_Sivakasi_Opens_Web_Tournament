@@ -1,19 +1,44 @@
 import Layout from './pages/Layout';
 import DashboardPage from './pages/DashboardPage';
 import LoginPage from './pages/LoginPage';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route,Navigate,Outlet } from 'react-router-dom';
+import EntriesPage from './pages/EntriesPage';
+import UsersPage from './pages/UsersPage';
+import ReportPage from './pages/ReportPage';
+import PartnerChangeRequestPage from './pages/PartnerChangeRequestPage';
+function ProtectedRoute() {
+  const isLoggedIn = localStorage.getItem('token');
+  return isLoggedIn ? <Outlet /> : <Navigate to="/login" replace />;
+}
+
+function PublicRoute() {
+  const isLoggedIn = localStorage.getItem('token');
+  return isLoggedIn ? <Navigate to="/" replace /> : <Outlet />;
+}
+
 function App() {
   return (
     <Router>
       <Routes>
-        {/* Auth Routes */}
-        <Route path="/login" element={<LoginPage />} />
-
-        {/* Protected Layout */}
-        <Route path="/" element={<Layout />}>
-          <Route index element={<DashboardPage />} />
-          {/* Add more nested pages below */}
+        {/* Public route for login, redirects if logged in */}
+        <Route element={<PublicRoute />}>
+          <Route path="/login" element={<LoginPage />} />
         </Route>
+
+        {/* Protected Layout wrapped with ProtectedRoute */}
+        <Route element={<ProtectedRoute />}>
+          <Route path="/" element={<Layout />}>
+            <Route index element={<DashboardPage />} />
+            <Route path='/entries' element={<EntriesPage/>}/>
+            <Route path='/users' element={<UsersPage/>}/>
+            <Route path='/reports'element={<ReportPage/>}/>
+            <Route path='/partners'element={<PartnerChangeRequestPage/>}/>
+            {/* Add more nested pages below */}
+          </Route>
+        </Route>
+
+        {/* Catch-all route */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
   );
