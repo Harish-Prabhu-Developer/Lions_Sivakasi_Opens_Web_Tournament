@@ -7,7 +7,7 @@ import RegisterForm from "../components/Auth/RegisterForm";
 import AuthTabs from "../components/Auth/AuthTabs";
 import axios from "axios";
 import { useContext } from "react";
-import AuthContext from "../components/Auth/AuthContext";
+
 import { decryptData, encryptData } from "../utils/cryptoUtils";
 import { API_URL } from "../constants";
 import ForgotPasswordForm from "../components/Auth/ForgotPasswordForm";
@@ -29,7 +29,7 @@ const RegisterPage = ({ active = "login" }) => {
   });
   const [remember, setRemember] = useState(false);
   const navigate = useNavigate();
-  const { setUser, setIsLoggedIn } = useContext(AuthContext);
+
   // On mount, check if saved login data exists and pre-fill
   useEffect(() => {
     const savedEncrypted = localStorage.getItem("rememberedLogin");
@@ -60,8 +60,6 @@ const RegisterPage = ({ active = "login" }) => {
         const { user, token } = res.data.data;
         localStorage.setItem("token", token);
         localStorage.setItem("user", JSON.stringify(user)); // ✅ store user too
-        setUser(user);
-        setIsLoggedIn(true); // ✅ optional, ensures immediate UI sync
 
         if (remember) {
           localStorage.setItem(

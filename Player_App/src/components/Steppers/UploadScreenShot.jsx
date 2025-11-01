@@ -1,3 +1,4 @@
+// UploadScreenShot.jsx
 import { ImagePlus, X, CheckCircle2, AlertCircle, Loader2, Upload } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import toast from "react-hot-toast";
@@ -14,7 +15,6 @@ const UploadScreenShot = ({ expectedAmount, expectedUPI, setStep }) => {
   const [validationMessage, setValidationMessage] = useState("");
   const [extractedData, setExtractedData] = useState(null);
   const [progress, setProgress] = useState(0);
-  const [uploadProgress, setUploadProgress] = useState(false);
   const dispatch=useDispatch();
 
 
@@ -167,23 +167,30 @@ const UploadScreenShot = ({ expectedAmount, expectedUPI, setStep }) => {
   };
 
   const handleUpload = () => {
-    setUploadProgress(true);
+    
       // ✅ Log Base64 data of the uploaded image
   console.log("🖼️ Uploaded Image Base64 Data:", preview);
     toast.success("Screenshot uploaded successfully!");
   };
 
   const handleSubmit=async() => {
-            try {
-                      const response = await dispatch(getPlayerEntries()).unwrap();
-                      const playerEntries = response.data.events;
-                      console.log(playerEntries);
-                      
-            } catch (error) {
-              
-            }
-            
-            toast.success("Entry Successfully Submitted!", { duration: 3000 });
+  // try {
+    const payload = {
+      entryId: playerEntryId,
+      paymentProof: preview, // base64 string
+      paymentApp: extractedData.app,
+      paymentAmount: extractedData.amount,
+      senderUpiId: extractedData.senderUPI,
+      paymentBy: user._id,
+    };
+
+    console.log("Payment Payload : ",payload);
+    
+    // const res = await axios.post(`${API_URL}/payments/add`, payload);
+    // if (res.data.success) toast.success("Payment successfully submitted!");
+  // } catch (error) {
+  //   toast.error("Failed to submit payment");
+  // }
           }
   return (
     <div className="w-full space-y-6">
@@ -384,7 +391,7 @@ const UploadScreenShot = ({ expectedAmount, expectedUPI, setStep }) => {
           Back
         </button>
         <button
-          disabled={!selectedFile || validationStatus !== "success" || !uploadProgress}
+          disabled={!selectedFile || validationStatus !== "success" }
           onClick={handleSubmit}
           className="btn btn-primary"
         >

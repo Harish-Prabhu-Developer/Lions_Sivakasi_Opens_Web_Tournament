@@ -6,11 +6,12 @@ import StepOneEventSelection from "../components/Steppers/StepOneEventSelection"
 import PlayerForm from "../components/PlayerForm";
 import PaymentStep from "../components/Steppers/PaymentStep";
 import { mockUser, tournamentData } from "../constants";
-import AuthContext from "../components/Auth/AuthContext";
-import { formatDate } from "../utils/dateUtils";
+
 import { useNavigate } from "react-router-dom";
-import { addToEvents, getPlayerEntries } from "../redux/Slices/EntriesSlice";
+import { addPartnerToEvent, addToEvents, getPlayerEntries } from "../redux/Slices/EntriesSlice";
 import { useDispatch } from "react-redux";
+import { getUser } from "../utils/authHelpers";
+import { updatePlayerForm } from "../redux/Slices/PlayerSlice";
 const EntryPage = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -18,16 +19,17 @@ const EntryPage = () => {
   const [loading, setLoading] = useState(false);
   const [selectedEvents, setSelectedEvents] = useState([]);
   const [step2Index, setStep2Index] = useState(0);
-  const { user } = useContext(AuthContext);
+  const user = getUser();
+
   // Main state holding player and partner data
   const [playersData, setPlayersData] = useState({
     player: {
-      fullName: user.name,
-      tnbaId: user.TNBAID,
-      dob: user.dob,
-      academyName: user.academy,
-      place: user.place,
-      district: user.district,
+      fullName: user?.name || "",
+      tnbaId: user?.TNBAID || "",
+      dob: user?.dob || "",
+      academyName: user?.academy || "",
+      place: user?.place || "",
+      district: user?.district || "",
     },
     // Partners now keyed by a unique combination of category and event type
     partners: {}, // Keyed by: 'Category|EventType' (e.g., 'Under 15 Boys & Girls|Doubles')
@@ -139,7 +141,7 @@ const EntryPage = () => {
       return;
     }
     const payload = {
-      playerId: user.id,
+      playerId: user?.id || "testid",
       events: selectedEvents,
     };
 
@@ -158,11 +160,12 @@ const EntryPage = () => {
     }
   };
 
-  const goNextStep2Form = async() => {
+  const goNextStep2Form = async () => {
     // Note: Validation is inside PlayerForm component, this runs on successful form submit
     console.log("STEP 2 PAYLOAD GENERATED:", playersData.player);
     // reStructure player data
-    const { fullName, tnbaId, dob, academyName, place, district } =playersData.player;
+    const { fullName, tnbaId, dob, academyName, place, district } =
+      playersData.player;
 
     const playerPayload = {
       name: fullName,
@@ -173,17 +176,72 @@ const EntryPage = () => {
       district,
     };
     // condition based CurrentFromDef==="player"
-    if (currentFormDef.type==="player") {
-      //Update Player Form
-      console.log("Player : ",playersData.player);
-      toast.success("Your Details Saved!")
-    }else if (currentFormDef.type==="partner") {
-      //add the Events
-      console.log("Player Partner : ",playersData.partners);
-      // give that msg based Category and type like Under 11 doubles Event added
-      // toast.success()
-    }
+    if (currentFormDef.type === "player") {
+      try {
+        setLoading(true);
+        const resultAction = await dispatch(updatePlayerForm(playerPayload));
+
+        if (updatePlayerForm.fulfilled.match(resultAction)) {
+          const updatedUser = resultAction.payload.data.user;
+
+          // ✅ Update localStorage
+          const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+          const newUserData = {
+            ...storedUser,
+            name: updatedUser.name,
+            dob: updatedUser.dob,
+            TNBAID: updatedUser.TnBaId,
+            academyName: updatedUser.academyName,
+            place: updatedUser.place,
+            district: updatedUser.district,
+          };
+
+          localStorage.setItem("user", JSON.stringify(newUserData));
+
+          toast.success("Your player details were saved successfully!");
+          console.log("✅ Player updated:", updatedUser);
+        } else {
+          throw new Error(resultAction.payload || "Player update failed");
+        }
+      } catch (error) {
+        console.error("❌ Player update error:", error);
+        toast.error(error.message || "Failed to update player details");
+      } finally {
+        setLoading(false);
+      }
+    } else if (currentFormDef.type === "partner") {
+      const partnerKey = currentFormDef.key;
+      const partnerData = playersData.partners[partnerKey];
+
+      const { category, eventType } = currentFormDef;
+
+      const payload = {
+        category,
+        type: eventType,
+        partner: {
+          fullname: partnerData.fullName,
+          TnBaId: partnerData.tnbaId,
+          dob: partnerData.dob,
+          academyName: partnerData.academyName,
+          place: partnerData.place,
+          district: partnerData.district,
+        },
+      };
+      console.log("Payload Partner : ",payload);
       
+      try {
+        setLoading(true);
+        const res = await dispatch(addPartnerToEvent(payload)).unwrap();
+        console.log("res add partner : ",res);
+        
+        toast.success(res.msg || `${category} ${eventType} partner added!`);
+      } catch (error) {
+        toast.error(error || "Failed to add partner");
+      } finally {
+        setLoading(false);
+      }
+    }
+
     // use the diapatch updatePlayerForm
     console.log("FORMATTED PLAYER PAYLOAD:", playerPayload);
 
@@ -285,6 +343,7 @@ const EntryPage = () => {
         {/* Step 3: Summary & Payment */}
         {step === 3 && (
           <PaymentStep
+            
             selectedEvents={selectedEvents}
             player={playersData.player}
             partners={playersData.partners}

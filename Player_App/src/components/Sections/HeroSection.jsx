@@ -1,7 +1,7 @@
 // HeroSection.jsx
 import React, { useContext, useEffect, useState } from "react";
 import { Calendar, MapPin, IndianRupee, Trophy, ArrowDown, Clock } from "lucide-react";
-import AuthContext from "../Auth/AuthContext";
+import { IsLoggedIn } from "../../utils/authHelpers";
 
 // Tournament data from flyer
 const TOURNEY = {
@@ -38,30 +38,20 @@ function useCountdown(targetDate) {
 
 const HeroSection = () => {
   const deadlineDays = useCountdown(TOURNEY.entryDeadline);
-  const { isLoggedIn, setIsLoggedIn } = useContext(AuthContext);
 
   // Improve loggedIn tracking with storage event and location change
-  useEffect(() => {
+const [isLoggedIn, setIsLoggedIn] = useState(IsLoggedIn());
 
-    const checkLoggedIn = () => {
-      const token = localStorage.getItem("token");
-      setIsLoggedIn(!!token);
-    };
+useEffect(() => {
+  const handleStorageChange = (e) => {
+    if (e.key === "token" || e.key === "user") {
+      setIsLoggedIn(IsLoggedIn());
+    }
+  };
+  window.addEventListener("storage", handleStorageChange);
+  return () => window.removeEventListener("storage", handleStorageChange);
+}, []);
 
-    checkLoggedIn();
-
-    const storageListener = (e) => {
-      if (e.key === "token") {
-        checkLoggedIn();
-      }
-    };
-
-    window.addEventListener("storage", storageListener);
-
-    return () => {
-      window.removeEventListener("storage", storageListener);
-    };
-  }, [setIsLoggedIn]);
   return (
     <section className="relative flex flex-col items-center w-full justify-center text-center min-h-screen bg-gradient-to-b from-[#071324] via-[#122344] to-[#1c2e44] text-gray-100 overflow-hidden pt-10 md:pt-0 px-2">
       <style>{`

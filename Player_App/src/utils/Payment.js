@@ -1,3 +1,4 @@
+// Payment.js
 export const paymentApps = [
       { name: "Google Pay", keywords: ["google pay", "gpay", "g pay", "google.com/pay"] },
       { name: "PhonePe", keywords: ["phonepe", "phone pe"] },

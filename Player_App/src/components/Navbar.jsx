@@ -1,40 +1,35 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Menu, X } from "lucide-react";
 import Logo from "../assets/logo.png";
-import AuthContext from "./Auth/AuthContext";
+import { IsLoggedIn } from "../utils/authHelpers";
 
 function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(IsLoggedIn());
   const location = useLocation();
-  const { isLoggedIn, setIsLoggedIn } = useContext(AuthContext);
 
-  // Improve loggedIn tracking with storage event and location change
+  // ✅ Handle scroll + listen for token changes
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener("scroll", handleScroll);
 
-    const checkLoggedIn = () => {
-      const token = localStorage.getItem("token");
-      setIsLoggedIn(!!token);
-    };
+    const updateLoginState = () => setIsLoggedIn(IsLoggedIn());
+    updateLoginState();
 
-    checkLoggedIn();
-
-    const storageListener = (e) => {
-      if (e.key === "token") {
-        checkLoggedIn();
+    // React to localStorage token updates (login/logout)
+    window.addEventListener("storage", (e) => {
+      if (e.key === "token" || e.key === "user") {
+        updateLoginState();
       }
-    };
-
-    window.addEventListener("storage", storageListener);
+    });
 
     return () => {
       window.removeEventListener("scroll", handleScroll);
-      window.removeEventListener("storage", storageListener);
+      window.removeEventListener("storage", updateLoginState);
     };
-  }, [location, setIsLoggedIn]);
+  }, [location]);
 
   const toggleMenu = () => setIsOpen((prev) => !prev);
 
@@ -86,6 +81,7 @@ function Navbar() {
               </li>
             );
           })}
+
           {!isLoggedIn && (
             <Link
               to="/register"
@@ -125,7 +121,7 @@ function Navbar() {
                     }`}
                   >
                     <span
-                      className={`text-sm font-medium${
+                      className={`text-sm font-medium ${
                         isActive
                           ? "text-cyan-300 after:w-full"
                           : "text-gray-200 hover:text-cyan-200"
@@ -137,6 +133,7 @@ function Navbar() {
                 </li>
               );
             })}
+
             {!isLoggedIn && (
               <Link
                 to="/register"

@@ -1,3 +1,4 @@
+// EntryController.js
 import EntryModel from "../Models/EntryModel.js";
 import PaymentModel from "../Models/PaymentModel.js";
 
@@ -169,7 +170,7 @@ export const updateEventItem = async (req, res) => {
 
     if (updatedEvent.status) event.status = updatedEvent.status;
     if (updatedEvent.payment) event.payment = updatedEvent.payment;
-    if (updatedEvent.ApprovedBy) event.ApprovedBy = updatedEvent.ApprovedBy;
+    if (updatedEvent.ApprovedBy) event.ApproverdBy = updatedEvent.ApprovedBy;
 
     // ✅ Validation
     if (entry.events.length > 4) {
@@ -225,6 +226,68 @@ export const approveRejectEvent = async (req, res) => {
     await entry.save();
     res.status(200).json({ success: true, data: entry });
   } catch (err) {
+    res.status(500).json({ success: false, msg: err.message });
+  }
+};
+
+/**
+ * ✅ Add or update partner details for a specific player's event
+ * Used in Step 2 Partner Form in EntryPage
+ */
+/**
+ * ✅ Add or update partner details for a specific player's event
+ * Used in Step 2 Partner Form in EntryPage
+ */
+export const addPartnerToEvent = async (req, res) => {
+  try {
+    const { category, type, partner } = req.body;
+
+    if (!category || !type || !partner) {
+      return res.status(400).json({
+        success: false,
+        msg: "Category, type, and partner details are required",
+      });
+    }
+
+    const playerId = req.user._id; // ✅ Logged-in player's ID from token
+
+    // 1️⃣ Find the player's entry
+    const entry = await EntryModel.findOne({ player: playerId });
+    if (!entry) {
+      return res.status(404).json({ success: false, msg: "Entry not found" });
+    }
+
+    // 2️⃣ Find the matching event
+    const event = entry.events.find(
+      (ev) =>
+        ev.category.toLowerCase() === category.toLowerCase() &&
+        ev.type.toLowerCase() === type.toLowerCase()
+    );
+
+    if (!event) {
+      return res.status(404).json({
+        success: false,
+        msg: `Event not found for ${category} - ${type}`,
+      });
+    }
+
+    // 3️⃣ Update partner details
+    event.partner = {
+      ...event.partner?.toObject?.() || {},
+      ...partner,
+    };
+    entry.markModified(`events.${entry.events.indexOf(event)}.partner`);
+
+    // 4️⃣ Save entry
+    await entry.save();
+
+    res.status(200).json({
+      success: true,
+      msg: `${category} (${type}) partner details added successfully!`,
+      data: entry,
+    });
+  } catch (err) {
+    console.log("AddPartner Error:", err);
     res.status(500).json({ success: false, msg: err.message });
   }
 };

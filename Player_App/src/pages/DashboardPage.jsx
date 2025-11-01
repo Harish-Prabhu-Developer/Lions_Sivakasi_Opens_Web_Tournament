@@ -18,15 +18,18 @@ import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { API_URL } from "../constants";
 import axios from "axios";
-import AuthContext from "../components/Auth/AuthContext";
+
 import EntryCard from "../components/EntryCard";
 import { formatDate, formatDateMonth,toDateInputValue } from "../utils/dateUtils";
 import {useDispatch, useSelector} from "react-redux";
 import { clearPlayerState, updatePlayerForm } from "../redux/Slices/PlayerSlice";
+import { getUser, IsLoggedIn, Logout } from "../utils/authHelpers";
 const DashboardPage = () => {
   const navigate = useNavigate();
-  const { logout, user } = useContext(AuthContext);
   const dispatch = useDispatch();
+  // ✅ Local auth state
+  const [user, setUser] = useState(getUser());
+  const [isLoggedIn, setIsLoggedIn] = useState(IsLoggedIn());
   
   // 🔹 Redux state
   const { loading, error, success } = useSelector((state) => state.player);
@@ -41,17 +44,42 @@ const DashboardPage = () => {
   });
 
   useEffect(() => {
-    if (user) {
-      setPlayerData({
-        fullName: user.name || "",
-        TNBAID: user.TNBAID || "",
-        dob: formatDate(user.dob) || "",
-        academy: user.academy || "",
-        place: user.place || "",
-        district: user.district || "",
-      });
+    if (!isLoggedIn) {
+      navigate("/login");
+      return;
     }
-  }, [user, setPlayerData]);
+
+    const storedUser = getUser();
+    if (storedUser) {
+      setPlayerData({
+        fullName: storedUser.name || "",
+        TNBAID: storedUser.TNBAID || "",
+        dob: formatDate(storedUser.dob) || "",
+        academy: storedUser.academy || "",
+        place: storedUser.place || "",
+        district: storedUser.district || "",
+      });
+      setUser(storedUser);
+    }
+  }, [isLoggedIn, navigate]);
+
+  // ✅ Update on storage or focus change
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === "user" || e.key === "token") {
+        setUser(getUser());
+        setIsLoggedIn(IsLoggedIn());
+      }
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    window.addEventListener("focus", () => setIsLoggedIn(IsLoggedIn()));
+
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener("focus", () => setIsLoggedIn(IsLoggedIn()));
+    };
+  }, []);
   // Icon mapping for labels
   const iconMap = {
     "Full Name": <User className="w-4 h-4 text-cyan-400" />,
@@ -68,74 +96,63 @@ const DashboardPage = () => {
     setPlayerData((prev) => ({ ...prev, [key]: value }));
   };
 
-// 🔹 Save player updates
-const handleSave = async () => {
-  const formData = {
-    name: playerData.fullName,
-    dob: playerData.dob,
-    TnBaId: playerData.TNBAID,
-    academyName: playerData.academy,
-    place: playerData.place,
-    district: playerData.district,
-  };
-
-  try {
-  const resultAction = await dispatch(updatePlayerForm(formData));
-
-  if (updatePlayerForm.fulfilled.match(resultAction)) {
-    const updatedUser = resultAction.payload.data.user;
-
-    // ✅ Parse the stored user correctly
-    const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
-
-    // ✅ Merge updated fields
-    const newUserData = {
-      ...storedUser,
-      name: updatedUser.name,
-      dob: formatDate(updatedUser.dob),
-      TNBAID: updatedUser.TnBaId,
-      academy: updatedUser.academyName,
-      place: updatedUser.place,
-      district: updatedUser.district,
+  // 🔹 Save player updates
+  const handleSave = async () => {
+    const formData = {
+      name: playerData.fullName,
+      dob: playerData.dob,
+      TnBaId: playerData.TNBAID,
+      academyName: playerData.academy,
+      place: playerData.place,
+      district: playerData.district,
     };
 
-    // ✅ Save the merged user object
-    localStorage.setItem("user", JSON.stringify(newUserData));
+    try {
+      const resultAction = await dispatch(updatePlayerForm(formData));
 
-    // ✅ Update local state for UI
-    setPlayerData({
-      fullName: updatedUser.name,
-      TNBAID: updatedUser.TnBaId,
-      dob:formatDate(updatedUser.dob),
-      academy: updatedUser.academyName,
-      place: updatedUser.place,
-      district: updatedUser.district,
-    });
+      if (updatePlayerForm.fulfilled.match(resultAction)) {
+        const updatedUser = resultAction.payload.data.user;
 
-    setIsEditing(false);
-    toast.success("Player details updated successfully!");
-  } else {
-    throw new Error(resultAction.payload || "Update failed");
-  }
-} catch (err) {
-  console.log("Error : ", err);
-  toast.error(err.message || "Failed to update player details");
-}
-};
+        const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+        const newUserData = {
+          ...storedUser,
+          name: updatedUser.name,
+          dob: formatDate(updatedUser.dob),
+          TNBAID: updatedUser.TnBaId,
+          academy: updatedUser.academyName,
+          place: updatedUser.place,
+          district: updatedUser.district,
+        };
 
-useEffect(() => {
-  if (success) {
-    // toast.success("Player updated successfully!");
-    dispatch(clearPlayerState());
-  }
-  if (error) {
-    console.log("Error : ",error);
-    
-    toast.error(error);
-    dispatch(clearPlayerState());
-  }
-}, [success, error, dispatch]);
+        localStorage.setItem("user", JSON.stringify(newUserData));
+        setUser(newUserData);
+        setPlayerData({
+          fullName: updatedUser.name,
+          TNBAID: updatedUser.TnBaId,
+          dob: formatDate(updatedUser.dob),
+          academy: updatedUser.academyName,
+          place: updatedUser.place,
+          district: updatedUser.district,
+        });
 
+        setIsEditing(false);
+        toast.success("Player details updated successfully!");
+      } else {
+        throw new Error(resultAction.payload || "Update failed");
+      }
+    } catch (err) {
+      console.error("Error : ", err);
+      toast.error(err.message || "Failed to update player details");
+    }
+  };
+
+  useEffect(() => {
+    if (success) dispatch(clearPlayerState());
+    if (error) {
+      toast.error(error);
+      dispatch(clearPlayerState());
+    }
+  }, [success, error, dispatch]);
   // 🏸 Dummy Data (simulate MongoDB response)
   // 🏸 Dummy Data (simulate MongoDB response)
   const [entries, setEntries] = useState([
@@ -261,27 +278,23 @@ useEffect(() => {
     navigate("/entry"); // ✅ Fixed: use absolute path
   };
 
-  const handleLogout = async () => {
+const handleLogout = async () => {
     try {
       const token = localStorage.getItem("token");
       if (token) {
         await axios.post(
           `${API_URL}/api/v1/auth/logout`,
           {},
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
+          { headers: { Authorization: `Bearer ${token}` } }
         );
       }
-      toast.success("Logout Successful", { duration: 2000 });
-      logout();
-      navigate("/login");
+      toast.success("Logout successful!");
+      Logout(); // ✅ centralized logout
     } catch (error) {
       console.error("Logout Error:", error);
       toast.error("Logout failed. Please try again.");
     }
   };
-
   return (
     <div className="h-full px-4 sm:px-2 md:px-1 pt-28 sm:pt-32 bg-gradient-to-br from-[#141C2F] to-[#16213C] text-white transition-all duration-300 relative">
       {/* Top Section */}

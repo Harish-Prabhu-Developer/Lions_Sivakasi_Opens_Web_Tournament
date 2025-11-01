@@ -13,9 +13,14 @@ export const addToEvents = createAsyncThunk(
   "entries/addToEvents",
   async (payload, { rejectWithValue }) => {
     try {
-      const res = await axios.post(`${API_URL}/api/v1/entry/create`, payload,getHeaders(), {
-        withCredentials: true,
-      });
+      const res = await axios.post(
+        `${API_URL}/api/v1/entry/create`,
+        payload,
+        getHeaders(),
+        {
+          withCredentials: true,
+        }
+      );
       return res.data;
     } catch (err) {
       return rejectWithValue(
@@ -45,12 +50,31 @@ export const updateEventItem = createAsyncThunk(
   }
 );
 
+// 4️⃣ Add partner details for an event
+export const addPartnerToEvent = createAsyncThunk(
+  "entries/addPartnerToEvent",
+  async (payload, { rejectWithValue }) => {
+    try {
+      const res = await axios.put(
+        `${API_URL}/api/v1/entry/add-partner`,
+        payload,
+        getHeaders()
+      );
+      return res.data;
+    } catch (err) {
+      return rejectWithValue(
+        err.response?.data?.msg || "Failed to add partner to event"
+      );
+    }
+  }
+);
+
 // 3️⃣ Get player's entries
 export const getPlayerEntries = createAsyncThunk(
   "entries/getPlayerEntries",
   async (_, { rejectWithValue }) => {
     try {
-      const res = await axios.get(`${API_URL}/api/v1/entry/me`,getHeaders());
+      const res = await axios.get(`${API_URL}/api/v1/entry/me`, getHeaders());
       return res.data;
     } catch (err) {
       return rejectWithValue(
@@ -66,9 +90,9 @@ export const getPlayerEntries = createAsyncThunk(
 const EntriesSlice = createSlice({
   name: "entries",
   initialState: {
-    entry: null,         // entire entry document
-    events: [],          // event items
-    player: null,        // player ID/reference
+    entry: null, // entire entry document
+    events: [], // event items
+    player: null, // player ID/reference
     loading: false,
     error: null,
     successMessage: null,
@@ -118,6 +142,23 @@ const EntriesSlice = createSlice({
         state.loading = false;
         state.error = action.payload;
       });
+    // Add Partner
+    builder
+      .addCase(addPartnerToEvent.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(addPartnerToEvent.fulfilled, (state, action) => {
+        state.loading = false;
+        state.successMessage = action.payload.msg;
+        if (action.payload.data) {
+          state.entry = action.payload.data;
+          state.events = action.payload.data.events;
+        }
+      })
+      .addCase(addPartnerToEvent.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      });
 
     // 🟢 getPlayerEntries
     builder
@@ -128,8 +169,8 @@ const EntriesSlice = createSlice({
       .addCase(getPlayerEntries.fulfilled, (state, action) => {
         state.loading = false;
         // Backend returns { success, player, events }
-        console.log("action :" ,action.payload);
-        
+        console.log("action :", action.payload);
+
         state.player = action.payload.player || null;
         state.events = action.payload.events || [];
       })

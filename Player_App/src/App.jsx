@@ -15,35 +15,36 @@ import DashboardPage from "./pages/DashboardPage";
 import RegisterPage from "./pages/RegisterPage";
 import EntryDetailsPage from "./pages/EntryDetailsPage";
 import EntryPage from "./pages/EntryPage";
+import { IsLoggedIn } from "./utils/authHelpers";
 
-// Simulated auth check function
-const IsLoggedIn = () => {
-  const token = localStorage.getItem("token");
-  return !!token;
-};
 
 const ProtectRoute = () => {
-  const [loggedIn, setLoggedIn] = useState(IsLoggedIn());
-  useEffect(() => {
-    const checkLogin = () => {
-      const token = localStorage.getItem("token");
-      setLoggedIn(!!token);
-    };
-    checkLogin();
-  }, []);
-  return loggedIn ? <Outlet /> : <Navigate to="/register" replace />;
+  const token = localStorage.getItem("token");
+  const user = localStorage.getItem("user");
+
+  if (!token || !user) {
+    // 🔸 No valid session, redirect to register/login
+    return <Navigate to="/register" replace />;
+  }
+
+  // ✅ Authenticated user proceeds to protected route
+  return <Outlet />;
 };
 
+
+
+
 const PublicRoute = () => {
-  const [loggedIn, setLoggedIn] = useState(IsLoggedIn());
-  useEffect(() => {
-    const checkLogin = () => {
-      const token = localStorage.getItem("token");
-      setLoggedIn(!!token);
-    };
-    checkLogin();
-  }, []);
-  return loggedIn ? <Navigate to="/register" replace /> : <Outlet />;
+  const token = localStorage.getItem("token");
+  const user = localStorage.getItem("user");
+
+  if (token && user) {
+    // 🔸 If already logged in, redirect to dashboard
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  // ✅ Not logged in → allow public route
+  return <Outlet />;
 };
 // ✅ Wrapper to handle Navbar visibility
 const Layout = ({ loggedIn }) => {
@@ -81,14 +82,12 @@ const Layout = ({ loggedIn }) => {
 };
 
 const App = () => {
-  const [loggedIn, setLoggedIn] = useState(IsLoggedIn());
+ const [loggedIn, setLoggedIn] = useState(IsLoggedIn());
 
   useEffect(() => {
-    const checkLogin = () => {
-      const token = localStorage.getItem("token");
-      setLoggedIn(!!token);
-    };
-    checkLogin();
+    const handleStorageChange = () => setLoggedIn(IsLoggedIn());
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
 
   return (
