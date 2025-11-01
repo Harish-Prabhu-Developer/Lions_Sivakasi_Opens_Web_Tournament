@@ -24,6 +24,7 @@ import { formatDate, formatDateMonth,toDateInputValue } from "../utils/dateUtils
 import {useDispatch, useSelector} from "react-redux";
 import { clearPlayerState, updatePlayerForm } from "../redux/Slices/PlayerSlice";
 import { getUser, IsLoggedIn, Logout } from "../utils/authHelpers";
+import { getPlayerEntries } from "../redux/Slices/EntriesSlice";
 const DashboardPage = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -155,70 +156,21 @@ const DashboardPage = () => {
   }, [success, error, dispatch]);
   // 🏸 Dummy Data (simulate MongoDB response)
   // 🏸 Dummy Data (simulate MongoDB response)
-  const [entries, setEntries] = useState([
-    {
-      _id: "671a23f7b12d4e001a5e93ab",
-      category: "Under 17 Boys",
-      type: "Doubles",
-      status: "Approved",
-      paymentStatus: "Paid",
-      RegistrationDate: "2025-10-01T08:00:00Z",
-      Partner: {
-        fullName: "John Doe",
-        TNBAID: "TNBA456",
-        dob: "2008-05-21",
-        academy: "Elite Sports Academy",
-        place: "Chennai",
-        district: "Chengalpattu",
-      },
-      adminApproval: {
-        approvedBy: {
-          name: "Admin Rajesh Kumar",
-          phone: "+91 9876543210",
-          email: "rajesh.admin@example.com",
-        },
-        approvedDate: "2025-10-05T12:00:00Z",
-        paymentApp: "Google Pay",
-        paymentAmount: 800,
-        paymentDate: "2025-10-06T09:00:00Z",
-      },
-    },
-    // {
-    //   _id: "671a24b0b12d4e001a5e93ad",
-    //   category: "Under 19 Boys",
-    //   type: "Singles",
-    //   status: "Pending Review",
-    //   paymentStatus: "Unpaid",
-    //   RegistrationDate: "2025-10-10T10:00:00Z",
-    // },
-    // {
-    //   _id: "671a24d0b12d4e001a5e93ae",
-    //   category: "Under 17 Boys",
-    //   type: "Mixed Doubles",
-    //   status: "Approved",
-    //   paymentStatus: "Paid",
-    //   RegistrationDate: "2025-10-12T12:00:00Z",
-    // },
-    // {
-    //   _id: "671a250fb12d4e001a5e93b1",
-    //   category: "Under 19 Boys",
-    //   type: "Singles",
-    //   status: "Approved",
-    //   paymentStatus: "Paid",
-    //   RegistrationDate: "2025-10-20T09:30:00Z",
-    //   adminApproval: {
-    //     approvedBy: {
-    //       name: "Admin Priya Sharma",
-    //       phone: "+91 9012345678",
-    //       email: "priya.admin@example.com",
-    //     },
-    //     approvedDate: "2025-10-22T15:00:00Z",
-    //     paymentApp: "PhonePe",
-    //     paymentAmount: 700,
-    //     paymentDate: "2025-10-23T08:30:00Z",
-    //   },
-    // },
-  ]);
+  const [entries, setEntries] = useState([]);
+
+  useEffect(() => {
+    const fetchEntries = async () => {
+      try {
+        const res =await dispatch(getPlayerEntries());
+        console.log("Res : ",res.payload.data);
+        
+        setEntries(res.payload.data.events);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchEntries();
+  },[])
 
   // 🧮 Stats (computed dynamically)
   const stats = [
