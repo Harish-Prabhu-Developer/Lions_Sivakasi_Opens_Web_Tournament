@@ -6,7 +6,7 @@ import TournamentCategories from "../components/Sections/TournamentCategories";
 import PriceDistribution from "../components/Sections/PriceDistribution";
 import CallToAction from "../components/Sections/CallToAction";
 
-import {  useEffect } from "react";
+import {  useEffect, useState } from "react";
 import { IsLoggedIn } from "../utils/authHelpers";
 
 const HomePage = () => {

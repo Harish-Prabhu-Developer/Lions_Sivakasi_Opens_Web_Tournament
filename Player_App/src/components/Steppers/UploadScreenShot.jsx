@@ -176,12 +176,12 @@ const UploadScreenShot = ({ expectedAmount, expectedUPI, setStep }) => {
   const handleSubmit=async() => {
   // try {
     const payload = {
-      entryId: playerEntryId,
+      // entryId: playerEntryId,
       paymentProof: preview, // base64 string
       paymentApp: extractedData.app,
       paymentAmount: extractedData.amount,
       senderUpiId: extractedData.senderUPI,
-      paymentBy: user._id,
+      // paymentBy: user._id,
     };
 
     console.log("Payment Payload : ",payload);

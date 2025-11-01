@@ -13,7 +13,6 @@ const PaymentStep = ({
   onBack,
   onSubmit,
 }) => {
-  const [verificationStatus, setVerificationStatus] = useState(null);
 
   // ✅ Calculate total fee dynamically
   const totalFee = useMemo(() => {
@@ -23,16 +22,6 @@ const PaymentStep = ({
     }, 0);
   }, [selectedEvents]);
 
-  // ✅ Callback from UploadScreenShot when verified successfully
-  const handlePaymentVerification = (status, details) => {
-    if (status === "success" || status === "verified") {
-      setVerificationStatus("verified");
-      toast.success("Payment verified successfully!");
-    } else {
-      setVerificationStatus("failed");
-      toast.error("Payment verification failed!");
-    }
-  };
 
   return (
     <div className="space-y-8">
