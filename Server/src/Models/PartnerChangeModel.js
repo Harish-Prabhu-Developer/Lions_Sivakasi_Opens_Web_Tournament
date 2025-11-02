@@ -1,8 +1,9 @@
 import mongoose from "mongoose";
-import { PlayerEntrySchema } from "./EntryModel";
+import { PlayerEntrySchema } from "./EntryModel.js";
 // Player Form Data Update request
 const PartnerChangeModel = new mongoose.Schema(
   {
+
     form: PlayerEntrySchema, //Old Partner Data(fullname, tnbaId, dob, academyName, place, district)
     To: PlayerEntrySchema, //New Partner Data(fullname, tnbaId, dob, academyName, place, district)
     Reason: {

@@ -139,56 +139,82 @@ export const getPlayerEntries = async (req, res) => {
 //     res.status(500).json({ success: false, msg: err.message });
 //   }
 // };
-/** * Get all entries (Admin)
- * @param {*} req
- * @param {*} res
- */
+/**
+ * Get all entries (Admin)
+ * @param {*} req - Expects optional 'page' and 'limit' query params
+ * @param {*} res
+ */
 export const getEntries = async (req, res) => {
-  try {
-    const entries = await EntryModel.find()
-      .populate("player", "name TnBaId academyName place district")
-      .populate({
-        path: "events.payment",
-        select: "status metadata paymentAmount paymentApp",
-      })
-      .populate({
-        path: "events.ApproverdBy",
-        select: "name email",
-      })
-      .lean(); // Use lean for performance
+  try {
+    // --- Pagination: Get limit and page from query, calculate skip ---
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
 
-    // Transform and flatten data for easier frontend consumption
-    const formattedEntries = entries.map(entry => {
-      const { player, events, createdAt, updatedAt, _id } = entry;
-      
-      // Aggregate event summaries
-      const eventCategories = events.map(e => e.category).join(', ');
-      const eventTypes = [...new Set(events.map(e => e.type))].join(', ');
-      const eventStatuses = [...new Set(events.map(e => e.status))].join(', ');
-      
-      return {
-        id: _id, // Primary entry ID
-        entryDate: createdAt,
-        // Player fields
-        playerName: player?.name || 'N/A',
-        playerTnBaId: player?.TnBaId || 'N/A',
-        academy: player?.academyName || 'N/A',
-        district: player?.district || 'N/A',
-        // Event summaries
-        eventCount: events.length,
-        categories: eventCategories,
-        types: eventTypes,
-        statuses: eventStatuses,
-        // Full nested events for expansion
-        detailedEvents: events,
-      };
-    });
+    // Get total count (for pagination metadata)
+    const totalEntries = await EntryModel.countDocuments();
+    // -----------------------------------------------------------------
 
-    res.status(200).json({ success: true, data: formattedEntries });
-  } catch (err) {
-    console.error("❌ getEntries Error:", err);
-    res.status(500).json({ success: false, msg: err.message });
-  }
+    const entries = await EntryModel.find()
+      .skip(skip) // Apply skip for current page
+      .limit(limit) // Apply limit for page size
+      .populate("player", "name TnBaId academyName place district gender")
+      .populate({
+        path: "events.payment",
+        // --- MODIFIED: Added 'paymentProof' to selected fields ---
+        select: "status metadata paymentAmount paymentApp paymentProof",
+      })
+      .populate({
+        path: "events.ApproverdBy",
+        select: "name email",
+      })
+      .lean(); // Use lean for performance
+
+    // Transform and flatten data for easier frontend consumption
+    const formattedEntries = entries.map(entry => {
+      const { player, events, createdAt, updatedAt, _id } = entry;
+      
+      // Aggregate event summaries
+      const eventCategories = events.map(e => e.category).join(', ');
+      const eventTypes = [...new Set(events.map(e => e.type))].join(', ');
+      const eventStatuses = [...new Set(events.map(e => e.status))].join(', ');
+      
+      return {
+        id: _id, // Primary entry ID
+        entryDate: createdAt,
+        // Player fields
+        playerName: player?.name || 'N/A',
+        playerTnBaId: player?.TnBaId || 'N/A',
+        academy: player?.academyName || 'N/A',
+        district: player?.district || 'N/A',
+        playerGender: player?.gender || 'N/A', 
+        // Event summaries
+        eventCount: events.length,
+        categories: eventCategories,
+        types: eventTypes,
+        statuses: eventStatuses,
+        // Full nested events for expansion
+        detailedEvents: events,
+      };
+    });
+
+    // --- Pagination: Include metadata in the response ---
+    res.status(200).json({ 
+      success: true, 
+      data: formattedEntries,
+      pagination: {
+        total: totalEntries,
+        limit: limit,
+        currentPage: page,
+        totalPages: Math.ceil(totalEntries / limit),
+      }
+    });
+    // ----------------------------------------------------
+
+  } catch (err) {
+    console.error("❌ getEntries Error:", err);
+    res.status(500).json({ success: false, msg: err.message });
+  }
 };
 
 /**
