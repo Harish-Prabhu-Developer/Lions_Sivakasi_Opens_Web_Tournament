@@ -14,6 +14,7 @@ const PartnerChangeModel = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+    AdminMsg: { type: String },
     ApprovredBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     status: {
       type: String,

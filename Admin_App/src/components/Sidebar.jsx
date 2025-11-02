@@ -126,8 +126,8 @@ const Sidebar = ({
                 className={`${linkClasses} ${
                   item.to === location.pathname ? activeClasses : ""
                 } ${
-                  isExpanded ? "justify-start" : "justify-center"
-                } items-center`}
+                  isExpanded ? "justify-start" : "justify-center items-center"
+                } `}
               >
                 <item.icon className="w-6 h-6 shrink-0 transition-transform duration-300" />
                 <span

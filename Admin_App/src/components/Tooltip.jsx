@@ -9,8 +9,10 @@ const Tooltip = ({ content, children, showCondition = true }) => {
 
   const handleEnter = (e) => {
     const rect = e.currentTarget.getBoundingClientRect();
+    //ge mouse position
+    const mouseX = e.clientX;
     setCoords({
-      x: rect.right + 10,
+      x: showCondition ? rect.left + rect.width / 3.5 : mouseX,
       y: rect.top + rect.height / 2,
     });
     setVisible(true);

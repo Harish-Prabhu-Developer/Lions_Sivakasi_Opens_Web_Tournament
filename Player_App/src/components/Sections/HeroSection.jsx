@@ -1,7 +1,21 @@
 // HeroSection.jsx
 import React, { useContext, useEffect, useState } from "react";
-import { Calendar, MapPin, IndianRupee, Trophy, ArrowDown, Clock } from "lucide-react";
+import {
+  Calendar,
+  MapPin,
+  IndianRupee,
+  Trophy,
+  ArrowDown,
+  Clock,
+} from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { IsLoggedIn } from "../../utils/authHelpers";
+import axios from "axios";
+import { canAddNewEntryCheck } from "../../utils/entryRules";
+import toast from "react-hot-toast";
+import { API_URL } from "../../constants";
+import { getPlayerEntries } from "../../redux/Slices/EntriesSlice";
+import { useDispatch } from "react-redux";
 
 // Tournament data from flyer
 const TOURNEY = {
@@ -16,8 +30,6 @@ const TOURNEY = {
 
 function useCountdown(targetDate) {
   const [daysLeft, setDaysLeft] = useState(null);
-
-
 
   useEffect(() => {
     function updateCountdown() {
@@ -37,20 +49,40 @@ function useCountdown(targetDate) {
 }
 
 const HeroSection = () => {
+  const navigate = useNavigate();
   const deadlineDays = useCountdown(TOURNEY.entryDeadline);
+  const [isLoggedIn, setIsLoggedIn] = useState(IsLoggedIn());
+const [entries, setEntries] = useState([]);
+const [canAddNewEntry, setCanAddNewEntry] = useState(true);
+const dispatch=useDispatch();
 
-  // Improve loggedIn tracking with storage event and location change
-const [isLoggedIn, setIsLoggedIn] = useState(IsLoggedIn());
-
+// Fetch entries if logged in
 useEffect(() => {
-  const handleStorageChange = (e) => {
-    if (e.key === "token" || e.key === "user") {
-      setIsLoggedIn(IsLoggedIn());
+  const fetchEntries = async () => {
+    if (!isLoggedIn) return;
+    try {
+     const res = await dispatch(getPlayerEntries()).unwrap();
+
+      const events = res?.data?.events || res?.events || [];
+      setEntries(events);
+      setCanAddNewEntry(canAddNewEntryCheck(events));
+    } catch (err) {
+      console.error("Error fetching entries:", err);
     }
   };
-  window.addEventListener("storage", handleStorageChange);
-  return () => window.removeEventListener("storage", handleStorageChange);
-}, []);
+  fetchEntries();
+}, [isLoggedIn]);
+
+  // ✅ Track login state dynamically
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === "token" || e.key === "user") {
+        setIsLoggedIn(IsLoggedIn());
+      }
+    };
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, []);
 
   return (
     <section className="relative flex flex-col items-center w-full justify-center text-center min-h-screen bg-gradient-to-b from-[#071324] via-[#122344] to-[#1c2e44] text-gray-100 overflow-hidden pt-10 md:pt-0 px-2">
@@ -75,10 +107,10 @@ useEffect(() => {
         }
       `}</style>
 
-{/* Background glows */}
-<div className="pointer-events-none select-none absolute top-[28%] left-1/3 w-96 h-96 bg-white/20 blur-[140px] rounded-full -z-10 animate-floatPulse"></div>
-<div className="pointer-events-none select-none absolute bottom-10 right-1/4 w-96 h-96 bg-indigo-400/25 blur-[140px] rounded-full -z-10 animate-floatPulse"></div>
-<div className="pointer-events-none select-none absolute top-0 right-1/3 w-72 h-72 bg-sky-300/20 blur-[120px] rounded-full -z-10"></div>
+      {/* Background glows */}
+      <div className="pointer-events-none absolute top-[28%] left-1/3 w-96 h-96 bg-white/20 blur-[140px] rounded-full -z-10 animate-floatPulse"></div>
+      <div className="pointer-events-none absolute bottom-10 right-1/4 w-96 h-96 bg-indigo-400/25 blur-[140px] rounded-full -z-10 animate-floatPulse"></div>
+      <div className="pointer-events-none absolute top-0 right-1/3 w-72 h-72 bg-sky-300/20 blur-[120px] rounded-full -z-10"></div>
 
       {/* Tournament Tag */}
       <div className="flex items-center gap-2 bg-white/10 border border-cyan-400/30 backdrop-blur-lg px-4 py-2 rounded-full text-cyan-200 text-sm mt-10 md:mt-0 shadow-lg shadow-cyan-900/30 animate-fadeUp">
@@ -87,9 +119,9 @@ useEffect(() => {
       </div>
 
       {/* Main Title */}
-      <h2 className="mt-8 text-4xl sm:text-5xl md:text-6xl font-extrabold leading-tight animate-fadeUp [animation-delay:0.2s] max-w-full drop-shadow-lg">
-        <span className="relative inline-block">
-          <span className="shine-text text-transparent">9<sup className="shine-text">th</sup> Lion’s Sivakasi Open</span>
+      <h2 className="mt-8 text-4xl sm:text-5xl md:text-6xl font-extrabold leading-tight animate-fadeUp [animation-delay:0.2s] drop-shadow-lg">
+        <span className="shine-text text-transparent">
+          9<sup className="shine-text">th</sup> Lion’s Sivakasi Open
         </span>
       </h2>
       <p className="text-lg md:text-2xl text-cyan-200 tracking-wide mt-3 animate-fadeUp [animation-delay:0.4s] font-semibold">
@@ -108,7 +140,9 @@ useEffect(() => {
         </div>
         <div className="flex items-center gap-2">
           <IndianRupee className="w-5 h-5 text-cyan-300" />
-          <span className="font-bold tracking-wide">{TOURNEY.prize} Prize Pool</span>
+          <span className="font-bold tracking-wide">
+            {TOURNEY.prize} Prize Pool
+          </span>
         </div>
         <div className="flex items-center gap-2">
           <Trophy className="w-5 h-5 text-yellow-300" />
@@ -120,40 +154,66 @@ useEffect(() => {
       <div className="flex flex-wrap justify-center items-center gap-6 mt-8 animate-fadeUp [animation-delay:0.7s]">
         <div className="flex items-center gap-2 bg-cyan-700/15 border border-cyan-300/30 backdrop-blur-lg px-2 py-2 rounded-xl text-cyan-200 font-medium text-base shadow">
           <Clock className="w-6 h-6 text-cyan-400" />
-          <span className="font-bold text-sm sm:text-md">Last Date for Entries:</span>
-          <span className="text-white ml-1 font-semibold tracking-wide">{new Date(TOURNEY.entryDeadline).toLocaleDateString()}</span>
+          <span className="font-bold text-sm sm:text-md">
+            Last Date for Entries:
+          </span>
+          <span className="text-white ml-1 font-semibold tracking-wide">
+            {new Date(TOURNEY.entryDeadline).toLocaleDateString()}
+          </span>
           {deadlineDays !== null && (
             <span className="ml-3 px-3 py-1 bg-cyan-400/10 text-cyan-200 rounded-lg text-xs font-bold tracking-wider">
-              {deadlineDays > 0 ? `${deadlineDays} days left` : "Deadline Today!"}
+              {deadlineDays > 0
+                ? `${deadlineDays} days left`
+                : "Deadline Today!"}
             </span>
           )}
         </div>
       </div>
 
-      {/* CTAs */}
+      {/* ✅ CTAs */}
       <div className="flex flex-wrap justify-center gap-6 mt-8 mb-20 md:mb-0 animate-fadeUp [animation-delay:0.8s]">
-        {!isLoggedIn && (<button
-          className="px-10 py-3.5 rounded-full font-bold bg-gradient-to-r from-cyan-500 via-sky-400 to-blue-500 shadow-lg
-            text-white border-0 outline-none transition-all duration-300
-            hover:from-sky-500 hover:via-cyan-400 hover:to-cyan-400
-            hover:shadow-cyan-300/30 active:scale-95 focus-visible:ring-2 focus-visible:ring-cyan-400"
+      {isLoggedIn ? (
+        <button
+          onClick={() => {
+            if (!canAddNewEntry) {
+              toast.error("Entry limit reached — view your Dashboard for more info.", { duration: 3000 });
+              return;
+            }
+            navigate("/entry");
+          }}
+          
+          className={`px-10 py-3.5 rounded-full font-bold shadow-lg transition-all duration-300 ${
+            canAddNewEntry
+              ? "bg-gradient-to-r from-cyan-500 via-sky-400 to-blue-500 text-white hover:from-sky-500 hover:to-cyan-400 hover:shadow-cyan-300/30 active:scale-95"
+              : "bg-gray-600/60 text-gray-300 cursor-not-allowed"
+          }`}
+        >
+          Enter Now
+        </button>
+      ) : (
+        <button
+          onClick={() => navigate("/register")}
+          className="px-10 py-3.5 rounded-full font-bold bg-gradient-to-r from-cyan-500 via-sky-400 to-blue-500 shadow-lg text-white hover:from-sky-500 hover:to-cyan-400 hover:shadow-cyan-300/30 active:scale-95"
         >
           Register Now
-        </button>)}
-        <a href="#categories">
-        <button
-          className="px-10 py-3.5 rounded-full font-semibold border-2 border-cyan-300/60 bg-white/30
-          text-cyan-100 hover:bg-cyan-300/20 hover:text-white
-          active:scale-95 transition-all duration-300
-          focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
-          >
-          View Categories
         </button>
+      )}
+
+
+        <a href="#categories">
+          <button
+            className="px-10 py-3.5 rounded-full font-semibold border-2 border-cyan-300/60 bg-white/30
+              text-cyan-100 hover:bg-cyan-300/20 hover:text-white
+              active:scale-95 transition-all duration-300
+              focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+          >
+            View Categories
+          </button>
         </a>
       </div>
 
       {/* Scroll Indicator */}
-      <div className="absolute my:4 py:8 md:mt-8 bottom-2 sm:bottom-4 left-1/2 -translate-x-1/2 flex flex-col items-center animate-bounce">
+      <div className="absolute bottom-2 sm:bottom-4 left-1/2 -translate-x-1/2 flex flex-col items-center animate-bounce">
         <a href="#about" className="flex flex-col items-center group">
           <span className="text-xs text-gray-400 mb-1 group-hover:text-cyan-300 transition-all">
             Scroll Down
@@ -161,7 +221,6 @@ useEffect(() => {
           <ArrowDown className="h-6 w-6 text-cyan-400 group-hover:text-cyan-300 transition-all" />
         </a>
       </div>
-
     </section>
   );
 };

@@ -4,11 +4,11 @@ import { IsValidEmail, IsValidPhone } from "../../utils/Validation";
 import { Calendar } from "lucide-react";
 import { useRef } from "react";
 
-const RegisterForm = ({ form, setForm, onSubmit, setActiveTab ,loading}) => {
+const RegisterForm = ({ form, setForm, onSubmit, setActiveTab, loading }) => {
   const inputRef = useRef(null);
   const handleChange = (field) => (e) =>
     setForm({ ...form, [field]: e.target.value });
- // Function to trigger native date picker
+  // Function to trigger native date picker
   const openDatePicker = () => {
     if (inputRef.current) {
       if (inputRef.current.showPicker) {
@@ -42,16 +42,20 @@ const RegisterForm = ({ form, setForm, onSubmit, setActiveTab ,loading}) => {
       />
 
       {/* Gender */}
+      {/* Gender */}
       <div className="flex flex-col gap-2">
         <label className="text-cyan-100 font-medium tracking-wide">
-          Gender
+          Category
         </label>
         <div className="flex items-center gap-3">
-          {["male", "female", "other"].map((option) => (
+          {[
+            { label: "Boys", value: "male" },
+            { label: "Girls", value: "female" },
+          ].map(({ label, value }) => (
             <label
-              key={option}
+              key={value}
               className={`px-4 py-2 rounded-xl cursor-pointer transition-all border-2 ${
-                form.gender === option
+                form.gender === value
                   ? "bg-cyan-500/90 text-white border-cyan-400"
                   : "bg-white/10 border-white/20 text-gray-300 hover:bg-white/20"
               }`}
@@ -59,15 +63,14 @@ const RegisterForm = ({ form, setForm, onSubmit, setActiveTab ,loading}) => {
               <input
                 type="radio"
                 name="gender"
-                value={option}
+                value={value}
                 className="hidden"
                 onChange={handleChange("gender")}
               />
-              {option}
+              {label}
             </label>
           ))}
         </div>
-        
       </div>
 
       {/* Modern Date of Birth Selector */}
@@ -146,19 +149,18 @@ const RegisterForm = ({ form, setForm, onSubmit, setActiveTab ,loading}) => {
         }
       />
 
-    <button
-      type="submit"
-      disabled={loading}
-      className={`
+      <button
+        type="submit"
+        disabled={loading}
+        className={`
         w-full mt-2 py-3 rounded-xl font-bold text-lg text-white shadow-xl ring-1 ring-cyan-400/30 transition-all
         bg-gradient-to-r from-cyan-500 to-cyan-400
         hover:from-cyan-600 hover:to-cyan-500 active:scale-95
         ${loading ? "opacity-70 cursor-not-allowed filter grayscale" : ""}
       `}
-    >
-      {loading ? "Creating Account..." : "Create Account"}
-    </button>
-
+      >
+        {loading ? "Creating Account..." : "Create Account"}
+      </button>
 
       <div className="text-center text-sm mt-3 text-gray-400">
         Already have an account?{" "}

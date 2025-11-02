@@ -129,15 +129,66 @@ export const getPlayerEntries = async (req, res) => {
  * @param {*} req
  * @param {*} res
  */
+// export const getEntries = async (req, res) => {
+//   try {
+//     const entries = await EntryModel.find()
+//       .populate("player", "name TnBaId academyName place district")
+//       .populate("events.payment");
+//     res.status(200).json({ success: true,data: entries });
+//   } catch (err) {
+//     res.status(500).json({ success: false, msg: err.message });
+//   }
+// };
+/** * Get all entries (Admin)
+ * @param {*} req
+ * @param {*} res
+ */
 export const getEntries = async (req, res) => {
-  try {
-    const entries = await EntryModel.find()
-      .populate("player", "name TnBaId academyName place district")
-      .populate("events.payment");
-    res.status(200).json({ success: true,data: entries });
-  } catch (err) {
-    res.status(500).json({ success: false, msg: err.message });
-  }
+  try {
+    const entries = await EntryModel.find()
+      .populate("player", "name TnBaId academyName place district")
+      .populate({
+        path: "events.payment",
+        select: "status metadata paymentAmount paymentApp",
+      })
+      .populate({
+        path: "events.ApproverdBy",
+        select: "name email",
+      })
+      .lean(); // Use lean for performance
+
+    // Transform and flatten data for easier frontend consumption
+    const formattedEntries = entries.map(entry => {
+      const { player, events, createdAt, updatedAt, _id } = entry;
+      
+      // Aggregate event summaries
+      const eventCategories = events.map(e => e.category).join(', ');
+      const eventTypes = [...new Set(events.map(e => e.type))].join(', ');
+      const eventStatuses = [...new Set(events.map(e => e.status))].join(', ');
+      
+      return {
+        id: _id, // Primary entry ID
+        entryDate: createdAt,
+        // Player fields
+        playerName: player?.name || 'N/A',
+        playerTnBaId: player?.TnBaId || 'N/A',
+        academy: player?.academyName || 'N/A',
+        district: player?.district || 'N/A',
+        // Event summaries
+        eventCount: events.length,
+        categories: eventCategories,
+        types: eventTypes,
+        statuses: eventStatuses,
+        // Full nested events for expansion
+        detailedEvents: events,
+      };
+    });
+
+    res.status(200).json({ success: true, data: formattedEntries });
+  } catch (err) {
+    console.error("❌ getEntries Error:", err);
+    res.status(500).json({ success: false, msg: err.message });
+  }
 };
 
 /**

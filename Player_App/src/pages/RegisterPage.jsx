@@ -93,6 +93,11 @@ const RegisterPage = ({ active = "login" }) => {
   // ======== REGISTER HANDLER =========
   const handleRegister = async (e) => {
     e.preventDefault();
+     // 🔹 Basic validation before submission
+  if (!form.gender) {
+    toast.error("Please select your category (Boys or Girls).");
+    return;
+  }
     try {
       setLoading({ ...loading, register: true });
       const registerData = {
