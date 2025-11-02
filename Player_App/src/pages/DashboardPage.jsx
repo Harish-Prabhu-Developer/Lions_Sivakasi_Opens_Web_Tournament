@@ -56,7 +56,7 @@ const DashboardPage = () => {
         fullName: storedUser.name || "",
         TNBAID: storedUser.TNBAID || "",
         dob: formatDate(storedUser.dob) || "",
-        academy: storedUser.academy || "",
+        academy: storedUser.academyName || "",
         place: storedUser.place || "",
         district: storedUser.district || "",
       });
@@ -162,12 +162,14 @@ const DashboardPage = () => {
     const fetchEntries = async () => {
       try {
         const res = await dispatch(getPlayerEntries()).unwrap();
+        console.log("Events fetch Data  res :",res?.data?.events || res?.events );
+        
         const events = res?.data?.events || res?.events || [];
         
         setEntries(events);
       } catch (err) {
         toast.error("Server Down",{duration: 7000});
-        console.error("Error fetchEntries:",err);
+        console.error("Error fetchEntries:",err.message);
       }
     };
     fetchEntries();

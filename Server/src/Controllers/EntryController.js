@@ -9,8 +9,8 @@ import mongoose from "mongoose";
  */
 export const addToEvents = async (req, res) => {
   try {
-    const { playerId, events } = req.body;
-
+    const { events } = req.body;
+    const playerId=req.user.id
     if (!playerId || !Array.isArray(events) || !events.length) {
       return res.status(400).json({
         success: false,
@@ -76,38 +76,54 @@ export const addToEvents = async (req, res) => {
 
 
 /**
- * Get all entries for the logged-in user
- * Only approved events will be returned in 'approvedEntries'
+ * Get all entries for the logged-in user record 
+ * 
  */
 export const getPlayerEntries = async (req, res) => {
   try {
+    // 1️⃣ Find all entries for the logged-in player
     const entries = await EntryModel.find({ player: req.user.id })
       .populate("player", "name TnBaId academyName place district")
-      .populate("events.payment").populate("events.ApproverdBy");
+      .populate("events.payment")
+      .populate("events.ApproverdBy")
+      .lean(); // returns plain JS objects for easier manipulation
 
-    // If no entries or all events arrays empty, send empty response.
-    if (!entries.length || !entries.some((e) => e.events.length)) {
-      return res.status(200).json({ player: req.user.id, events: [] });
+    // 2️⃣ Handle no entries or empty event arrays
+    if (!entries.length || !entries.some(e => e.events && e.events.length)) {
+      return res.status(200).json({
+        success: true,
+        _id: entries._id,
+        player: req.user.id,
+        playerDetails: null,
+        events: [],
+      });
     }
+    
+    // 3️⃣ Extract player details from first entry (they’re all same player)
+    const playerDetails = entries[0].player;
 
-    // Flatten and collect only approved events for the user
-    const approvedEvents = entries
-      .map((e) => e.events.filter((ev) => ev.status === "approved"))
-      .flat();
+    // 4️⃣ Combine all event arrays safely (with flatten)
+    const allEvents = entries.flatMap(entry => entry.events || []);
 
-    if (!approvedEvents.length) {
-      return res.status(200).json({ player: req.user.id, events: [] });
-    }
-
+    // 5️⃣ Send clean structured response
     res.status(200).json({
       success: true,
-      player: req.user.id,
-      events: approvedEvents,
+      _id:entries[0]._id,
+      playerID: req.user.id,
+      player:playerDetails,
+      totalEvents: allEvents.length,
+      events: allEvents,
     });
+
   } catch (err) {
-    res.status(500).json({ success: false, msg: err.message });
+    console.error("❌ getPlayerEntries Error:", err);
+    res.status(500).json({
+      success: false,
+      msg: err.message || "Something went wrong fetching player entries.",
+    });
   }
 };
+
 
 /** * Get all entries (Admin)
  * @param {*} req
@@ -118,7 +134,7 @@ export const getEntries = async (req, res) => {
     const entries = await EntryModel.find()
       .populate("player", "name TnBaId academyName place district")
       .populate("events.payment");
-    res.status(200).json({ success: true,data: entries[0] });
+    res.status(200).json({ success: true,data: entries });
   } catch (err) {
     res.status(500).json({ success: false, msg: err.message });
   }

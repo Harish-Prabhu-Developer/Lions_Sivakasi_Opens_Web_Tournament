@@ -160,7 +160,7 @@ export const login = async (req, res) => {
           isVerified: user.isVerified,
           lastLogin: user.lastLogin,
           TNBAID :user.TnBaId||null,
-          academy : user.academyName||null,
+          academyName : user.academyName||null,
           place : user.place||null,
           district : user.district||null
         },

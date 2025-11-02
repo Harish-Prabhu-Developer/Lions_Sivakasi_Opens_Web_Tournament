@@ -27,7 +27,7 @@ const EntryPage = () => {
       fullName: user?.name || "",
       tnbaId: user?.TNBAID || "",
       dob: user?.dob || "",
-      academyName: user?.academy || "",
+      academyName: user?.academyName || "",
       place: user?.place || "",
       district: user?.district || "",
     },
@@ -188,8 +188,9 @@ const onFormChange = useCallback(
       toast.error("Please select at least one event.");
       return;
     }
+    console.log("");
+    
     const payload = {
-      playerId: user?.id || "testid",
       events: selectedEvents,
     };
 
@@ -197,7 +198,8 @@ const onFormChange = useCallback(
     try {
       setLoading(true);
       const result = await dispatch(addToEvents(payload)).unwrap();
-
+      console.log("AddToEvents Res : ",result);
+      
       toast.success(result.msg || "Events added successfully!");
       setStep(2);
       setStep2Index(0);

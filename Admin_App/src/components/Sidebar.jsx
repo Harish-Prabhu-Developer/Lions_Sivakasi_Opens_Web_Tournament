@@ -65,7 +65,7 @@ const Sidebar = ({
       />
       <aside
         className={`fixed top-0 left-0 min-h-screen z-40 flex flex-col bg-white border-r border-gray-200 shadow-xl
-        transition-[width,transform] duration-500 ease-in-out transform-gpu
+        transition-[width,transform] duration-100 ease-in-out transform-gpu
         ${isExpanded ? "sidebar-expanded" : "sidebar-collapsed"}
         ${isMobileOpen ? "translate-x-0" : "-translate-x-full"} 
         md:translate-x-0`}
