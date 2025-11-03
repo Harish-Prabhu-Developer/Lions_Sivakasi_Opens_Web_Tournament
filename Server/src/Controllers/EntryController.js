@@ -1,7 +1,8 @@
 // EntryController.js
-import EntryModel from "../Models/EntryModel.js";
+import EntryModel, { EventSchema } from "../Models/EntryModel.js";
 import PaymentModel from "../Models/PaymentModel.js";
 import mongoose from "mongoose";
+import UserModel from "../Models/UserModel.js";
 /**
  * Add or update player's events (Add to Cart style)
  * @param {*} req
@@ -125,26 +126,16 @@ export const getPlayerEntries = async (req, res) => {
 };
 
 
-/** * Get all entries (Admin)
+/** * Get all Event entries for Manage Event Entries Page (Admin)
  * @param {*} req
  * @param {*} res
  */
-// export const getEntries = async (req, res) => {
-//   try {
-//     const entries = await EntryModel.find()
-//       .populate("player", "name TnBaId academyName place district")
-//       .populate("events.payment");
-//     res.status(200).json({ success: true,data: entries });
-//   } catch (err) {
-//     res.status(500).json({ success: false, msg: err.message });
-//   }
-// };
 /**
- * Get all entries (Admin)
+ * Get all Users entries for Manage User Page with pagination  (Admin)
  * @param {*} req - Expects optional 'page' and 'limit' query params
  * @param {*} res
  */
-export const getEntries = async (req, res) => {
+export const getUserEntries = async (req, res) => {
   try {
     // --- Pagination: Get limit and page from query, calculate skip ---
     const page = parseInt(req.query.page) || 1;
@@ -412,5 +403,143 @@ export const addPartnerToEvent = async (req, res) => {
   } catch (err) {
     console.log("AddPartner Error:", err);
     res.status(500).json({ success: false, msg: err.message });
+  }
+};
+
+
+
+/**
+ * Get individual Event Entries for Admin Management (Recommended)
+ * This uses the Aggregation Pipeline to flatten events, lookup related data, and paginate efficiently.
+ * @param {*} req - Expects optional 'page', 'limit', 'status', 'category', 'type' query params
+ * @param {*} res
+ */
+
+export const getEntries = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    // 🔹 Flatten events from each Entry
+    const pipeline = [
+      { $unwind: "$events" },
+
+      // 🔹 Lookup player details
+      {
+        $lookup: {
+          from: "users",
+          localField: "player",
+          foreignField: "_id",
+          as: "playerDetails",
+        },
+      },
+      { $unwind: "$playerDetails" },
+
+      // 🔹 Lookup payment details
+      {
+        $lookup: {
+          from: "payments",
+          localField: "events.payment",
+          foreignField: "_id",
+          as: "paymentDetails",
+        },
+      },
+      {
+        $addFields: {
+          paymentDetails: { $arrayElemAt: ["$paymentDetails", 0] },
+        },
+      },
+
+      // 🔹 Lookup approvedBy user (optional)
+      {
+        $lookup: {
+          from: "users",
+          localField: "events.ApproverdBy",
+          foreignField: "_id",
+          as: "approvedByUser",
+        },
+      },
+      {
+        $addFields: {
+          approvedByUser: { $arrayElemAt: ["$approvedByUser", 0] },
+        },
+      },
+
+      // 🔹 Shape the output
+      {
+        $project: {
+          _id: 0,
+          entryRefId: "$_id",
+          eventId: "$events._id",
+          registrationDate: "$events.RegistrationDate",
+          eventStatus: "$events.status",
+          eventCategory: "$events.category",
+          eventType: "$events.type",
+          isDoubles: {
+            $or: [
+              { $eq: ["$events.type", "doubles"] },
+              { $eq: ["$events.type", "mixed doubles"] },
+            ],
+          },
+          partner: "$events.partner",
+          player: {
+            id: "$playerDetails._id",
+            name: "$playerDetails.name",
+            TnBaId: "$playerDetails.TnBaId",
+            gender: "$playerDetails.gender",
+            dob: "$playerDetails.dob",
+            place: "$playerDetails.place",
+            district: "$playerDetails.district",
+            academyName: "$playerDetails.academyName",
+          },
+          payment: {
+            id: "$paymentDetails._id",
+            status: "$paymentDetails.status",
+            amount: "$paymentDetails.metadata.paymentAmount",
+            app: "$paymentDetails.metadata.paymentApp",
+            paymentsenderUPI: "$paymentDetails.metadata.senderUpiId",
+            createdAt: "$paymentDetails.createdAt",
+            paymentProof: "$paymentDetails.paymentProof",
+          },
+          approvedBy: {
+            _id: "$approvedByUser._id",
+            name: "$approvedByUser.name",
+            email: "$approvedByUser.email",
+            phone: "$approvedByUser.phone",
+          },
+        },
+      },
+
+      // 🔹 Sort by registration date (newest first)
+      { $sort: { registrationDate: -1 } },
+
+      // 🔹 Pagination
+      { $skip: skip },
+      { $limit: limit },
+    ];
+
+    const eventEntries = await EntryModel.aggregate(pipeline);
+
+    // 🔹 Total count for pagination
+    const totalCount = await EntryModel.aggregate([
+      { $unwind: "$events" },
+      { $count: "total" },
+    ]);
+    const total = totalCount[0]?.total || 0;
+
+    return res.status(200).json({
+      success: true,
+      data: eventEntries,
+      pagination: {
+        total,
+        limit,
+        currentPage: page,
+        totalPages: Math.ceil(total / limit),
+      },
+    });
+  } catch (err) {
+    console.error("❌ getEntries Error:", err);
+    return res.status(500).json({ success: false, msg: err.message });
   }
 };

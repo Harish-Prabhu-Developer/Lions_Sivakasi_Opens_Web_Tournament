@@ -12,28 +12,9 @@ export const PlayerEntrySchema = new mongoose.Schema({
 
 export const EventSchema = new mongoose.Schema(
   {
-    category: {
-      type: String,
-      enum: [
-        "Under 09",
-        "Under 11",
-        "Under 13",
-        "Under 15",
-        "Under 17",
-        "Under 19",
-      ],
-      required: true,
-    },
-    type: {
-      type: String,
-      enum: ["singles", "doubles", "mixed doubles"],
-      required: true,
-    },
-    status: {
-      type: String,
-      enum: ["pending", "approved", "rejected"],
-      default: "pending",
-    },
+    category: {type: String, enum: ["Under 09","Under 11","Under 13","Under 15","Under 17","Under 19",],required: true,},
+    type: {type: String,enum: ["singles", "doubles", "mixed doubles"],required: true,},
+    status: {type: String,enum: ["pending", "approved", "rejected"],default: "pending",},
     RegistrationDate: { type: Date, default: Date.now },
     partner: PlayerEntrySchema,
     ApproverdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
@@ -44,14 +25,8 @@ export const EventSchema = new mongoose.Schema(
 
 const EntrySchema = new mongoose.Schema(
   {
-    player: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
-  
-    events: {
-      type: [EventSchema],
+    player: {type: mongoose.Schema.Types.ObjectId,ref: "User",required: true,},
+    events: {type: [EventSchema],
       validate: {
         validator: function (events) {
           if (!events || events.length === 0) {
