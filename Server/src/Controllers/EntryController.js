@@ -491,6 +491,7 @@ export const getEntries = async (req, res) => {
             dob: "$playerDetails.dob",
             place: "$playerDetails.place",
             district: "$playerDetails.district",
+            phone: "$playerDetails.phone",
             academyName: "$playerDetails.academyName",
           },
           payment: {

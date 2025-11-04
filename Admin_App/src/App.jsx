@@ -6,6 +6,7 @@ import EntriesPage from './pages/EntriesPage';
 import UsersPage from './pages/UsersPage';
 import ReportPage from './pages/ReportPage';
 import PartnerChangeRequestPage from './pages/PartnerChangeRequestPage';
+import EntriesDetailPage from './pages/EntriesDetailPage';
 function ProtectedRoute() {
   const isLoggedIn = localStorage.getItem('token');
   return isLoggedIn ? <Outlet /> : <Navigate to="/login" replace />;
@@ -30,6 +31,7 @@ function App() {
           <Route path="/" element={<Layout />}>
             <Route index element={<DashboardPage />} />
             <Route path='/entries' element={<EntriesPage/>}/>
+            <Route path="/entryDetail/:id" element={<EntriesDetailPage />} />
             <Route path='/users' element={<UsersPage/>}/>
             <Route path='/reports'element={<ReportPage/>}/>
             <Route path='/partners'element={<PartnerChangeRequestPage/>}/>
