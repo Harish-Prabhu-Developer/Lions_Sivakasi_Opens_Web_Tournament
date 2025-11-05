@@ -13,7 +13,7 @@ export const IsLoggedIn = () => {
 /**
  * ✅ Logs out the user: clears localStorage and optionally redirects.
  * Can be used both with or without AuthContext.
- */
+ */ 
 export const Logout = (redirect = true) => {
   localStorage.removeItem("token");
   localStorage.removeItem("user");

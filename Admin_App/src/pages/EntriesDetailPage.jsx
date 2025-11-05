@@ -238,6 +238,7 @@ const EntriesDetailPage = () => {
     );
   }
 
+  // Payment ProofUrl
   const paymentProofUrl = getPaymentProofUrl();
 
   return (
