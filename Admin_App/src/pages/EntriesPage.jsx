@@ -5,10 +5,11 @@ import axios from "axios";
 
 import Pagination from "../components/Pagination";
 import { API_URL } from "../config";
-import { getHeaders } from "../../../Player_App/src/redux/Slices/PlayerSlice";
+
 import FilterModel from "../components/Entries/FilterModel";
 import SearchBar from "../components/SearchBar";
 import { useNavigate } from "react-router-dom";
+import { getHeaders } from "../redux/Slices/EntriesSlice";
 
 const EntriesPage = () => {
   const [entries, setEntries] = useState([]);
@@ -45,16 +46,6 @@ const EntriesPage = () => {
     genderFilter: ["boys", "girls"],
   };
 
-  // Safe headers function
-  const getAuthHeaders = () => {
-    try {
-      const headers = getHeaders();
-      return headers || {};
-    } catch (error) {
-      console.error("Error getting headers:", error);
-      return {};
-    }
-  };
 
   // Calculate if all rows are selected
   const isAllSelected = selectedRows.length > 0 && selectedRows.length === entries.length;
