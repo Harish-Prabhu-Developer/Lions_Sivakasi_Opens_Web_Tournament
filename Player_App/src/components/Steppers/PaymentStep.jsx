@@ -1,15 +1,60 @@
 // ✅ PaymentStep.jsx
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { tournamentData } from "../../constants";
 import UploadScreenShot from "./UploadScreenShot";
+import { useDispatch } from "react-redux";
+import { getPlayerEntries } from "../../redux/Slices/EntriesSlice";
 
 const PaymentStep = ({
+  setPlayersData,
+  setSelectedEvents,
   selectedEvents,
   player,
   upi,
   upiQrUrl,
   onBack,
 }) => {
+
+const dispatch=useDispatch();
+useEffect(() => {
+  const fetchEvents = async () => {
+    try {
+      const res = await dispatch(getPlayerEntries()).unwrap();
+      const events = res?.data?.events || res?.events || [];
+
+      setSelectedEvents(events);
+
+      // 🧠 Extract partner data from fetched events
+      const partnersMap = {};
+      events.forEach((ev) => {
+        if (ev.partner) {
+          const key = `${ev.category}|${ev.type}`;
+          partnersMap[key] = {
+            fullName: ev.partner.fullname || "",
+            tnbaId: ev.partner.TnBaId || "",
+            dob: ev.partner.dob || "",
+            academyName: ev.partner.academyName || "",
+            place: ev.partner.place || "",
+            district: ev.partner.district || "",
+          };
+        }
+      });
+
+      // 👫 Initialize partners in playersData
+      setPlayersData((prev) => ({
+        ...prev,
+        partners: partnersMap,
+      }));
+
+      console.log("✅ Initialized partnersData:", partnersMap);
+    } catch (error) {
+      console.error("❌ Error fetching player entries:", error);
+    }
+  };
+
+  fetchEvents();
+}, [dispatch]);
+
   // ✅ Calculate total fee dynamically
   const totalFee = useMemo(() => {
     return selectedEvents.reduce((acc, event) => {

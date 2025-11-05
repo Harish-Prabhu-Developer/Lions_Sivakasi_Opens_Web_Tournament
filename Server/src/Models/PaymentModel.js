@@ -5,6 +5,7 @@ const PaymentModel = new mongoose.Schema(
   {
     paymentProof: { type: String },
     status: { type: String, enum: ["Paid", "Failed", "Pending"], default: "Paid" },
+    ActualAmount:{type:Number},
     metadata: {
       paymentApp: { type: String },
       paymentAmount: { type: Number },

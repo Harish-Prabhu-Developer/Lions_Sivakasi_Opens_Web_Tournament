@@ -492,11 +492,13 @@ export const getEntries = async (req, res) => {
             place: "$playerDetails.place",
             district: "$playerDetails.district",
             phone: "$playerDetails.phone",
+            email:"$playerDetails.email",
             academyName: "$playerDetails.academyName",
           },
           payment: {
             id: "$paymentDetails._id",
             status: "$paymentDetails.status",
+            ActualAmount:"$paymentDetails.ActualAmount",
             amount: "$paymentDetails.metadata.paymentAmount",
             app: "$paymentDetails.metadata.paymentApp",
             paymentsenderUPI: "$paymentDetails.metadata.senderUpiId",
@@ -541,6 +543,130 @@ export const getEntries = async (req, res) => {
     });
   } catch (err) {
     console.error("❌ getEntries Error:", err);
+    return res.status(500).json({ success: false, msg: err.message });
+  }
+};
+
+
+
+// Add this to your EntryController.js
+
+/**
+ * Get filtered events for reports (Admin)
+ * @param {*} req
+ * @param {*} res
+ */
+export const getFilteredEventsForReport = async (req, res) => {
+  try {
+    const { category, type, status, gender, startDate, endDate } = req.query;
+
+    // Build match stage for aggregation
+    const matchStage = { $match: {} };
+    
+    if (category) {
+      matchStage.$match['events.category'] = category;
+    }
+    
+    if (type) {
+      matchStage.$match['events.type'] = type;
+    }
+    
+    if (status) {
+      matchStage.$match['events.status'] = status;
+    }
+
+    // Pipeline for aggregation
+    const pipeline = [
+      { $unwind: "$events" },
+      
+      // Apply event filters
+      ...(Object.keys(matchStage.$match).length > 0 ? [matchStage] : []),
+      
+      // Lookup player details
+      {
+        $lookup: {
+          from: "users",
+          localField: "player",
+          foreignField: "_id",
+          as: "playerDetails",
+        },
+      },
+      { $unwind: "$playerDetails" },
+      
+      // Apply gender filter after player lookup
+      ...(gender ? [{
+        $match: {
+          "playerDetails.gender": gender
+        }
+      }] : []),
+      
+      // Date range filter
+      ...(startDate || endDate ? [{
+        $match: {
+          "events.RegistrationDate": {
+            ...(startDate && { $gte: new Date(startDate) }),
+            ...(endDate && { $lte: new Date(endDate) })
+          }
+        }
+      }] : []),
+
+      // Lookup payment details
+      {
+        $lookup: {
+          from: "payments",
+          localField: "events.payment",
+          foreignField: "_id",
+          as: "paymentDetails",
+        },
+      },
+      {
+        $addFields: {
+          paymentDetails: { $arrayElemAt: ["$paymentDetails", 0] },
+        },
+      },
+
+      // Shape the output
+      {
+        $project: {
+          eventId: "$events._id",
+          registrationDate: "$events.RegistrationDate",
+          eventStatus: "$events.status",
+          eventCategory: "$events.category",
+          eventType: "$events.type",
+          partner: "$events.partner",
+          player: {
+            id: "$playerDetails._id",
+            name: "$playerDetails.name",
+            TnBaId: "$playerDetails.TnBaId",
+            gender: "$playerDetails.gender",
+            dob: "$playerDetails.dob",
+            place: "$playerDetails.place",
+            district: "$playerDetails.district",
+            phone: "$playerDetails.phone",
+            email: "$playerDetails.email",
+            academyName: "$playerDetails.academyName",
+          },
+          payment: {
+            status: "$paymentDetails.status",
+            amount: "$paymentDetails.metadata.paymentAmount",
+            app: "$paymentDetails.metadata.paymentApp",
+          },
+        },
+      },
+
+      // Sort by registration date
+      { $sort: { registrationDate: -1 } },
+    ];
+
+    const events = await EntryModel.aggregate(pipeline);
+
+    return res.status(200).json({
+      success: true,
+      data: events,
+      total: events.length,
+    });
+  } catch (err) {
+    console.error("❌ getFilteredEventsForReport Error:", err);
     return res.status(500).json({ success: false, msg: err.message });
   }
 };

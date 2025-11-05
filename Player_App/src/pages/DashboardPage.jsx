@@ -139,12 +139,17 @@ const DashboardPage = () => {
         setIsEditing(false);
         toast.success("Player details updated successfully!");
       } else {
-        throw new Error(resultAction.payload || "Update failed");
-      }
-    } catch (err) {
-      console.error("Error : ", err);
-      toast.error(err.message || "Failed to update player details");
-    }
+    // ✅ Extract backend message properly
+    const errorMessage =
+      resultAction.payload?.message ||
+      resultAction.error?.message ||
+      "Update failed";
+    throw new Error(errorMessage);
+  }
+} catch (err) {
+  console.error("Error:", err);
+  toast.error(err.message || "Failed to update player details");
+}
   };
 
   useEffect(() => {

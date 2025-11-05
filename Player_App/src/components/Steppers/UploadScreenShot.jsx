@@ -8,6 +8,7 @@ import { paymentApps } from "../../utils/Payment";
 import { useDispatch, useSelector } from "react-redux";
 import { addPayment, getPlayerEntries } from "../../redux/Slices/EntriesSlice";
 import { useNavigate } from "react-router-dom";
+import { tournamentData } from "../../constants";
 
 const UploadScreenShot = ({ expectedAmount, expectedUPI, onBack,selectedEvents }) => {
   const [selectedFile, setSelectedFile] = useState(null);
@@ -189,10 +190,23 @@ const handleSubmit = async () => {
   
   try {
     // ✅ Build payload for backend
+
+  // ✅ Calculate total amount based on event types
+  const totalAmount = selectedEvents.reduce((total, event) => {
+    if (event.type === "singles") {
+      return total + tournamentData.entryFees.singles;
+    } else if (event.type === "doubles" || event.type === "mixed doubles") {
+      return total + tournamentData.entryFees.doubles;
+    }
+    return total;
+  }, 0);
+
+  console.log("💰 Calculated Total Amount:", totalAmount);
     const payload = {
       entryId: selectedEvents.map((e) => e._id), // list of entry IDs
       paymentProof: preview, // base64 image
       status: "Paid",
+      ActualAmount:totalAmount,
       metadata: {
         paymentApp: extractedData.app,
         paymentAmount: extractedData.amount,

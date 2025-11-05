@@ -20,8 +20,8 @@ const EntryDetailsPage = () => {
   const navigate = useNavigate();
   const { state } = location || {};
   const entry = state?.entry || {};
-  console.log("Entry : ",entry);
-  
+  console.log("Entry : ", entry);
+
   const [isEditing, setIsEditing] = useState(false);
   const [partnerData, setPartnerData] = useState(entry?.partner || {});
 
@@ -66,9 +66,11 @@ const EntryDetailsPage = () => {
 
       {/* Content */}
       <div className="p-6 max-w-5xl mx-auto w-full space-y-8">
-
         {/* Entry Info */}
-        <SectionCard title="Entry Information" icon={<BadgeCheck className="text-indigo-400" />}>
+        <SectionCard
+          title="Entry Information"
+          icon={<BadgeCheck className="text-indigo-400" />}
+        >
           <div className="grid md:grid-cols-2 gap-6">
             <InfoRow label="Category" value={entry.category} />
             <InfoRow label="Type" value={entry.type} />
@@ -124,7 +126,20 @@ const EntryDetailsPage = () => {
                       className="p-2 rounded-md bg-[#141C2F] border border-gray-600 text-gray-200 focus:outline-none focus:ring-1 focus:ring-cyan-400"
                     />
                   ) : (
-                    <p className="mt-1 text-gray-300">{partnerData[key] || "-"}</p>
+                    <p className="mt-1 text-gray-300">
+                      {key === "dob"
+                        ? partnerData[key]
+                          ? new Date(partnerData[key]).toLocaleDateString(
+                              "en-GB",
+                              {
+                                day: "2-digit",
+                                month: "short",
+                                year: "numeric",
+                              }
+                            )
+                          : "-"
+                        : partnerData[key] || "-"}
+                    </p>
                   )}
                 </div>
               ))}
@@ -145,12 +160,32 @@ const EntryDetailsPage = () => {
 
         {/* Payment Info */}
         {payment && (
-          <SectionCard title="Payment Information" icon={<CreditCard className="text-purple-400" />}>
+          <SectionCard
+            title="Payment Information"
+            icon={<CreditCard className="text-purple-400" />}
+          >
             <div className="grid md:grid-cols-2 gap-6">
-              {payment.metadata?.paymentApp && (<InfoRow label="Payment App" value={payment.metadata?.paymentApp} />)}
-              {payment.status && (<InfoRow label="Payment Status" value={payment.status} />)}
-              {payment.metadata?.paymentAmount && (<InfoRow label="Amount" value={payment.metadata?.paymentAmount ?? "N/A"} />)}
-              {payment.metadata?.senderUpiId && (<InfoRow label="UPI ID" value={payment.metadata?.senderUpiId ?? "N/A"} />)}
+              {payment.metadata?.paymentApp && (
+                <InfoRow
+                  label="Payment App"
+                  value={payment.metadata?.paymentApp}
+                />
+              )}
+              {payment.status && (
+                <InfoRow label="Payment Status" value={payment.status} />
+              )}
+              {payment.metadata?.paymentAmount && (
+                <InfoRow
+                  label="Amount"
+                  value={payment.metadata?.paymentAmount ?? "N/A"}
+                />
+              )}
+              {payment.metadata?.senderUpiId && (
+                <InfoRow
+                  label="UPI ID"
+                  value={payment.metadata?.senderUpiId ?? "N/A"}
+                />
+              )}
             </div>
             <div className="mt-4">
               <img
@@ -164,7 +199,10 @@ const EntryDetailsPage = () => {
 
         {/* Approved By */}
         {approvedBy && (
-          <SectionCard title="Approved By" icon={<User className="text-green-400" />}>
+          <SectionCard
+            title="Approved By"
+            icon={<User className="text-green-400" />}
+          >
             <div className="grid md:grid-cols-2 gap-6">
               <InfoRow label="Name" value={approvedBy.name} />
               <InfoRow label="Email" value={approvedBy.email} />
@@ -205,14 +243,12 @@ const StatusTag = ({ status }) => {
   return (
     <span
       className={`min-w-[120px] inline-flex justify-center items-center px-4 py-1.5 text-sm font-semibold rounded-full border transition-all duration-300 tracking-wide backdrop-blur-sm ${
-        colors[status] ||
-        "bg-gray-700/30 text-gray-300 border-gray-500/40"
+        colors[status] || "bg-gray-700/30 text-gray-300 border-gray-500/40"
       }`}
     >
       {status ? status.toUpperCase() : "UNKNOWN"}
     </span>
   );
 };
-
 
 export default EntryDetailsPage;

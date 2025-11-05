@@ -7,6 +7,21 @@ export const PlayerFormChange = async (req, res) => {
   try {
     const { name, dob, TnBaId, academyName, place, district } = req.body;
 
+    // 🔹 Check if TnBaId is already used by another user
+    if (TnBaId) {
+      const existingUser = await UserModel.findOne({
+        TnBaId,
+        _id: { $ne: req.user.id }, // exclude current user
+      });
+
+      if (existingUser) {
+        return res.status(400).json({
+          success: false,
+          message: `TnBaId '${TnBaId}' is already registered to another user.`,
+        });
+      }
+    }
+
     const updatedUser = await UserModel.findByIdAndUpdate(
       req.user.id,
       {
@@ -25,6 +40,7 @@ export const PlayerFormChange = async (req, res) => {
         .status(404)
         .json({ success: false, message: "User not found" });
     }
+
     // Generate token for local storage update
     // 🔹 Define base payload for token
     const tokenPayload = {

@@ -395,7 +395,8 @@ const onFormChange = useCallback(
         {/* Step 3: Summary & Payment */}
         {step === 3 && (
           <PaymentStep
-            
+            setPlayersData={setPlayersData}
+            setSelectedEvents={setSelectedEvents}            
             selectedEvents={selectedEvents}
             player={playersData.player}
             partners={playersData.partners}

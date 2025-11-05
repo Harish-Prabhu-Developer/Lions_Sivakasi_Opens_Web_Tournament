@@ -8,7 +8,7 @@ const Layout = () => {
   const [isDesktopCollapsed, setIsDesktopCollapsed] = useState(false);
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex min-h-screen w-full bg-gray-100">
       {/* Sidebar */}
       <Sidebar
         isMobileOpen={isMobileOpen}
@@ -50,7 +50,7 @@ const Layout = () => {
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 transition-all duration-500 overflow-y-auto p-4">
+        <main className="flex-1 transition-all w-full duration-500 overflow-y-auto p-4">
           <Outlet />
         </main>
       </div>

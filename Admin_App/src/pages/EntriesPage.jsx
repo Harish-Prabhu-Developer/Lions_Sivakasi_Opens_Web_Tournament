@@ -46,7 +46,6 @@ const EntriesPage = () => {
     genderFilter: ["boys", "girls"],
   };
 
-
   // Calculate if all rows are selected
   const isAllSelected = selectedRows.length > 0 && selectedRows.length === entries.length;
 
@@ -69,8 +68,8 @@ const EntriesPage = () => {
   };
 
   // Handle view details
-  const onViewDetails = (entryId) => {
-    console.log("View details for entry:", entryId);
+  const onViewDetails = (entry) => {
+    navigate(`/entryDetail/${entry.eventId || entry.id}`, { state: { entry } });
   };
 
   // Apply filters to entries
@@ -88,12 +87,14 @@ const EntriesPage = () => {
         const eventCategory = entry.eventCategory?.toLowerCase() || '';
         const eventType = entry.eventType?.toLowerCase() || '';
         const partnerName = entry.partner?.fullname?.toLowerCase() || '';
+        const phone = entry.player?.phone?.toLowerCase() || '';
         
         return playerName.includes(query) || 
                tnbaId.includes(query) || 
                eventCategory.includes(query) || 
                eventType.includes(query) || 
-               partnerName.includes(query);
+               partnerName.includes(query) ||
+               phone.includes(query);
       });
     }
 
@@ -134,13 +135,14 @@ const EntriesPage = () => {
     return filteredData;
   }, [filters, searchQuery]);
 
-  // ✅ Fetch Entries from Backend
-  const fetchEntries = useCallback(async () => {
+  // ✅ Fetch ALL Entries from Backend (without pagination)
+  const fetchAllEntries = useCallback(async () => {
     try {
       setLoading(true);
 
+      // Fetch all entries without pagination parameters
       const { data } = await axios.get(
-        `${API_URL}/api/v1/entry/admin/entries?page=${pagination.currentPage}&limit=${pagination.limit}`,
+        `${API_URL}/api/v1/entry/admin/entries?limit=1000`, // Large limit to get all data
         getHeaders()
       );
 
@@ -151,19 +153,8 @@ const EntriesPage = () => {
         // Store all entries for client-side filtering
         setAllEntries(entriesData);
         
-        // Apply filters to the fetched data
-        const filteredEntries = applyFilters(entriesData);
-        setEntries(filteredEntries);
-        
-        // Calculate pagination based on filtered data
-        const totalFiltered = filteredEntries.length;
-        const totalPages = Math.ceil(totalFiltered / pagination.limit);
-        
-        setPagination((prev) => ({
-          ...prev,
-          totalPages: totalPages,
-          total: totalFiltered,
-        }));
+        // Apply initial filters and pagination
+        applyFiltersAndPagination(entriesData);
       } else {
         toast.error("Failed to fetch entries");
       }
@@ -173,45 +164,55 @@ const EntriesPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [pagination.currentPage, pagination.limit, applyFilters]);
+  }, []);
+
+  // Apply filters and pagination to data
+  const applyFiltersAndPagination = (entriesData, newPage = pagination.currentPage) => {
+    const filteredEntries = applyFilters(entriesData);
+    
+    // Calculate pagination for filtered data
+    const totalFiltered = filteredEntries.length;
+    const totalPages = Math.ceil(totalFiltered / pagination.limit);
+    
+    // Ensure current page is valid after filtering
+    const validCurrentPage = Math.min(newPage, Math.max(1, totalPages));
+    
+    // Get paginated data for current page
+    const startIndex = (validCurrentPage - 1) * pagination.limit;
+    const endIndex = startIndex + pagination.limit;
+    const paginatedEntries = filteredEntries.slice(startIndex, endIndex);
+    
+    setEntries(paginatedEntries);
+    setPagination(prev => ({
+      ...prev,
+      currentPage: validCurrentPage,
+      totalPages: totalPages,
+      total: totalFiltered,
+    }));
+  };
 
   // Apply filters when filters or search query change
   useEffect(() => {
     if (allEntries.length > 0) {
-      const filteredEntries = applyFilters(allEntries);
-      
-      // Calculate pagination for filtered data
-      const totalFiltered = filteredEntries.length;
-      const totalPages = Math.ceil(totalFiltered / pagination.limit);
-      
-      // Ensure current page is valid after filtering
-      const validCurrentPage = Math.min(pagination.currentPage, Math.max(1, totalPages));
-      
-      // Get paginated data for current page
-      const startIndex = (validCurrentPage - 1) * pagination.limit;
-      const endIndex = startIndex + pagination.limit;
-      const paginatedEntries = filteredEntries.slice(startIndex, endIndex);
-      
-      setEntries(paginatedEntries);
-      setPagination(prev => ({
-        ...prev,
-        currentPage: validCurrentPage,
-        totalPages: totalPages,
-        total: totalFiltered,
-      }));
+      applyFiltersAndPagination(allEntries, 1); // Reset to page 1 when filters change
     }
-  }, [filters, searchQuery, allEntries, applyFilters, pagination.limit]);
+  }, [filters, searchQuery, allEntries, applyFilters]);
+
+  // Apply pagination when current page changes
+  useEffect(() => {
+    if (allEntries.length > 0) {
+      applyFiltersAndPagination(allEntries, pagination.currentPage);
+    }
+  }, [pagination.currentPage, pagination.limit]);
 
   // Initial data fetch
   useEffect(() => {
-    fetchEntries();
-  }, [fetchEntries]);
+    fetchAllEntries();
+  }, [fetchAllEntries]);
 
   // Handle filter apply from FilterModel
   const handleApplyFilters = (newFilters) => {
     setFilters(newFilters);
-    // Reset to first page when filters change
-    setPagination(prev => ({ ...prev, currentPage: 1 }));
   };
 
   // Clear all filters
@@ -223,7 +224,6 @@ const EntriesPage = () => {
       genderFilter: [],
     });
     setSearchQuery("");
-    setPagination(prev => ({ ...prev, currentPage: 1 }));
   };
 
   // ✅ Export CSV
@@ -238,6 +238,7 @@ const EntriesPage = () => {
 
     const headers = [
       "Player Name",
+      "Phone",
       "TNBA ID",
       "Gender",
       "Event Type",
@@ -251,6 +252,7 @@ const EntriesPage = () => {
 
     const rows = filteredEntries.map((e) => [
       e.player?.name || "-",
+      e.player?.phone||"-",
       e.player?.TnBaId || "-",
       e.player?.gender === 'male' ? 'boys' : e.player?.gender === 'female' ? 'girls' : '-',
       e.eventType || "-",
@@ -275,15 +277,6 @@ const EntriesPage = () => {
   // ✅ Pagination handlers
   const handlePageChange = (newPage) => {
     setPagination((prev) => ({ ...prev, currentPage: newPage }));
-    
-    // Apply pagination to filtered data
-    if (allEntries.length > 0) {
-      const filteredEntries = applyFilters(allEntries);
-      const startIndex = (newPage - 1) * pagination.limit;
-      const endIndex = startIndex + pagination.limit;
-      const paginatedEntries = filteredEntries.slice(startIndex, endIndex);
-      setEntries(paginatedEntries);
-    }
   };
 
   // ✅ Handle limit change
@@ -419,31 +412,30 @@ const EntriesPage = () => {
 
         {/* Empty State Table */}
         <div className="overflow-x-auto border rounded-lg p-10 shadow-sm bg-white">
-                  <div className="flex flex-col items-center justify-center text-gray-500">
-                    <Filter className="w-12 h-12 mb-4 text-gray-400" strokeWidth={1.5} />
-                    <p className="text-lg font-medium text-gray-900 mb-2">
-                      No entries found matching your criteria.
-                    </p>
-                    <p className="text-sm text-gray-600 mb-4">
-                      Try adjusting your filters or search terms.
-                    </p>
-                    {hasActiveFilters && (
-                      <button
-                        onClick={clearAllFilters}
-                        className="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
-                      >
-                        Clear all filters
-                      </button>
-                    )}
-                  </div>
-          
+          <div className="flex flex-col items-center justify-center text-gray-500">
+            <Filter className="w-12 h-12 mb-4 text-gray-400" strokeWidth={1.5} />
+            <p className="text-lg font-medium text-gray-900 mb-2">
+              No entries found matching your criteria.
+            </p>
+            <p className="text-sm text-gray-600 mb-4">
+              Try adjusting your filters or search terms.
+            </p>
+            {hasActiveFilters && (
+              <button
+                onClick={clearAllFilters}
+                className="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+              >
+                Clear all filters
+              </button>
+            )}
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="p-5 space-y-5">
+    <div className="p-4 w-full space-y-5">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <h1 className="text-xl font-semibold text-gray-800">Entries</h1>
@@ -465,6 +457,7 @@ const EntriesPage = () => {
           <button
             onClick={exportCSV}
             className="flex items-center gap-1 px-3 py-2 text-sm border rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition"
+            disabled={totalFilteredCount === 0}
           >
             <Download className="w-4 h-4" /> Export
           </button>
@@ -561,6 +554,8 @@ const EntriesPage = () => {
               </th>
               
               <th className="p-3">Player</th>
+              <th className="p-3">TNBA ID</th>
+              <th className="p-3">Phone</th>
               <th className="p-3">Gender</th>
               <th className="p-3">Category</th>
               <th className="p-3">Type</th>
@@ -596,8 +591,7 @@ const EntriesPage = () => {
                     aria-label={`View details for entry ${entry.eventId || entry.id}`}
                     onClick={(e) => {
                       e.stopPropagation();
-                      onViewDetails(entry.eventId || entry.id);
-                      navigate(`/entryDetail/${entry.eventId || entry.id} `, { state: { entry } });
+                      onViewDetails(entry);
                     }}
                   >
                     <Eye className="w-5 h-5" />
@@ -610,6 +604,8 @@ const EntriesPage = () => {
                 </td>
 
                 <td className="p-3">{entry.player?.name || "-"}</td>
+                <td className="p-3">{entry.player?.TnBaId||"-"}</td>
+                <td className="p-3">{entry.player?.phone || "-"}</td>
                 <td className="p-3 capitalize">{getGenderDisplay(entry.player?.gender)}</td>
                 <td className="p-3">{entry.eventCategory}</td>
                 <td className="p-3 capitalize">{entry.eventType}</td>
@@ -635,14 +631,16 @@ const EntriesPage = () => {
         </table>
       </div>
 
-      {/* Pagination */}
-      <Pagination
-        currentPage={pagination.currentPage}
-        totalPages={pagination.totalPages}
-        totalFilteredCount={totalFilteredCount}
-        entriesPerPage={pagination.limit}
-        onPageChange={handlePageChange}
-      />
+      {/* Pagination - Only show if there are multiple pages */}
+      {pagination.totalPages > 1 && (
+        <Pagination
+          currentPage={pagination.currentPage}
+          totalPages={pagination.totalPages}
+          totalFilteredCount={totalFilteredCount}
+          entriesPerPage={pagination.limit}
+          onPageChange={handlePageChange}
+        />
+      )}
 
       {/* Filter Modal */}
       {showFilter && (

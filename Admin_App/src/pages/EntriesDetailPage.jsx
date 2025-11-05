@@ -326,6 +326,14 @@ const EntriesDetailPage = () => {
                       {entry.player?.phone ? entry.player?.phone : "N/A"}
                     </p>
                   </div>
+                                    <div>
+                    <label className="text-sm font-medium text-gray-500">
+                      Email
+                    </label>
+                    <p className="text-lg text-gray-900 mt-1">
+                      {entry.player?.email ? entry.player?.email : "N/A"}
+                    </p>
+                  </div>
                 </div>
 
                 <div className="space-y-4">

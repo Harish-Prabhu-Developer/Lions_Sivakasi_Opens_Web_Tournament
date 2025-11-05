@@ -73,6 +73,7 @@ const UserModel = new mongoose.Schema(
     },
     TnBaId:{
       type: String,
+      unique: true,
     },
     academyName: {
       type: String,

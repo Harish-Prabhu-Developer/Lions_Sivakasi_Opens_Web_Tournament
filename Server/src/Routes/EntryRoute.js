@@ -1,7 +1,7 @@
 import express from "express";
 import { protect } from "../Middleware/authMiddleware.js";
 import { authorize } from "../Middleware/roleMiddleware.js";
-import { approveRejectEvent, getEntries,addToEvents,updateEventItem, addPartnerToEvent, getPlayerEntries, getUserEntries} from "../Controllers/EntryController.js";
+import { approveRejectEvent, getEntries,addToEvents,updateEventItem, addPartnerToEvent, getPlayerEntries, getUserEntries, getFilteredEventsForReport} from "../Controllers/EntryController.js";
 
 const EntryRoute = express.Router();
 
@@ -19,4 +19,7 @@ EntryRoute.get("/admin/user-entries",protect,authorize("admin"),getUserEntries);
 
 // Admin routes Manage Event Entries Page (Admin)
 EntryRoute.get("/admin/entries", protect, authorize("admin"), getEntries);
+
+// Admin Report 
+EntryRoute.get("/export-report",protect,authorize("admin"),getFilteredEventsForReport)
 export default EntryRoute;
