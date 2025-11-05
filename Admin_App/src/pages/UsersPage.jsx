@@ -21,8 +21,9 @@ import Pagination from "../components/Pagination";
 import FilterModel from "../components/Entries/FilterModel";
 import { API_URL } from "../config";
 import axios from "axios";
-import { getHeaders } from "../../../Player_App/src/redux/Slices/PlayerSlice";
+
 import SearchBar from "../components/SearchBar";
+import { getHeaders } from "../redux/Slices/EntriesSlice";
 // --- MOCK DATA & API CALL (Simulating the updated backend response) ---
 
 const mockEntries = [];
