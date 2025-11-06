@@ -1,5 +1,6 @@
+//EntriesPage.jsx
 import React, { useState, useEffect, useCallback } from "react";
-import { Filter, Loader2, Download, Eye } from "lucide-react";
+import { Filter, Loader2, Download, Eye, X } from "lucide-react";
 import toast from "react-hot-toast";
 import axios from "axios";
 
@@ -10,6 +11,7 @@ import FilterModel from "../components/Entries/FilterModel";
 import SearchBar from "../components/SearchBar";
 import { useNavigate } from "react-router-dom";
 import { getHeaders } from "../redux/Slices/EntriesSlice";
+import StatusModal from "../components/StatusModal";
 
 const EntriesPage = () => {
   const [entries, setEntries] = useState([]);
@@ -21,6 +23,9 @@ const EntriesPage = () => {
     typeFilter: [],
     genderFilter: [],
   });
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const [selectedEntry, setSelectedEntry] = useState(null);
+  const [selectedStatus, setSelectedStatus] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [showFilter, setShowFilter] = useState(false);
   const [selectedRows, setSelectedRows] = useState([]);
@@ -66,6 +71,21 @@ const EntriesPage = () => {
       setSelectedRows([...selectedRows, entryId]);
     }
   };
+
+  // Handle status modal open
+  const handleStatus = (entry) => {
+    setSelectedEntry(entry);
+    setSelectedStatus(entry.eventStatus || "");
+    setShowUpdateModal(true);
+  };
+
+  // Handle close status modal
+  const handleCloseUpdateModal = () => {
+    setShowUpdateModal(false);
+    setSelectedEntry(null);
+    setSelectedStatus("");
+  };
+
 
   // Handle view details
   const onViewDetails = (entry) => {
@@ -165,6 +185,68 @@ const EntriesPage = () => {
       setLoading(false);
     }
   }, []);
+
+//handle Update status
+  // Handle update status
+  const handleUpdateStatus = async() => {
+    if (!selectedStatus || !selectedEntry) {
+      toast.error("Please select a status");
+      return;
+    }
+
+
+  console.log("Update Status Data:", {
+    status: selectedStatus,
+    entryId: selectedEntry.entryRefId,
+    eventID: selectedEntry.eventId,
+  });
+
+    try {
+      const token = localStorage.getItem("token");
+  
+      const res = await axios.put(
+        `${API_URL}/api/v1/entry/approve/${selectedEntry.entryRefId}/${selectedEntry.eventId}`,
+        { status: selectedStatus },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+  
+      console.log("✅ Approve API Response:", res.data);
+  
+      if (res.data.success) {
+        toast.success(
+         `Event status updated to ${selectedStatus.toUpperCase()} successfully!`
+        );
+        
+      } else {
+        toast.error(res.data.msg || "❌ Failed to update event status");
+      }
+    } catch (error) {
+      console.error("❌ Error updating event status:", error.response?.data || error.message);
+  
+      toast.error(
+        error.response?.data?.msg || "🚨 Something went wrong updating event status."
+      );
+    }finally{
+  
+    // Here you would typically make an API call to update the status
+    // For now, just log to console and close modal
+    console.log(`Updating status to: ${selectedStatus} for entry: ${selectedEntry._id}`);
+    fetchAllEntries();
+    // Show success message
+    // toast.success(`Status updated to: ${selectedStatus}`);
+    
+    // Close modal after update
+    handleCloseUpdateModal();
+    }
+    // Optional: Refresh the data or update local state
+    // fetchAllEntries();
+  };
+
 
   // Apply filters and pagination to data
   const applyFiltersAndPagination = (entriesData, newPage = pagination.currentPage) => {
@@ -610,14 +692,15 @@ const EntriesPage = () => {
                 <td className="p-3">{entry.eventCategory}</td>
                 <td className="p-3 capitalize">{entry.eventType}</td>
                 <td className="p-3">{entry.partner?.fullname || "-"}</td>
-                <td
-                  className={`p-3 font-medium capitalize ${
+                <td 
+                  className={`p-3 font-medium capitalize cursor-pointer hover:bg-gray-100 rounded ${
                     entry.eventStatus === "approved"
                       ? "text-green-600"
                       : entry.eventStatus === "rejected"
                       ? "text-red-600"
                       : "text-yellow-600"
                   }`}
+                  onClick={() => handleStatus(entry)}
                 >
                   {entry.eventStatus}
                 </td>
@@ -649,6 +732,17 @@ const EntriesPage = () => {
           setFilters={handleApplyFilters}
           availableFilters={availableFilters}
           onClose={() => setShowFilter(false)}
+        />
+      )}
+
+      {/* Status Update Modal */}
+      {showUpdateModal && selectedEntry && (
+        <StatusModal 
+          entry={selectedEntry}
+          selectedStatus={selectedStatus}
+          setSelectedStatus={setSelectedStatus}
+          handleCloseUpdateModal={handleCloseUpdateModal}
+          handleUpdateStatus={handleUpdateStatus}
         />
       )}
     </div>

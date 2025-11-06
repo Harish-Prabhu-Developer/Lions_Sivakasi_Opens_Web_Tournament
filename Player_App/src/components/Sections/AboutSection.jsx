@@ -63,9 +63,7 @@ const AboutSection = () => {
             Celebrating Passion, Precision & Unity
           </h3>
           <p className="text-gray-400  text-justify  leading-relaxed">
-            This annual championship honors{" "}
-            <span className="text-yellow-400 font-medium">Late Balamurugan</span>
-            , bringing together exceptional badminton talent across Tamil Nadu in
+            Lions Sivakasi Open, bringing together exceptional badminton talent across Tamil Nadu in
             the spirit of sportsmanship and excellence.
           </p>
 

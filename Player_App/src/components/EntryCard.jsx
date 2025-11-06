@@ -8,11 +8,11 @@ const EntryCard = ({ entry }) => {
     const Navigate = useNavigate();
     const getStatusColor = (status) => {
     switch (status) {
-      case "Approved":
+      case "approved":
         return "text-green-400";
-      case "Pending Review":
+      case "pending":
         return "text-yellow-400";
-      case "Rejected":
+      case "rejected":
         return "text-red-400";
       default:
         return "text-gray-400";
@@ -21,11 +21,11 @@ const EntryCard = ({ entry }) => {
 
   const getStatusBg = (status) => {
     switch (status) {
-      case "Approved":
+      case "approved":
         return "bg-green-400/10 border-green-400/20";
-      case "Pending Review":
+      case "pending":
         return "bg-yellow-400/10 border-yellow-400/20";
-      case "Rejected":
+      case "rejected":
         return "bg-red-400/10 border-red-400/20";
       default:
         return "bg-gray-400/10 border-gray-400/20";
@@ -35,18 +35,20 @@ const EntryCard = ({ entry }) => {
   const getPaymentColor = (paymentStatus) => {
     switch (paymentStatus) {
       case "Paid":
-        return "text-teal-400";
-      case "Unpaid":
+        return "text-green-400";
+      case "Pending":
+        return "text-yellow-400";
+      case "Failed":
         return "text-red-400";
       default:
-        return "text-gray-400";
+        return "text-teal-400";
     }
   };
 
   const StatusIcon =
-    entry.status === "Approved"
+    entry.status === "approved"
       ? CheckCircle
-      : entry.status === "Pending Review"
+      : entry.status === "pending"
       ? Clock
       : XCircle;
 

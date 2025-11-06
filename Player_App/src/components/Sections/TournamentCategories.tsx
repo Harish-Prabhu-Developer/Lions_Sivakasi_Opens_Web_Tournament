@@ -46,12 +46,6 @@ const categories = [
     color: "from-teal-600 to-teal-300",
   },
   {
-    title: "U17 Mixed Doubles",
-    description: "Mixed doubles for players born on or after 2009, showcasing teamwork and strategy.",
-    icon: <Users className="w-7 h-7 text-purple-400" />,
-    color: "from-purple-600 to-purple-400",
-  },
-  {
     title: "U19 Mixed Doubles",
     description: "For athletes born on or after 2007, pairs of boys and girls compete together.",
     icon: <Users className="w-7 h-7 text-rose-400" />,

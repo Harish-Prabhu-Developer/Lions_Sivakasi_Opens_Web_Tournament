@@ -23,9 +23,9 @@ const TOURNEY = {
   sub: "STATE LEVEL BADMINTON TOURNAMENT",
   dateRange: "28 Nov – 30 Nov 2025",
   venue: "ANSO Sports Academy, Sivakasi",
-  prize: "3 Lakhs",
+  prize: "2 Lakhs",
   entryDeadline: "2025-11-25",
-  entryFee: "Singles ₹800, Doubles ₹1400",
+  entryFee: "Singles ₹900, Doubles ₹1300",
 };
 
 function useCountdown(targetDate) {

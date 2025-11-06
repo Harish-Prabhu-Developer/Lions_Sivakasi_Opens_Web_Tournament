@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import {
   ArrowLeft,
@@ -18,15 +18,24 @@ import {
   Shield,
   Building,
   Navigation,
+  X,
 } from "lucide-react";
+import axios from "axios";
+import { API_URL } from "../config";
+import toast from "react-hot-toast";
 
 const EntriesDetailPage = () => {
-  const { id } = useParams();
+
   const navigate = useNavigate();
   const location = useLocation();
 
   // Get the entry data from route state
   const entry = location.state?.entry;
+ console.log("Entry : ",entry);
+ 
+  // State for update status modal
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const [selectedStatus, setSelectedStatus] = useState("");
 
   // Status badge component
   const StatusBadge = ({ status }) => {
@@ -197,6 +206,67 @@ const EntriesDetailPage = () => {
     alert("Payment verification functionality would be implemented here");
   };
 
+  // Handle open update status modal
+  const handleOpenUpdateModal = () => {
+    setSelectedStatus(entry.eventStatus || "");
+    setShowUpdateModal(true);
+  };
+
+  // Handle close update status modal
+  const handleCloseUpdateModal = () => {
+    setShowUpdateModal(false);
+    setSelectedStatus("");
+  };
+
+
+const handleUpdateStatus = async () => {
+  if (!selectedStatus) {
+    toast.error("⚠️ Please select a status");
+    return;
+  }
+
+  console.log("Update Status Data:", {
+    status: selectedStatus,
+    entryId: entry.entryRefId,
+    eventID: entry.eventId,
+  });
+
+  try {
+    const token = localStorage.getItem("token");
+
+    const res = await axios.put(
+      `${API_URL}/api/v1/entry/approve/${entry.entryRefId}/${entry.eventId}`,
+      { status: selectedStatus },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    console.log("✅ Approve API Response:", res.data);
+
+    if (res.data.success) {
+      toast.success(
+       `Event status updated to ${selectedStatus.toUpperCase()} successfully!`
+      );
+
+      handleCloseUpdateModal();
+
+      // Optional: refresh table after update
+      // if (typeof fetchEntries === "function") fetchEntries();
+    } else {
+      toast.error(res.data.msg || "❌ Failed to update event status");
+    }
+  } catch (error) {
+    console.error("❌ Error updating event status:", error.response?.data || error.message);
+
+    toast.error(
+      error.response?.data?.msg || "🚨 Something went wrong updating event status."
+    );
+  }
+};
   // Get payment proof URL for display
   const getPaymentProofUrl = () => {
     if (!entry.payment?.paymentProof) return null;
@@ -326,7 +396,7 @@ const EntriesDetailPage = () => {
                       {entry.player?.phone ? entry.player?.phone : "N/A"}
                     </p>
                   </div>
-                                    <div>
+                  <div>
                     <label className="text-sm font-medium text-gray-500">
                       Email
                     </label>
@@ -568,16 +638,16 @@ const EntriesDetailPage = () => {
                   </div>
                 </div>
 
-                    {entry.payment.amount && (
-                      <div>
-                        <label className="text-sm font-medium text-gray-500">
-                          Amount
-                        </label>
-                        <p className="text-lg text-gray-900 mt-1">
-                          ${entry.payment.amount}
-                        </p>
-                      </div>
-                    )}
+                {entry.payment.amount && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">
+                      Amount
+                    </label>
+                    <p className="text-lg text-gray-900 mt-1">
+                      ${entry.payment.amount}
+                    </p>
+                  </div>
+                )}
                 {entry.payment && (
                   <>
                     <div>
@@ -614,7 +684,6 @@ const EntriesDetailPage = () => {
                           : "N/A"}
                       </p>
                     </div>
-
                   </>
                 )}
               </div>
@@ -783,7 +852,10 @@ const EntriesDetailPage = () => {
                 <button className="w-full border border-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-50 transition text-sm font-medium">
                   Contact Player
                 </button>
-                <button className="w-full bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition text-sm font-medium">
+                <button 
+                  onClick={handleOpenUpdateModal}
+                  className="w-full bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition text-sm font-medium"
+                >
                   Update Status
                 </button>
               </div>
@@ -791,6 +863,80 @@ const EntriesDetailPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Update Status Modal */}
+      {showUpdateModal && (
+        <div className="fixed inset-0 bg-black/40 bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-lg w-full max-w-md">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h3 className="text-xl font-semibold text-gray-900">
+                Update Entry Status
+              </h3>
+              <button
+                onClick={handleCloseUpdateModal}
+                className="p-1 rounded-full hover:bg-gray-100 transition"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Select Status
+                </label>
+                <select
+                  value={selectedStatus}
+                  onChange={(e) => setSelectedStatus(e.target.value)}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                >
+                  <option value="">Choose a status</option>
+                  <option value="approved">Approved</option>
+                  <option value="rejected">Rejected</option>
+                  <option value="pending">Pending</option>
+                </select>
+              </div>
+
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h4 className="text-sm font-medium text-gray-700 mb-2">
+                  Entry Information:
+                </h4>
+                <p className="text-sm text-gray-600">
+                  <strong>Entry ID:</strong> {entry.entryRefId}
+                </p>
+                <p className="text-sm text-gray-600">
+                  <strong>Event ID:</strong> {entry.eventId}
+                </p>
+                <p className="text-sm text-gray-600">
+                  <strong>Player:</strong> {entry.player?.name}
+                </p>
+                <p className="text-sm text-gray-600">
+                  <strong>Current Status:</strong> {entry.eventStatus}
+                </p>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex justify-end gap-3 p-6 border-t border-gray-200">
+              <button
+                onClick={handleCloseUpdateModal}
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleUpdateStatus}
+                disabled={!selectedStatus}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition"
+              >
+                Update Status
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

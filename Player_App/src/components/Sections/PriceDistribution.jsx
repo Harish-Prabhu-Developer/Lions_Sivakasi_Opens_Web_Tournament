@@ -5,15 +5,15 @@ import { IndianRupee, Trophy } from "lucide-react";
 const prizes = [
   {
     category: "Singles",
-    first: "₹8,000",
-    second: "₹4,000",
+    first: "₹5,000",
+    second: "₹2,500",
     color: "from-cyan-600 to-blue-400",
     icon: <Trophy className="w-7 h-7 text-cyan-400" />,
   },
   {
     category: "Doubles & Mixed Doubles",
-    first: "₹10,000",
-    second: "₹5,000",
+    first: "₹6,000",
+    second: "₹3,000",
     color: "from-yellow-400 to-orange-400",
     icon: <Trophy className="w-7 h-7 text-yellow-400" />,
   },
@@ -89,7 +89,7 @@ const PriceDistribution = () => (
     {/* Total Pool */}
     <div className="mt-8 text-center">
       <span className="text-2xl md:text-3xl font-bold text-cyan-400">Total Prize Pool</span>
-      <span className="ml-3 text-yellow-400 font-extrabold text-3xl">₹3,00,000</span>
+      <span className="ml-3 text-yellow-400 font-extrabold text-3xl">₹2,00,000</span>
     </div>
   </section>
 );

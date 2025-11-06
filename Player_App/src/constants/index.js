@@ -1,3 +1,4 @@
+import UPIQR from "../assets/UpiQR.png"
 export const API_URL=import.meta.env.VITE_NODE_API_URL || "http://localhost:3000";
 export const CRYPTO_SECRET=import.meta.env.VITE_CRYPTO_SECRET || "TestSecretKey123456789";
 
@@ -11,8 +12,8 @@ export const CRYPTO_SECRET=import.meta.env.VITE_CRYPTO_SECRET || "TestSecretKey1
     { name: "Under 17", afterBorn: 2009, events: ["singles", "doubles"] },
     { name: "Under 19", afterBorn: 2007, events: ["singles", "doubles", "mixed doubles"] },
   ],
-  upi: "test@oksbi",
-  upiQrUrl: "https://placehold.co/150x150/0000FF/FFFFFF/png?text=Mock+UPI+QR",
+  upi: "9360933755@iob",
+  upiQrUrl: UPIQR,
 };
 
 export  const mockUser = {

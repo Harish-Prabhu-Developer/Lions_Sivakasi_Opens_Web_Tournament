@@ -57,12 +57,60 @@ export const updatePlayerForm = createAsyncThunk(
   }
 );
 
+
+
+// ==========================
+// 🔹 Partner Change Request (POST)
+// ==========================
+export const PartnerChangeReq = createAsyncThunk(
+  "player/PartnerChangeReq",
+  async (formData, { rejectWithValue }) => {
+    try {
+      const response = await axios.post(
+        `${API_URL}/api/v1/partner/request`,
+        formData,
+        getHeaders()
+      );
+      return response.data;
+    } catch (error) {
+      console.error("❌ PartnerChangeReq Error:", error);
+      return rejectWithValue(
+        error.response?.data?.msg || "Failed to submit partner change request"
+      );
+    }
+  }
+);
+
+// ==========================
+// 🔹 Get My Partner Change Requests (GET)
+// ==========================
+export const PartnerChangeRes = createAsyncThunk(
+  "player/PartnerChangeRes",
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await axios.get(
+        `${API_URL}/api/v1/partner/my-requests`,
+        getHeaders()
+      );
+      return response.data;
+    } catch (error) {
+      console.error("❌ PartnerChangeRes Error:", error);
+      return rejectWithValue(
+        error.response?.data?.msg || "Failed to fetch partner change requests"
+      );
+    }
+  }
+);
+
+
 // 🔹 Initial state
 const initialState = {
   loading: false,
   error: null,
   success: false,
   playerData: null,
+  partnerChangeRequests: [], // 🆕 for storing fetched requests
+  partnerChangeSuccess: false, // 🆕 for submit success
 };
 
 // 🔹 Player Slice
@@ -74,6 +122,7 @@ const PlayerSlice = createSlice({
       state.loading = false;
       state.error = null;
       state.success = false;
+      state.partnerChangeSuccess = false;
     },
   },
   extraReducers: (builder) => {
@@ -92,6 +141,40 @@ const PlayerSlice = createSlice({
         state.loading = false;
         state.error = action.payload;
         state.success = false;
+      })
+            // --------------------------
+      // Partner Change Request (POST)
+      // --------------------------
+      .addCase(PartnerChangeReq.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+        state.partnerChangeSuccess = false;
+      })
+      .addCase(PartnerChangeReq.fulfilled, (state, action) => {
+        state.loading = false;
+        state.partnerChangeSuccess = true;
+        state.partnerChangeRequests.unshift(action.payload.data);
+      })
+      .addCase(PartnerChangeReq.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+        state.partnerChangeSuccess = false;
+      })
+
+      // --------------------------
+      // Get My Partner Change Requests (GET)
+      // --------------------------
+      .addCase(PartnerChangeRes.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(PartnerChangeRes.fulfilled, (state, action) => {
+        state.loading = false;
+        state.partnerChangeRequests = action.payload.data || [];
+      })
+      .addCase(PartnerChangeRes.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
       });
   },
 });
