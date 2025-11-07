@@ -200,21 +200,23 @@ const handleSubmit = async () => {
     }
     return total;
   }, 0);
+      console.log("💰 Calculated Total Amount:", totalAmount);
+      console.log("📊 Extracted Data:", extractedData,expectedAmount);
 
-  console.log("💰 Calculated Total Amount:", totalAmount);
-    const payload = {
-      entryId: selectedEvents.map((e) => e._id), // list of entry IDs
-      paymentProof: preview, // base64 image
-      status: "Paid",
-      ActualAmount:totalAmount,
-      metadata: {
-        paymentApp: extractedData.app,
-        paymentAmount: extractedData.amount,
-        senderUpiId: extractedData.senderUPI,
-      },
-    };
+      // ✅ Build payload for backend - FIXED: Use extractedData.amount instead of extractAmount function
+      const payload = {
+        entryId: selectedEvents.map((e) => e._id), // list of entry IDs
+        paymentProof: preview, // base64 image
+        status: "Paid",
+        ActualAmount: expectedAmount || totalAmount, // FIXED: Use the actual extracted amount
+        metadata: {
+          paymentApp: extractedData.app,
+          paymentAmount: extractedData.amount, // FIXED: Use the actual extracted amount
+          senderUpiId: extractedData.senderUPI,
+        },
+      };
 
-    console.log("💳 Sending Payment Payload:", payload);
+      console.log("💳 Sending Payment Payload:", payload);
 
     // ✅ Dispatch Redux thunk
     const res = await dispatch(addPayment(payload)).unwrap();

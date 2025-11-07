@@ -726,7 +726,24 @@ const handleUpdateStatus = async () => {
                       <p className="text-sm text-gray-600 mb-3">
                         Payment proof uploaded
                       </p>
-
+                      {/* Actual Payment Amount */}
+                      <div className="flex items-center justify-center py-4 gap-2">
+                        <span className="text-sm font-medium text-gray-500">
+                          Payment Amount:
+                        </span>
+                        <span className="text-md text-gray-900">
+                          {entry.payment?.ActualAmount|| 'N/A'} 
+                        </span>
+                      </div>
+                      {/* Expected Payment Amount */}
+                      <div className="flex items-center justify-center py-4 gap-2">
+                        <span className="text-sm font-medium text-gray-500">
+                          Expected Payment Amount:
+                        </span>
+                        <span className="text-md text-gray-900">
+                          {entry.payment?.amount|| 'Can not find amount'} 
+                        </span>
+                      </div>
                       {/* Action Buttons */}
                       <div className="flex flex-col gap-2">
                         <button

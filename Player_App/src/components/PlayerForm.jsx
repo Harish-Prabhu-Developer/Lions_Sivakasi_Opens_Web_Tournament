@@ -42,8 +42,13 @@ const PlayerForm = ({ currentForm, form, onFormChange, onNext, onBack }) => {
                 placeholder={field.type === 'date' ? 'mm/dd/yyyy' : field.label}
                 value={form[field.key] || ''}
                 onChange={(e) => onFormChange(field.key, e.target.value)}
-                required={field.key==="tnbaId"?false:true}
-                className="w-full px-4 py-2 bg-[#192339] border border-gray-600 rounded-lg text-white focus:ring-cyan-500 focus:border-cyan-500 transition-colors duration-200"
+                disabled={isPlayer&&field.key==="dob"?true:false} //The player dob field is not editable
+                required={field.key==="tnbaId"?false:true} //The tnbaId field is not required 
+                className={`w-full px-4 py-2 border rounded-lg text-white focus:ring-cyan-500 focus:border-cyan-500 transition-colors duration-200 ${
+                  isPlayer && field.key === "dob" 
+                    ? "bg-[#1a253f] border-gray-600 text-gray-400 bg-opacity-50 cursor-not-allowed" 
+                    : "bg-[#192339] border-cyan-700 focus:ring-cyan-500 focus:border-cyan-500"
+                }`}
               />
             </div>
           ))}

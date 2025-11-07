@@ -1,5 +1,5 @@
 // ✅ PaymentStep.jsx
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { tournamentData } from "../../constants";
 import UploadScreenShot from "./UploadScreenShot";
 import { useDispatch } from "react-redux";
@@ -16,12 +16,15 @@ const PaymentStep = ({
 }) => {
 
 const dispatch=useDispatch();
+const [fetchSelectedEvents, setFetchSelectedEvents] = useState([]);
+
 useEffect(() => {
   const fetchEvents = async () => {
     try {
       const res = await dispatch(getPlayerEntries()).unwrap();
       const events = res?.data?.events || res?.events || [];
-
+      console.log("fetchtotalAmount : ",events);
+      setFetchSelectedEvents(selectedEvents);
       setSelectedEvents(events);
 
       // 🧠 Extract partner data from fetched events
@@ -62,6 +65,13 @@ useEffect(() => {
       return acc + tournamentData.entryFees[feeKey];
     }, 0);
   }, [selectedEvents]);
+const fetchSelectedEventsTotalAmount = useMemo(() => {
+  return fetchSelectedEvents.reduce((acc, event) => {
+    const feeKey = event.type === "singles" ? "singles" : "doubles";
+    return acc + tournamentData.entryFees[feeKey];
+  }, 0);
+})
+console.log("FetchAmount : ",fetchSelectedEventsTotalAmount,totalFee);
 
   return (
     <div className="space-y-8">

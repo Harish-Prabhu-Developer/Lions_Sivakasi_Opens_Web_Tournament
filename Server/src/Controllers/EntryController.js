@@ -3,6 +3,7 @@ import EntryModel, { EventSchema } from "../Models/EntryModel.js";
 import PaymentModel from "../Models/PaymentModel.js";
 import mongoose from "mongoose";
 import UserModel from "../Models/UserModel.js";
+import { sendPlayerEntryStatusEmail } from "../Services/EmailService.js";
 /**
  * Add or update player's events (Add to Cart style)
  * @param {*} req
@@ -288,61 +289,103 @@ export const updateEventItem = async (req, res) => {
   }
 };
 
-/** * approve or reject an entry event (Admin)
- * @param {*} req
- * @param {*} res
- */
+/**
+ * Approve or reject an entry event (Admin)
+ * @param {*} req
+ * @param {*} res
+ */
 export const approveRejectEvent = async (req, res) => {
-  try {
-    // --- FIX START: Validate and cast IDs ---
-
-    // 1. Validate and cast Admin ID (Approver)
+  try {
+    // --- 1️⃣ Validate and cast Admin ID ---
     const approverIdString = req.user.id;
     if (!mongoose.Types.ObjectId.isValid(approverIdString)) {
-        console.error("❌ Invalid Admin ID provided by request context:", approverIdString);
-        return res.status(401).json({ success: false, msg: "Authentication failed: Invalid Admin ID format." });
+      console.error("❌ Invalid Admin ID provided:", approverIdString);
+      return res.status(401).json({ success: false, msg: "Invalid Admin ID format." });
     }
     const approverId = new mongoose.Types.ObjectId(approverIdString);
-    
-    // 2. Validate Entry ID from params
-    const { entryId, eventId } = req.params;
-    
+
+    // --- 2️⃣ Validate Entry and Event IDs ---
+    const { entryId, eventId } = req.params;
     if (!mongoose.Types.ObjectId.isValid(entryId)) {
-        console.error("❌ Invalid Entry ID format in request params:", entryId);
-        return res.status(400).json({ success: false, msg: "Invalid Entry ID format provided." });
+      return res.status(400).json({ success: false, msg: "Invalid Entry ID format." });
     }
-    // --- FIX END ---
+    if (!mongoose.Types.ObjectId.isValid(eventId)) {
+      return res.status(400).json({ success: false, msg: "Invalid Event ID format." });
+    }
 
-    const { status } = req.body;
-    
-    // Use the validated entryId string
-    const entry = await EntryModel.findById(entryId).populate("events.payment").populate("events.ApproverdBy").populate("player");
-    
-    if (!entry) {
-      return res.status(404).json({ success: false, msg: "Entry not found" });
-    }
-    
-    // 3. Find event using Mongoose's .equals() for robust comparison
-    const event = entry.events.find((e) => e._id.equals(eventId));
-    
-    if (!event) {
-      return res.status(404).json({ success: false, msg: "Event not found" });
-    }
+    const { status } = req.body;
+    if (!["approved", "rejected", "pending"].includes(status)) {
+      return res.status(400).json({ success: false, msg: "Invalid status provided." });
+    }
 
-    // 4. Update fields using the casted Admin ID
-    event.ApproverdBy = approverId;
-    event.status = status;
-    
-    await entry.save();
-    
-    res.status(200).json({ success: true, data: entry });
-    
-  } catch (err) {
+    // --- 3️⃣ Find the entry and populate related data ---
+    const entry = await EntryModel.findById(entryId)
+      .populate("player")
+      .populate("events.payment")
+      .populate("events.ApproverdBy");
+
+    if (!entry) {
+      return res.status(404).json({ success: false, msg: "Entry not found" });
+    }
+
+    // --- 4️⃣ Find the target event ---
+    const event = entry.events.find((e) => e._id.equals(eventId));
+    if (!event) {
+      return res.status(404).json({ success: false, msg: "Event not found" });
+    }
+
+    // --- 5️⃣ Update event status and approver ---
+    event.ApproverdBy = approverId;
+    event.status = status;
+    await entry.save();
+
+// --- 6️⃣ Prepare player data for email ---
+const playerEmail = entry.player?.email;
+const playerName = entry.player?.name; // ✅ FIXED (UserModel uses "name", not "fullname")
+const partnerName = event.partner?.fullname || event.partner?.name || null;
+
+if (playerEmail && playerName) {
+  const playerData = {
+    email: playerEmail,
+    name: playerName,
+    eventDetails: {
+      category: event.category,
+      type: event.type,
+      registrationDate: new Date(event.RegistrationDate).toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+      }).replace(/ /g, ' '),
+    },
+    partnerName,
+  };
+
+  try {
+    // --- 7️⃣ Send email notification ---
+    sendPlayerEntryStatusEmail(playerData, status);
+    console.log(`📧 Status email sent to ${playerEmail} (${status})`);
+  } catch (emailError) {
+    console.error("⚠️ Failed to send status email:", emailError.message);
+  }
+} else {
+  console.warn("⚠️ Player email or name missing, skipping email notification.", {
+    playerId: entry.player?._id,
+    email: playerEmail,
+    name: playerName,
+  });
+}
+
+    // --- 8️⃣ Respond to client ---
+    res.status(200).json({
+      success: true,
+      msg: `Event has been ${status}`,
+      data: entry,
+    });
+  } catch (err) {
     console.error("❌ Error in approveRejectEvent:", err);
-    res.status(500).json({ success: false, msg: err.message });
-  }
+    res.status(500).json({ success: false, msg: err.message });
+  }
 };
-
 
 /**
  * ✅ Add or update partner details for a specific player's event
@@ -414,7 +457,6 @@ export const addPartnerToEvent = async (req, res) => {
  * @param {*} req - Expects optional 'page', 'limit', 'status', 'category', 'type' query params
  * @param {*} res
  */
-
 export const getEntries = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -449,6 +491,13 @@ export const getEntries = async (req, res) => {
         $addFields: {
           paymentDetails: { $arrayElemAt: ["$paymentDetails", 0] },
         },
+      },
+
+      // 🔹 Filter only entries with payment status "Paid"
+      {
+        $match: {
+          "paymentDetails.status": "Paid"
+        }
       },
 
       // 🔹 Lookup approvedBy user (optional)
@@ -492,13 +541,13 @@ export const getEntries = async (req, res) => {
             place: "$playerDetails.place",
             district: "$playerDetails.district",
             phone: "$playerDetails.phone",
-            email:"$playerDetails.email",
+            email: "$playerDetails.email",
             academyName: "$playerDetails.academyName",
           },
           payment: {
             id: "$paymentDetails._id",
             status: "$paymentDetails.status",
-            ActualAmount:"$paymentDetails.ActualAmount",
+            ActualAmount: "$paymentDetails.ActualAmount",
             amount: "$paymentDetails.metadata.paymentAmount",
             app: "$paymentDetails.metadata.paymentApp",
             paymentsenderUPI: "$paymentDetails.metadata.senderUpiId",
@@ -524,11 +573,31 @@ export const getEntries = async (req, res) => {
 
     const eventEntries = await EntryModel.aggregate(pipeline);
 
-    // 🔹 Total count for pagination
-    const totalCount = await EntryModel.aggregate([
+    // 🔹 Total count for pagination (with the same filter)
+    const totalCountPipeline = [
       { $unwind: "$events" },
-      { $count: "total" },
-    ]);
+      {
+        $lookup: {
+          from: "payments",
+          localField: "events.payment",
+          foreignField: "_id",
+          as: "paymentDetails",
+        },
+      },
+      {
+        $addFields: {
+          paymentDetails: { $arrayElemAt: ["$paymentDetails", 0] },
+        },
+      },
+      {
+        $match: {
+          "paymentDetails.status": "Paid"
+        }
+      },
+      { $count: "total" }
+    ];
+
+    const totalCount = await EntryModel.aggregate(totalCountPipeline);
     const total = totalCount[0]?.total || 0;
 
     return res.status(200).json({
@@ -546,8 +615,6 @@ export const getEntries = async (req, res) => {
     return res.status(500).json({ success: false, msg: err.message });
   }
 };
-
-
 
 // Add this to your EntryController.js
 

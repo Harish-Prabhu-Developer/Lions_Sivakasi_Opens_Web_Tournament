@@ -4,7 +4,8 @@ import { CheckCircle, Clock, XCircle, CreditCard, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const EntryCard = ({ entry }) => {
-
+    console.log("Entry Card : ",entry);
+    
     const Navigate = useNavigate();
     const getStatusColor = (status) => {
     switch (status) {
@@ -105,14 +106,14 @@ const EntryCard = ({ entry }) => {
       <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-700/50">
         <div className="flex items-center gap-2">
           <PaymentIcon
-            className={`w-5 h-5 ${getPaymentColor(entry.paymentStatus)}`}
+            className={`w-5 h-5 ${getPaymentColor(entry.payment?.status)}`}
           />
           <span
             className={`text-sm font-medium ${getPaymentColor(
-              entry.paymentStatus
+              entry.payment?.status
             )}`}
           >
-            {entry.paymentStatus}
+            {entry.payment?.status}
           </span>
         </div>
 

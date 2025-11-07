@@ -66,7 +66,7 @@ const Footer = () => {
             <Instagram className="text-gray-200 hover:text-pink-500" />
           </a>
           <a
-            href="#"
+            href="https://api.whatsapp.com/send?phone=+919360933755&text=Hi+Let%27s+talk..."
             className="hover:-translate-y-0.5 transition-all duration-300"
           >
             <PiWhatsappLogoLight

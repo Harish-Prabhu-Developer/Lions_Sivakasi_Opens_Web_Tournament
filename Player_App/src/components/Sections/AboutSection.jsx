@@ -36,7 +36,7 @@ const AboutSection = () => {
           About the Tournament
         </h2>
         <p className="text-base text-gray-400 mt-3 max-w-3xl mx-auto animate-fadeUp [animation-delay:0.3s]">
-          The Lions Club of Sivakasi Central proudly presents the 9
+          The Lions Sports Foundation proudly presents the 9
           <sup>th</sup>{" "}
           <span className="text-cyan-300 font-semibold">
             Statelevel Badminton Championship

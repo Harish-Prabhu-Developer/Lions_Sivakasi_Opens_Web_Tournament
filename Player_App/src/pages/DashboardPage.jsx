@@ -190,19 +190,19 @@ const DashboardPage = () => {
     },
     {
       name: "Pending Review",
-      value: entries.filter((e) => e.status === "Pending Review").length,
+      value: entries.filter((e) => e.status === "pending").length,
       icon: Clock,
       color: "text-yellow-300",
     },
     {
       name: "Approved",
-      value: entries.filter((e) => e.status === "Approved").length,
+      value: entries.filter((e) => e.status === "approved").length,
       icon: CheckCircle,
       color: "text-green-400",
     },
     {
       name: "Paid",
-      value: entries.filter((e) => e.paymentStatus === "Paid").length,
+      value: entries.filter((e) => e.payment?.status === "Paid").length,
       icon: CreditCard,
       color: "text-teal-300",
     },
@@ -374,12 +374,17 @@ const handleLogout = async () => {
                     ? toDateInputValue(playerData[key])
                     : playerData[key] || ""
                 }
+                disabled={label === "Date of Birth"}
                 onChange={(e) => handleInputChange(key,
                   label === "Date of Birth"
                     ? e.target.value // store as ISO, or convert to DD-MM-YYYY on save
                     : e.target.value
                 )}
-                className="px-3 py-3 rounded-lg bg-[#141C2F] border border-cyan-800 text-gray-200 font-medium focus:outline-none focus:ring-2 focus:ring-cyan-400 transition-all"
+                className={`px-3 py-3 rounded-lg bg-[#141C2F] border text-gray-200 font-medium focus:outline-none transition-all ${
+            label === "Date of Birth" 
+              ? "border-gray-600 cursor-not-allowed opacity-70" 
+              : "border-cyan-800 focus:ring-2 focus:ring-cyan-400"
+          }`}
                 placeholder={`Enter ${label}`}
               />
 

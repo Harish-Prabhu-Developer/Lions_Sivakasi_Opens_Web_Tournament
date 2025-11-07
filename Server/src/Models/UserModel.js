@@ -2,6 +2,7 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 import crypto from "crypto-js";
+import { EventSchema } from "./EntryModel.js";
 
 const UserModel = new mongoose.Schema(
   {
@@ -73,7 +74,6 @@ const UserModel = new mongoose.Schema(
     },
     TnBaId:{
       type: String,
-      unique: true,
     },
     academyName: {
       type: String,
@@ -84,12 +84,10 @@ const UserModel = new mongoose.Schema(
     district: {
       type: String,
     },
-    entries: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Entry",
-      },
-    ],
+     entries: {
+      type: [EventSchema],
+      default: []
+    },
   },
   {
     timestamps: true,
@@ -121,6 +119,29 @@ UserModel.methods.generateVerificationToken = function () {
     .digest("hex");
   return token;
 };
+
+
+// Add entry to user
+UserModel.methods.addEntry = function (eventData) {
+  this.entries.push(eventData);
+  return this.save();
+};
+
+// Get all entries for user
+UserModel.methods.getEntries = function () {
+  return this.entries;
+};
+
+// Update entry status
+UserModel.methods.updateEntryStatus = function (entryId, status) {
+  const entry = this.entries.id(entryId);
+  if (entry) {
+    entry.status = status;
+    return this.save();
+  }
+  throw new Error("Entry not found");
+};
+
 
 // Exclude password from JSON responses
 UserModel.methods.toJSON = function () {
