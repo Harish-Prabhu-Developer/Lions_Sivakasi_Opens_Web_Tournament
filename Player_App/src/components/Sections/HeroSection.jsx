@@ -53,6 +53,7 @@ const HeroSection = () => {
   const deadlineDays = useCountdown(TOURNEY.entryDeadline);
   const [isLoggedIn, setIsLoggedIn] = useState(IsLoggedIn());
 const [entries, setEntries] = useState([]);
+const [totalPaidCount,setTotalPaidCount]=useState(0);
 const [canAddNewEntry, setCanAddNewEntry] = useState(true);
 const dispatch=useDispatch();
 
@@ -65,6 +66,7 @@ useEffect(() => {
 
       const events = res?.data?.events || res?.events || [];
       setEntries(events);
+      setTotalPaidCount(res?.data?.TotalPaidCount ||res?.TotalPaidCount|| 0);
       setCanAddNewEntry(canAddNewEntryCheck(events));
     } catch (err) {
       console.error("Error fetching entries:", err);
@@ -175,7 +177,7 @@ useEffect(() => {
       {isLoggedIn ? (
         <button
           onClick={() => {
-            if (!canAddNewEntry) {
+            if (!canAddNewEntry && totalPaidCount === 4) {
               toast.error("Entry limit reached — view your Dashboard for more info.", { duration: 3000 });
               return;
             }
@@ -183,7 +185,7 @@ useEffect(() => {
           }}
           
           className={`px-10 py-3.5 rounded-full font-bold shadow-lg transition-all duration-300 ${
-            canAddNewEntry
+            totalPaidCount!==4
               ? "bg-gradient-to-r from-cyan-500 via-sky-400 to-blue-500 text-white hover:from-sky-500 hover:to-cyan-400 hover:shadow-cyan-300/30 active:scale-95"
               : "bg-gray-600/60 text-gray-300 cursor-not-allowed"
           }`}

@@ -10,16 +10,20 @@ import { addPayment, getPlayerEntries } from "../../redux/Slices/EntriesSlice";
 import { useNavigate } from "react-router-dom";
 import { tournamentData } from "../../constants";
 
-const UploadScreenShot = ({ expectedAmount, expectedUPI, onBack,selectedEvents }) => {
+const UploadScreenShot = ({ expectedAmount, expectedUPI, onBack,selectedEvents,unpaidEventsCount }) => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [preview, setPreview] = useState(null);
   const [validationStatus, setValidationStatus] = useState(null);
   const [validationMessage, setValidationMessage] = useState("");
   const [extractedData, setExtractedData] = useState(null);
   const [progress, setProgress] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false); // ✅ Add loading state
   const dispatch=useDispatch();
   const navigate=useNavigate();
-
+  useEffect(() => {
+    console.log("unpaidEventsCount",unpaidEventsCount);
+    
+  },[selectedEvents,unpaidEventsCount]);
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -186,44 +190,65 @@ const handleSubmit = async () => {
     return;
   }
 
-  
-  
+   setIsSubmitting(true); // ✅ Start loading
+
   try {
-    // ✅ Build payload for backend
+    // ✅ Filter only UNPAID events for payment linking
+    const unpaidEvents = selectedEvents.filter(event => 
+      !event.payment || event.payment.status !== "Paid"
+    );
 
-  // ✅ Calculate total amount based on event types
-  const totalAmount = selectedEvents.reduce((total, event) => {
-    if (event.type === "singles") {
-      return total + tournamentData.entryFees.singles;
-    } else if (event.type === "doubles" || event.type === "mixed doubles") {
-      return total + tournamentData.entryFees.doubles;
+    if (unpaidEvents.length === 0) {
+      toast.error("All selected events are already paid!");
+      return;
     }
-    return total;
-  }, 0);
-      console.log("💰 Calculated Total Amount:", totalAmount);
-      console.log("📊 Extracted Data:", extractedData,expectedAmount);
 
-      // ✅ Build payload for backend - FIXED: Use extractedData.amount instead of extractAmount function
-      const payload = {
-        entryId: selectedEvents.map((e) => e._id), // list of entry IDs
-        paymentProof: preview, // base64 image
-        status: "Paid",
-        ActualAmount: expectedAmount || totalAmount, // FIXED: Use the actual extracted amount
-        metadata: {
-          paymentApp: extractedData.app,
-          paymentAmount: extractedData.amount, // FIXED: Use the actual extracted amount
-          senderUpiId: extractedData.senderUPI,
-        },
-      };
+    // ✅ Calculate total for ALL selected events (paid + unpaid)
+    const totalAllEventsAmount = selectedEvents.reduce((total, event) => {
+      if (event.type === "singles") {
+        return total + tournamentData.entryFees.singles;
+      } else if (event.type === "doubles" || event.type === "mixed doubles") {
+        return total + tournamentData.entryFees.doubles;
+      }
+      return total;
+    }, 0);
 
-      console.log("💳 Sending Payment Payload:", payload);
+    // ✅ Calculate total for UNPAID events only
+    const unpaidTotalAmount = unpaidEvents.reduce((total, event) => {
+      if (event.type === "singles") {
+        return total + tournamentData.entryFees.singles;
+      } else if (event.type === "doubles" || event.type === "mixed doubles") {
+        return total + tournamentData.entryFees.doubles;
+      }
+      return total;
+    }, 0);
+
+    console.log("💰 All Events Total Amount:", totalAllEventsAmount);
+    console.log("💰 Unpaid Events Total Amount:", unpaidTotalAmount);
+    console.log("💰 Unpaid Events:", unpaidEvents);
+    console.log("📊 Extracted Data:", extractedData);
+
+    // ✅ Build payload for backend
+    const payload = {
+      entryId: unpaidEvents.map((e) => e._id), // Only link to unpaid events
+      paymentProof: preview, // base64 image
+      status: "Paid",
+      ActualAmount: totalAllEventsAmount, // Total of ALL events (paid + unpaid)
+      metadata: {
+        paymentApp: extractedData.app,
+        paymentAmount: extractedData.amount,
+        senderUpiId: extractedData.senderUPI,
+      },
+    };
+
+    console.log("💳 Sending Payment Payload:", payload);
 
     // ✅ Dispatch Redux thunk
     const res = await dispatch(addPayment(payload)).unwrap();
-    console.log("Payment res : ",res);
+    console.log("Payment res:", res);
     
     if (res.success) {
-      toast.success("Event payment submitted successfully!");
+      toast.success(`Payment of ₹${totalAllEventsAmount} submitted successfully!`);
       toast.success(res.msg);
 
       dispatch(getPlayerEntries()); // refresh player entries
@@ -234,6 +259,8 @@ const handleSubmit = async () => {
   } catch (err) {
     console.error("❌ Payment Error:", err);
     toast.error(err.msg || "Error submitting payment.");
+  }finally{
+     setIsSubmitting(false); // ✅ Stop loading in all cases
   }
 };
 
@@ -412,21 +439,31 @@ const handleSubmit = async () => {
 
       </div>
 
-      {/* Navigation Buttons */}
+    {/* Navigation Buttons */}
       <div className="flex items-center justify-between gap-3 md:gap-4 pt-2">
-        <button onClick={onBack} className="btn btn-secondary">
+        <button 
+          onClick={onBack} 
+          className="btn btn-secondary"
+          disabled={isSubmitting} // ✅ Disable back button during submission
+        >
           Back
         </button>
         <button
-          
           onClick={handleSubmit}
-          className="btn btn-primary disabled:pointer-events-auto disabled:opacity-50"
+          disabled={isSubmitting || !preview || validationStatus !== "success"} // ✅ Disable during submission
+          className="btn btn-primary disabled:pointer-events-auto disabled:opacity-50 flex items-center justify-center gap-2"
         >
-          Submit Entry
+          {isSubmitting ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Processing...
+            </>
+          ) : (
+            "Submit Entry"
+          )}
         </button>
       </div>
-    </div>
-  );
+    </div>  );
 };
 
 export default UploadScreenShot;

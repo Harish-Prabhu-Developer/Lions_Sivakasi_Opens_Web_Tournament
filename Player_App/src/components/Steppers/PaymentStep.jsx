@@ -13,65 +13,87 @@ const PaymentStep = ({
   upi,
   upiQrUrl,
   onBack,
+  eventsAnalysis = {} // Add default value to prevent destructuring errors
 }) => {
 
-const dispatch=useDispatch();
-const [fetchSelectedEvents, setFetchSelectedEvents] = useState([]);
+  const dispatch = useDispatch();
+  const [fetchSelectedEvents, setFetchSelectedEvents] = useState([]);
 
-useEffect(() => {
-  const fetchEvents = async () => {
-    try {
-      const res = await dispatch(getPlayerEntries()).unwrap();
-      const events = res?.data?.events || res?.events || [];
-      console.log("fetchtotalAmount : ",events);
-      setFetchSelectedEvents(selectedEvents);
-      setSelectedEvents(events);
+  // Destructure with safe defaults
+  const {
+    unpaidSelectedEvents = [],
+    unpaidTotalFee = 0,
+    unpaidEventsCount = 0,
+    paidEventsCount = 0
+  } = eventsAnalysis || {};
 
-      // 🧠 Extract partner data from fetched events
-      const partnersMap = {};
-      events.forEach((ev) => {
-        if (ev.partner) {
-          const key = `${ev.category}|${ev.type}`;
-          partnersMap[key] = {
-            fullName: ev.partner.fullname || "",
-            tnbaId: ev.partner.TnBaId || "",
-            dob: ev.partner.dob || "",
-            academyName: ev.partner.academyName || "",
-            place: ev.partner.place || "",
-            district: ev.partner.district || "",
-          };
-        }
-      });
+  // Debug logs
+  console.log('PaymentStep received events analysis:', eventsAnalysis);
+  console.log('Unpaid events:', unpaidSelectedEvents);
+  console.log('Unpaid total fee:', unpaidTotalFee);
 
-      // 👫 Initialize partners in playersData
-      setPlayersData((prev) => ({
-        ...prev,
-        partners: partnersMap,
-      }));
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        const res = await dispatch(getPlayerEntries()).unwrap();
+        const events = res?.data?.events || res?.events || [];
+        console.log("Fetched events:", events);
+        
+        setFetchSelectedEvents(events); // Set the fetched events
+        setSelectedEvents(events); // Update parent state
 
-      console.log("✅ Initialized partnersData:", partnersMap);
-    } catch (error) {
-      console.error("❌ Error fetching player entries:", error);
-    }
-  };
+        // 🧠 Extract partner data from fetched events
+        const partnersMap = {};
+        events.forEach((ev) => {
+          if (ev.partner) {
+            const key = `${ev.category}|${ev.type}`;
+            partnersMap[key] = {
+              fullName: ev.partner.fullname || "",
+              tnbaId: ev.partner.TnBaId || "",
+              dob: ev.partner.dob || "",
+              academyName: ev.partner.academyName || "",
+              place: ev.partner.place || "",
+              district: ev.partner.district || "",
+            };
+          }
+        });
 
-  fetchEvents();
-}, [dispatch]);
+        // 👫 Initialize partners in playersData
+        setPlayersData((prev) => ({
+          ...prev,
+          partners: partnersMap,
+        }));
 
-  // ✅ Calculate total fee dynamically
+        console.log("✅ Initialized partnersData:", partnersMap);
+      } catch (error) {
+        console.error("❌ Error fetching player entries:", error);
+      }
+    };
+
+    fetchEvents();
+  }, [dispatch, setSelectedEvents, setPlayersData]);
+
+  // ✅ Calculate total fee for ALL selected events
   const totalFee = useMemo(() => {
     return selectedEvents.reduce((acc, event) => {
       const feeKey = event.type === "singles" ? "singles" : "doubles";
       return acc + tournamentData.entryFees[feeKey];
     }, 0);
   }, [selectedEvents]);
-const fetchSelectedEventsTotalAmount = useMemo(() => {
-  return fetchSelectedEvents.reduce((acc, event) => {
-    const feeKey = event.type === "singles" ? "singles" : "doubles";
-    return acc + tournamentData.entryFees[feeKey];
-  }, 0);
-})
-console.log("FetchAmount : ",fetchSelectedEventsTotalAmount,totalFee);
+
+  // ✅ Calculate total fee for fetched events (for comparison)
+  const fetchSelectedEventsTotalAmount = useMemo(() => {
+    return fetchSelectedEvents.reduce((acc, event) => {
+      const feeKey = event.type === "singles" ? "singles" : "doubles";
+      return acc + tournamentData.entryFees[feeKey];
+    }, 0);
+  }, [fetchSelectedEvents]);
+
+  console.log("Selected Events:", selectedEvents);
+  console.log("Fetch Amount:", fetchSelectedEventsTotalAmount, "Total Fee:", totalFee);
+
+  // Determine which amount to use for payment
+  const paymentAmount = unpaidTotalFee > 0 ? unpaidTotalFee : totalFee;
 
   return (
     <div className="space-y-8">
@@ -84,17 +106,22 @@ console.log("FetchAmount : ",fetchSelectedEventsTotalAmount,totalFee);
         {/* Registration Summary */}
         <div className="mb-8 border border-gray-700 p-4 rounded-lg bg-[#192339] shadow-inner">
           <p className="text-lg font-semibold text-gray-200 border-b border-gray-700 pb-2 mb-3">
-            ₹ Registration Summary
+            Registration Summary
           </p>
           <ul className="list-disc ml-5 text-gray-300 space-y-2 text-sm">
             {selectedEvents.map((event, index) => {
               const isDoubles =
                 event.type.toLowerCase().includes("doubles") ||
                 event.type.toLowerCase().includes("mixed");
+              const isPaid = event.payment?.status === "Paid";
 
               return (
-                <li key={index} className="text-yellow-300">
+                <li 
+                  key={index} 
+                  className={`${isPaid ? 'text-green-400' : 'text-yellow-300'}`}
+                >
                   {event.category} {event.type}
+                  {isPaid && <span className="ml-2 text-xs bg-green-600 px-1 rounded">Paid ✓</span>}
                   {isDoubles && (
                     <span className="ml-2 text-gray-400">
                       (Partner:{" "}
@@ -117,6 +144,26 @@ console.log("FetchAmount : ",fetchSelectedEventsTotalAmount,totalFee);
           </p>
         </div>
 
+        {/* Payment Status Summary */}
+        {unpaidEventsCount > 0 && (
+          <div className="mb-4 p-4 bg-blue-900/30 rounded-lg">
+            <h3 className="text-lg font-semibold mb-2 text-cyan-300">Payment Summary</h3>
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              <div>
+                <span className="text-gray-400">Unpaid Events:</span>
+                <span className="ml-2 text-yellow-300 font-semibold">{unpaidEventsCount}</span>
+              </div>
+              <div>
+                <span className="text-gray-400">Paid Events:</span>
+                <span className="ml-2 text-green-400 font-semibold">{paidEventsCount}</span>
+              </div>
+            </div>
+            <p className="text-xl font-bold text-yellow-300 mt-3 pt-2 border-t border-gray-600">
+              Amount Due: ₹{unpaidTotalFee}
+            </p>
+          </div>
+        )}
+
         {/* Payment Info */}
         <div className="border border-gray-700 p-4 rounded-lg bg-[#192339] text-center">
           <p className="text-lg font-semibold text-gray-200 border-b border-gray-700 pb-2 mb-3">
@@ -130,22 +177,31 @@ console.log("FetchAmount : ",fetchSelectedEventsTotalAmount,totalFee);
               alt="UPI QR Code"
               className="w-32 h-32 rounded-lg shadow-lg border border-cyan-400/20"
             />
+            
+            {/* Dynamic Payment Button */}
             <a
-              href={`upi://pay?pa=${upi}&pn=Tournament%20Fees&am=${totalFee}&cu=INR`}
-              className="mt-4 px-6 py-2 btn btn-primary hover:scale-105 text-white font-semibold rounded-lg transition-all duration-200"
+              href={`upi://pay?pa=${upi}&pn=Tournament%20Fees&am=${paymentAmount}&cu=INR`}
+              className="mt-4 px-6 py-2 bg-gradient-to-r from-cyan-500 to-cyan-400 hover:scale-105 text-white font-semibold rounded-lg transition-all duration-200 shadow-md"
             >
-              Pay via UPI
+              {unpaidTotalFee > 0 ? `Pay ₹${unpaidTotalFee} for Unpaid Events` : `Pay ₹${totalFee}`}
             </a>
+            
+            {unpaidTotalFee > 0 && unpaidTotalFee !== totalFee && (
+              <p className="text-xs text-gray-400 mt-2">
+                Paying only for {unpaidEventsCount} unpaid event{unpaidEventsCount !== 1 ? 's' : ''}
+              </p>
+            )}
           </div>
         </div>
       </div>
 
       {/* ✅ Upload Screenshot Section */}
       <UploadScreenShot
-        expectedAmount={totalFee}
+        expectedAmount={paymentAmount} // Pass the dynamic payment amount
         expectedUPI={upi}
         onBack={onBack}
         selectedEvents={selectedEvents}
+        unpaidEventsCount={unpaidEventsCount} // Pass additional context
       />
     </div>
   );

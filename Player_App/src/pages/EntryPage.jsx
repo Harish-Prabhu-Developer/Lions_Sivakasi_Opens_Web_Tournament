@@ -12,6 +12,7 @@ import { addPartnerToEvent, addToEvents, getPlayerEntries } from "../redux/Slice
 import { useDispatch } from "react-redux";
 import { getUser } from "../utils/authHelpers";
 import { updatePlayerForm } from "../redux/Slices/PlayerSlice";
+
 const EntryPage = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -20,6 +21,14 @@ const EntryPage = () => {
   const [selectedEvents, setSelectedEvents] = useState([]);
   const [step2Index, setStep2Index] = useState(0);
   const user = getUser();
+
+  // Add state for unpaid events analysis
+  const [eventsAnalysis, setEventsAnalysis] = useState({
+    unpaidSelectedEvents: [],
+    unpaidTotalFee: 0,
+    unpaidEventsCount: 0,
+    paidEventsCount: 0
+  });
 
   // Main state holding player and partner data
   const [playersData, setPlayersData] = useState({
@@ -36,44 +45,49 @@ const EntryPage = () => {
     partners: {}, // Keyed by: 'Category|EventType' (e.g., 'Under 15 Boys & Girls|Doubles')
   });
 
-useEffect(() => {
-  const fetchEvents = async () => {
-    try {
-      const res = await dispatch(getPlayerEntries()).unwrap();
-      const events = res?.data?.events || res?.events || [];
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        const res = await dispatch(getPlayerEntries()).unwrap();
+        const events = res?.data?.events || res?.events || [];
 
-      setSelectedEvents(events);
+        setSelectedEvents(events);
 
-      // 🧠 Extract partner data from fetched events
-      const partnersMap = {};
-      events.forEach((ev) => {
-        if (ev.partner) {
-          const key = `${ev.category}|${ev.type}`;
-          partnersMap[key] = {
-            fullName: ev.partner.fullname || "",
-            tnbaId: ev.partner.TnBaId || "",
-            dob: ev.partner.dob || "",
-            academyName: ev.partner.academyName || "",
-            place: ev.partner.place || "",
-            district: ev.partner.district || "",
-          };
-        }
-      });
+        // 🧠 Extract partner data from fetched events
+        const partnersMap = {};
+        events.forEach((ev) => {
+          if (ev.partner) {
+            const key = `${ev.category}|${ev.type}`;
+            partnersMap[key] = {
+              fullName: ev.partner.fullname || "",
+              tnbaId: ev.partner.TnBaId || "",
+              dob: ev.partner.dob || "",
+              academyName: ev.partner.academyName || "",
+              place: ev.partner.place || "",
+              district: ev.partner.district || "",
+            };
+          }
+        });
 
-      // 👫 Initialize partners in playersData
-      setPlayersData((prev) => ({
-        ...prev,
-        partners: partnersMap,
-      }));
+        // 👫 Initialize partners in playersData
+        setPlayersData((prev) => ({
+          ...prev,
+          partners: partnersMap,
+        }));
 
-      console.log("✅ Initialized partnersData:", partnersMap);
-    } catch (error) {
-      console.error("❌ Error fetching player entries:", error);
-    }
-  };
+        console.log("✅ Initialized partnersData:", partnersMap);
+      } catch (error) {
+        console.error("❌ Error fetching player entries:", error);
+      }
+    };
 
-  fetchEvents();
-}, [dispatch]);
+    fetchEvents();
+  }, [dispatch]);
+
+  // Function to update events analysis (will be passed to StepOneEventSelection)
+  const updateEventsAnalysis = useCallback((analysis) => {
+    setEventsAnalysis(analysis);
+  }, []);
 
   // --- Step 2 Logic Configuration ---
 
@@ -135,51 +149,51 @@ useEffect(() => {
 
   // --- State Update Handlers ---
 
-const onFormChange = useCallback(
-  (key, value) => {
-    if (!currentFormDef) return;
+  const onFormChange = useCallback(
+    (key, value) => {
+      if (!currentFormDef) return;
 
-    if (currentFormDef.type === "player") {
-      // 🧍 Update main player details
-      setPlayersData((prev) => ({
-        ...prev,
-        player: { ...prev.player, [key]: value },
-      }));
-    } else if (currentFormDef.type === "partner") {
-      const partnerKey = currentFormDef.key;
+      if (currentFormDef.type === "player") {
+        // 🧍 Update main player details
+        setPlayersData((prev) => ({
+          ...prev,
+          player: { ...prev.player, [key]: value },
+        }));
+      } else if (currentFormDef.type === "partner") {
+        const partnerKey = currentFormDef.key;
 
-      // 👫 Update partner details in playersData
-      setPlayersData((prev) => ({
-        ...prev,
-        partners: {
-          ...prev.partners,
-          [partnerKey]: {
-            ...(prev.partners[partnerKey] || {}),
-            [key]: value,
+        // 👫 Update partner details in playersData
+        setPlayersData((prev) => ({
+          ...prev,
+          partners: {
+            ...prev.partners,
+            [partnerKey]: {
+              ...(prev.partners[partnerKey] || {}),
+              [key]: value,
+            },
           },
-        },
-      }));
+        }));
 
-      // 🆕 Also update partner info inside selectedEvents
-      setSelectedEvents((prev) =>
-        prev.map((event) => {
-          const eventKey = `${event.category}|${event.type}`;
-          if (eventKey === partnerKey) {
-            return {
-              ...event,
-              partner: {
-                ...(event.partner || {}),
-                [key]: value,
-              },
-            };
-          }
-          return event;
-        })
-      );
-    }
-  },
-  [currentFormDef]
-);
+        // 🆕 Also update partner info inside selectedEvents
+        setSelectedEvents((prev) =>
+          prev.map((event) => {
+            const eventKey = `${event.category}|${event.type}`;
+            if (eventKey === partnerKey) {
+              return {
+                ...event,
+                partner: {
+                  ...(event.partner || {}),
+                  [key]: value,
+                },
+              };
+            }
+            return event;
+          })
+        );
+      }
+    },
+    [currentFormDef]
+  );
 
   // --- Navigation Handlers ---
 
@@ -378,6 +392,7 @@ const onFormChange = useCallback(
             entryFees={tournamentData.entryFees}
             onNext={handleStepOneSubmit}
             loading={loading}
+            onEventsAnalysisUpdate={updateEventsAnalysis} // Pass the callback
           />
         )}
 
@@ -404,6 +419,7 @@ const onFormChange = useCallback(
             upiQrUrl={tournamentData.upiQrUrl}
             onBack={handlePaymentBack}
             onSubmit={handleEntrySubmit}
+            eventsAnalysis={eventsAnalysis} // Pass the analysis data
           />
         )}
       </div>

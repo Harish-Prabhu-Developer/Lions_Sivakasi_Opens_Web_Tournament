@@ -98,6 +98,7 @@ export const getPlayerEntries = async (req, res) => {
         player: req.user.id,
         playerDetails: null,
         events: [],
+        TotalPaidCount: 0,
       });
     }
     
@@ -107,6 +108,26 @@ export const getPlayerEntries = async (req, res) => {
     // 4️⃣ Combine all event arrays safely (with flatten)
     const allEvents = entries.flatMap(entry => entry.events || []);
 
+     // 5️⃣ Collect all unique payment IDs from events
+    const paymentIds = [
+      ...new Set(
+        allEvents
+          .map(e => e.payment?._id)
+          .filter(id => !!id)
+          .map(id => id.toString())
+      ),
+    ];
+
+        // 6️⃣ Count total number of Paid payments for this player
+    let TotalPaidCount = 0;
+    if (paymentIds.length > 0) {
+      TotalPaidCount = await PaymentModel.countDocuments({
+        _id: { $in: paymentIds },
+        status: "Paid",
+      });
+    }
+
+
     // 5️⃣ Send clean structured response
     res.status(200).json({
       success: true,
@@ -115,6 +136,7 @@ export const getPlayerEntries = async (req, res) => {
       player:playerDetails,
       totalEvents: allEvents.length,
       events: allEvents,
+      TotalPaidCount, // ✅ new field added
     });
 
   } catch (err) {

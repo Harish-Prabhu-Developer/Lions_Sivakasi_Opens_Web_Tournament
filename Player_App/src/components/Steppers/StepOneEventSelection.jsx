@@ -1,57 +1,110 @@
+import { useEffect } from "react";
 import toast from "react-hot-toast";
+import { Loader2 } from "lucide-react"; // Import loader icon
+import { useState } from "react";
 
 // 2. StepOneEventSelection Component
-const StepOneEventSelection = ({ categories, selectedEvents, setSelectedEvents, entryFees, onNext }) => {
+const StepOneEventSelection = ({
+  categories,
+  selectedEvents,
+  setSelectedEvents,
+  entryFees,
+  onNext,
+  loading=false, // Add loading prop
+  onEventsAnalysisUpdate,// Add this prop
+}) => {
   const SINGLES_DOUBLES_LIMIT = 3;
   const MIXED_DOUBLES_LIMIT = 1;
   const TOTAL_EVENTS_LIMIT = 4;
 
+  const [Loading, setLoading] = useState(loading);
   // Get user data from localStorage
   const getUserData = () => {
     try {
-      const userData = localStorage.getItem('user');
+      const userData = localStorage.getItem("user");
       return userData ? JSON.parse(userData) : null;
     } catch (error) {
-      console.error('Error parsing user data from localStorage:', error);
+      console.error("Error parsing user data from localStorage:", error);
       return null;
     }
   };
 
+
   const user = getUserData();
-  
+
   // Filter categories based on user's DOB
   const getFilteredCategories = () => {
     if (!user || !user.dob) return categories;
-    
+
     const userDob = new Date(user.dob);
     const currentYear = new Date().getFullYear();
     const userBirthYear = userDob.getFullYear();
-    
-    return categories.filter(category => {
+
+    return categories.filter((category) => {
       return userBirthYear >= category.afterBorn;
     });
   };
 
   const filteredCategories = getFilteredCategories();
 
-  const singlesDoublesCount = selectedEvents.filter(e => e.type !== 'mixed doubles').length;
-  const mixedDoublesCount = selectedEvents.filter(e => e.type === 'mixed doubles').length;
+  const singlesDoublesCount = selectedEvents.filter(
+    (e) => e.type !== "mixed doubles"
+  ).length;
+  const mixedDoublesCount = selectedEvents.filter(
+    (e) => e.type === "mixed doubles"
+  ).length;
   const totalCount = selectedEvents.length;
 
-  const totalFee = selectedEvents.reduce((acc, event) => {
-    const feeKey = event.type === 'singles' ? 'singles' : 'doubles';
-    return acc + entryFees[feeKey];
-  }, 0);
+  // Check if event is paid and cannot be unselected
+  const isEventPaidAndLocked = (categoryName, type) => {
+    const event = selectedEvents.find(
+      (e) => e.category === categoryName && e.type === type
+    );
+    return event && event.payment && event.payment.status === "Paid";
+  };
 
-  const isEventSelected = (categoryName, type) => 
-    selectedEvents.some(e => e.category === categoryName && e.type === type);
+  // Get unpaid/unlocked selected events
+  const getUnpaidSelectedEvents = () => {
+    return selectedEvents.filter(
+      (event) => !isEventPaidAndLocked(event.category, event.type)
+    );
+  };
+
+  // Calculate total fee for unpaid/unlocked events only
+  const calculateUnpaidTotalFee = () => {
+    const unpaidEvents = getUnpaidSelectedEvents();
+    return unpaidEvents.reduce((acc, event) => {
+      const feeKey = event.type === "singles" ? "singles" : "doubles";
+      return acc + entryFees[feeKey];
+    }, 0);
+  };
+
+  const unpaidSelectedEvents = getUnpaidSelectedEvents();
+  const unpaidTotalFee = calculateUnpaidTotalFee();
+
+  // Inside your component, after calculating the unpaid events analysis:
+  useEffect(() => {
+    if (onEventsAnalysisUpdate) {
+      const analysis = {
+        unpaidSelectedEvents: unpaidSelectedEvents,
+        unpaidTotalFee: unpaidTotalFee,
+        unpaidEventsCount: unpaidSelectedEvents.length,
+        paidEventsCount: selectedEvents.length - unpaidSelectedEvents.length
+      };
+      onEventsAnalysisUpdate(analysis);
+    }
+  }, [unpaidSelectedEvents, unpaidTotalFee, selectedEvents, onEventsAnalysisUpdate]);
+
+  const isEventSelected = (categoryName, type) =>
+    selectedEvents.some((e) => e.category === categoryName && e.type === type);
 
   const canSelectEvent = (type) => {
     if (totalCount >= TOTAL_EVENTS_LIMIT) return false;
 
-    if (type === 'mixed doubles') {
+    if (type === "mixed doubles") {
       return mixedDoublesCount < MIXED_DOUBLES_LIMIT;
-    } else { // Singles or Doubles
+    } else {
+      // Singles or Doubles
       return singlesDoublesCount < SINGLES_DOUBLES_LIMIT;
     }
   };
@@ -60,14 +113,27 @@ const StepOneEventSelection = ({ categories, selectedEvents, setSelectedEvents, 
     const newEvent = { category: categoryName, type: type };
     const isCurrentlySelected = isEventSelected(categoryName, type);
 
+    // Check if trying to unselect a paid event
+    if (isCurrentlySelected && isEventPaidAndLocked(categoryName, type)) {
+      toast.error(
+        `Cannot remove ${categoryName} - ${type} as payment has already been processed.`
+      );
+      return;
+    }
+
     if (isCurrentlySelected) {
-      setSelectedEvents(prev => prev.filter(e => !(e.category === categoryName && e.type === type)));
+      setSelectedEvents((prev) =>
+        prev.filter((e) => !(e.category === categoryName && e.type === type))
+      );
     } else {
       if (canSelectEvent(type)) {
-        setSelectedEvents(prev => [...prev, newEvent]);
+        setSelectedEvents((prev) => [...prev, newEvent]);
       } else {
         let message = `Cannot select more than ${TOTAL_EVENTS_LIMIT} total events.`;
-        if (type === 'mixed doubles' && mixedDoublesCount >= MIXED_DOUBLES_LIMIT) {
+        if (
+          type === "mixed doubles" &&
+          mixedDoublesCount >= MIXED_DOUBLES_LIMIT
+        ) {
           message = `Maximum ${MIXED_DOUBLES_LIMIT} Mixed Doubles event allowed.`;
         } else if (singlesDoublesCount >= SINGLES_DOUBLES_LIMIT) {
           message = `Maximum ${SINGLES_DOUBLES_LIMIT} Singles/Doubles events allowed.`;
@@ -78,7 +144,11 @@ const StepOneEventSelection = ({ categories, selectedEvents, setSelectedEvents, 
   };
 
   const RuleTag = ({ label, count, limit }) => (
-    <div className={`px-3 py-1 text-sm rounded-full font-medium ${count > limit ? 'bg-red-600 text-white' : 'bg-cyan-600 text-white'}`}>
+    <div
+      className={`px-3 py-1 text-sm rounded-full font-medium ${
+        count > limit ? "bg-red-600 text-white" : "bg-cyan-600 text-white"
+      }`}
+    >
       {label}: {count}/{limit}
     </div>
   );
@@ -107,62 +177,113 @@ const StepOneEventSelection = ({ categories, selectedEvents, setSelectedEvents, 
       {user && (
         <div className="mb-6 p-4 bg-blue-900/30 border border-blue-500/30 rounded-lg">
           <div className="text-sm text-blue-300">
-            <span className="font-semibold">Player:</span> {user.name} | 
-            <span className="font-semibold"> DOB:</span> {user.dob} | 
+            <span className="font-semibold">Player:</span> {user.name} |
+            <span className="font-semibold"> DOB:</span> {user.dob} |
             <span className="font-semibold"> Gender:</span> {user.gender}
           </div>
         </div>
       )}
 
       <div className="flex flex-wrap justify-between items-center mb-8 gap-4 p-4 bg-[#0d162a] rounded-xl border border-cyan-400/20">
-        <RuleTag label="Total Events" count={totalCount} limit={TOTAL_EVENTS_LIMIT} />
-        <RuleTag label="Singles/Doubles" count={singlesDoublesCount} limit={SINGLES_DOUBLES_LIMIT} />
-        <RuleTag label="Mixed Doubles" count={mixedDoublesCount} limit={MIXED_DOUBLES_LIMIT} />
-        <div className="text-xl font-bold text-yellow-300">Total Price: ₹{totalFee}</div>
+        <RuleTag
+          label="Total Events"
+          count={totalCount}
+          limit={TOTAL_EVENTS_LIMIT}
+        />
+        <RuleTag
+          label="Singles/Doubles"
+          count={singlesDoublesCount}
+          limit={SINGLES_DOUBLES_LIMIT}
+        />
+        <RuleTag
+          label="Mixed Doubles"
+          count={mixedDoublesCount}
+          limit={MIXED_DOUBLES_LIMIT}
+        />
+        <div className="flex flex-col items-end gap-2">
+          <div className="text-lg font-bold text-yellow-300">
+            Total Price: ₹{unpaidTotalFee}
+          </div>
+          {unpaidSelectedEvents.length !== totalCount && (
+            <div className="text-xs text-gray-400">
+              ({unpaidSelectedEvents.length} unpaid events of {totalCount}{" "}
+              total)
+            </div>
+          )}
+        </div>
       </div>
-      
+
+      {/* Loading Overlay */}
+      {loading && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="bg-[#0f1d38] p-8 rounded-xl border border-cyan-400/20 shadow-2xl flex flex-col items-center gap-4">
+            <Loader2 className="w-8 h-8 text-cyan-400 animate-spin" />
+            <p className="text-cyan-200 font-semibold">Loading events...</p>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredCategories.map((category) => {
           const userBirthYear = user ? new Date(user.dob).getFullYear() : 0;
-          const ageCategory = `Under ${category.name.split(' ')[1]}`;
-          const userAge = userBirthYear ? category.afterBorn - userBirthYear : 0;
-          
+          const ageCategory = `Under ${category.name.split(" ")[1]}`;
+          const userAge = userBirthYear
+            ? category.afterBorn - userBirthYear
+            : 0;
+
           return (
             <div
               key={category.name}
-              className="bg-[#0f1d38] p-5 rounded-xl border border-gray-700 shadow-lg hover:shadow-cyan-500/30 transition-shadow duration-300"
+              className={`bg-[#0f1d38] p-5 rounded-xl border border-gray-700 shadow-lg hover:shadow-cyan-500/30 transition-shadow duration-300 ${
+                loading ? "opacity-50 pointer-events-none" : ""
+              }`}
             >
               <h3 className="text-lg font-bold text-cyan-300 mb-1">
-                {category.name.replace('Boys & Girls', '').trim()}
+                {category.name.replace("Boys & Girls", "").trim()}
               </h3>
-              <p className="text-sm text-gray-400 mb-1">Born after: {category.afterBorn}</p>
+              <p className="text-sm text-gray-400 mb-1">
+                Born after: {category.afterBorn}
+              </p>
               {user && (
                 <p className="text-xs text-green-400 mb-3">
                   Your age: {userAge} years (Eligible ✓)
                 </p>
               )}
-              
+
               <div className="flex flex-col gap-2">
                 {category.events.map((type) => {
                   const isSelected = isEventSelected(category.name, type);
                   const canBeSelected = canSelectEvent(type) || isSelected;
+                  const isPaidAndLocked = isEventPaidAndLocked(
+                    category.name,
+                    type
+                  );
 
                   return (
                     <button
                       key={type}
                       onClick={() => handleToggleEvent(category.name, type)}
-                      disabled={!canBeSelected && !isSelected}
+                      disabled={!canBeSelected && !isSelected || loading}
                       className={`
-                        w-full capitalize py-2 rounded-lg font-semibold transition-all duration-200
-                        ${isSelected
-                          ? 'bg-cyan-500 hover:bg-cyan-600 text-white shadow-lg shadow-cyan-500/50 transform scale-[1.02]'
-                          : canBeSelected
-                          ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
-                          : 'bg-gray-800 text-gray-500 cursor-not-allowed opacity-60'
+                        w-full capitalize py-2 rounded-lg font-semibold transition-all duration-200 relative
+                        ${
+                          isPaidAndLocked
+                            ? "bg-green-600 text-white shadow-lg shadow-green-500/50 cursor-not-allowed"
+                            : isSelected
+                            ? "bg-cyan-500 hover:bg-cyan-600 text-white shadow-lg shadow-cyan-500/50 transform scale-[1.02]"
+                            : canBeSelected
+                            ? "bg-gray-700 hover:bg-gray-600 text-gray-200"
+                            : "bg-gray-800 text-gray-500 cursor-not-allowed opacity-60"
                         }
+                        ${loading ? "cursor-not-allowed opacity-50" : ""}
                       `}
                     >
                       {type}
+                      {isPaidAndLocked && (
+                        <span className="absolute top-1 right-2 text-xs bg-green-800 px-1 rounded">
+                          Paid ✓
+                        </span>
+                      )}
                     </button>
                   );
                 })}
@@ -173,15 +294,22 @@ const StepOneEventSelection = ({ categories, selectedEvents, setSelectedEvents, 
       </div>
       <div className="flex justify-end w-full mt-8">
         <button
-          disabled={selectedEvents.length === 0}
+          disabled={selectedEvents.length === 0 || loading}
           onClick={onNext}
-          className={`px-8 py-2 font-semibold rounded-lg transition-all duration-200 shadow-md ${
-            selectedEvents.length === 0
+          className={`px-8 py-2 font-semibold rounded-lg transition-all duration-200 shadow-md flex items-center justify-center gap-2 ${
+            selectedEvents.length === 0 || loading
               ? "bg-gray-600 cursor-not-allowed"
               : "bg-gradient-to-r from-cyan-500 to-cyan-400 hover:scale-105"
           }`}
         >
-          Next →
+          {loading ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Loading...
+            </>
+          ) : (
+            "Next →"
+          )}
         </button>
       </div>
     </div>
@@ -196,10 +324,17 @@ export const tournamentData = {
     { name: "Under 09", afterBorn: 2017, events: ["singles"] },
     { name: "Under 11", afterBorn: 2015, events: ["singles"] },
     { name: "Under 13", afterBorn: 2013, events: ["singles", "doubles"] },
-    { name: "Under 15", afterBorn: 2011, events: ["singles", "doubles", "mixed doubles"] },
+    {
+      name: "Under 15",
+      afterBorn: 2011,
+      events: ["singles", "doubles", "mixed doubles"],
+    },
     { name: "Under 17", afterBorn: 2009, events: ["singles", "doubles"] },
-    { name: "Under 19", afterBorn: 2007, events: ["singles", "doubles", "mixed doubles"] },
+    {
+      name: "Under 19",
+      afterBorn: 2007,
+      events: ["singles", "doubles", "mixed doubles"],
+    },
   ],
   upi: "9360933755@iob",
-  
 };

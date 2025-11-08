@@ -209,44 +209,57 @@ const DashboardPage = () => {
   ];
 
   // 📩 Entry Restrictions Logic
-  const totalEntries = entries.length;
-  const singlesOrDoublesCount = entries.filter(
-    (e) =>
-      e.type.toLowerCase() === "singles" || e.type.toLowerCase() === "doubles"
-  ).length;
-  const mixedDoublesCount = entries.filter(
-    (e) => e.type.toLowerCase() === "mixed doubles"
-  ).length;
+// 📩 Entry Restrictions Logic
+const totalEntries = entries.length;
+const singlesOrDoublesCount = entries.filter(
+  (e) =>
+    e.type.toLowerCase() === "singles" || e.type.toLowerCase() === "doubles"
+).length;
+const mixedDoublesCount = entries.filter(
+  (e) => e.type.toLowerCase() === "mixed doubles"
+).length;
 
-//   console.log("🔎 Debug Entry Counts:");
-// console.log("Total Entries:", totalEntries);
-// console.log("Singles/Doubles Count:", singlesOrDoublesCount);
-// console.log("Mixed Doubles Count:", mixedDoublesCount);
+const totalPaidCount = entries.filter(
+  (e) => e.payment?.status === "Paid"
+).length;
 
-// const canAddNewEntry =
-//   totalEntries < 4 && singlesOrDoublesCount < 3 && mixedDoublesCount < 1;
-const canAddNewEntry =
-  totalEntries < 4 &&
-  (singlesOrDoublesCount < 3 || mixedDoublesCount < 1);
+console.log("totalPaidCount: ", totalPaidCount);
+console.log("totalEntries: ", totalEntries);
+console.log("singlesOrDoublesCount: ", singlesOrDoublesCount);
+console.log("mixedDoublesCount: ", mixedDoublesCount);
 
-// console.log("✅ Can Add New Entry:", canAddNewEntry);
+// 📩 New Entry Validation Logic - FIXED
+const canAddNewEntry = 
+  (totalEntries < 4 || (totalEntries === 4 && totalPaidCount < 4)) && // Allow if less than 4 OR 4 entries but not all paid
+  (singlesOrDoublesCount < 3 || mixedDoublesCount < 1); // AND event type limits
 
-  // 📩 Handlers
+// 📩 Handlers// 📩 Handlers
 const handleEntry = () => {
-  if (!canAddNewEntry) {
-    let reason = "";
-    if (totalEntries >= 4)
-      reason = "You have reached the maximum of 4 total entries.";
-    else if (singlesOrDoublesCount >= 3)
-      reason = "You can only register for up to 3 Singles or Doubles events.";
-    else if (mixedDoublesCount >= 1)
-      reason = "You can register for only one Mixed Doubles event.";
-
-    toast.error(reason, { duration: 4000 });
+  // 🧠 1️⃣ First check if all 4 events are already paid
+  if (totalPaidCount >= 4) {
+    toast.error("You have already completed payment for 4 events.", {
+      duration: 4000,
+    });
     return;
   }
-    navigate("/entry"); // ✅ Fixed: use absolute path
-  };
+
+  // // 🧠 2️⃣ Then check if they can add new entries
+  // if (!canAddNewEntry) {
+  //   let reason = "";
+  //   if (totalEntries >= 4)
+  //     reason = "You have reached the maximum of 4 total entries.";
+  //   else if (singlesOrDoublesCount >= 3)
+  //     reason = "You can only register for up to 3 Singles or Doubles events.";
+  //   else if (mixedDoublesCount >= 1)
+  //     reason = "You can register for only one Mixed Doubles event.";
+
+  //   toast.error(reason, { duration: 4000 });
+  //   return;
+  // }
+
+  // ✅ 3️⃣ If all validations pass — proceed
+  navigate("/entry");
+};
 
 const handleLogout = async () => {
     try {
@@ -428,12 +441,13 @@ const handleLogout = async () => {
 
           <button
             className={`flex items-center justify-center gap-2 px-6 py-2 rounded-md shadow text-white font-semibold transition duration-200 text-sm sm:text-base ${
-              canAddNewEntry
+              (!canAddNewEntry && totalPaidCount!==4)
                 ? "bg-gradient-to-r from-cyan-500 to-cyan-400 hover:scale-105"
+                
                 : "bg-gray-600 cursor-not-allowed"
             }`}
             onClick={handleEntry}
-            disabled={!canAddNewEntry}
+            // disabled={!canAddNewEntry}
           >
             <Plus className="w-5 h-5" />
             <span className="hidden xs:inline">New Entry</span>
@@ -450,7 +464,7 @@ const handleLogout = async () => {
             </p>
             <button
               className="px-8 py-3 bg-gradient-to-r from-cyan-500 to-cyan-400 text-white rounded-full font-semibold shadow-md hover:scale-105 transition-all text-base sm:text-lg"
-              disabled={!canAddNewEntry}onClick={handleEntry}
+              onClick={handleEntry}
             >
               Register for Tournament
             </button>
