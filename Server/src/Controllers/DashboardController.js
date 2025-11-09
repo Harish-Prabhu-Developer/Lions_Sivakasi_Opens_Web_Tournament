@@ -36,19 +36,48 @@ export const getDashboardStats = async (req, res) => {
     const totalEventsResult = await EntryModel.aggregate(totalEventsPipeline);
     const totalEvents = totalEventsResult[0]?.total || 0;
 
-    // Payment statistics with date filtering
-    const paymentStatsPipeline = [
-      { $match: dateFilter },
-      {
-        $group: {
-          _id: null,
-          totalAmount: { $sum: "$metadata.paymentAmount" },
-          successfulPayments: { $sum: { $cond: [{ $eq: ["$status", "Paid"] }, 1, 0] } },
-          pendingPayments: { $sum: { $cond: [{ $eq: ["$status", "Pending"] }, 1, 0] } },
-          failedPayments: { $sum: { $cond: [{ $eq: ["$status", "Failed"] }, 1, 0] } }
+const paymentStatsPipeline = [
+  { $match: dateFilter },
+  {
+    $lookup: {
+      from: "entries", // MongoDB collection name for EntryModel
+      localField: "entryId",
+      foreignField: "_id",
+      as: "entries"
+    }
+  },
+  { $unwind: "$entries" },
+  { $unwind: "$entries.events" },
+  {
+    $group: {
+      _id: null,
+      totalAmount: {
+        $sum: {
+          $cond: [
+            {
+              $and: [
+                { $eq: ["$status", "Paid"] },
+                { $eq: ["$entries.events.type", "singles"] }
+              ]
+            },
+            {
+              $cond: [
+                { $eq: ["$entries.events.category", "Under 13"] },
+                900,
+                1300
+              ]
+            },
+            0
+          ]
         }
-      }
-    ];
+      },
+      successfulPayments: { $sum: { $cond: [{ $eq: ["$status", "Paid"] }, 1, 0] } },
+      pendingPayments: { $sum: { $cond: [{ $eq: ["$status", "Pending"] }, 1, 0] } },
+      failedPayments: { $sum: { $cond: [{ $eq: ["$status", "Failed"] }, 1, 0] } }
+    }
+  }
+];
+
     const paymentStats = await PaymentModel.aggregate(paymentStatsPipeline);
 
     // Event status statistics with date filtering

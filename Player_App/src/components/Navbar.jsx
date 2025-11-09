@@ -35,6 +35,7 @@ function Navbar() {
 
   const navLinks = [
     { name: "Home", path: "/" },
+    // { name: "Bulk Entries", path: "/entry" },
     ...(isLoggedIn ? [{ name: "Dashboard", path: "/dashboard" }] : []),
   ];
 

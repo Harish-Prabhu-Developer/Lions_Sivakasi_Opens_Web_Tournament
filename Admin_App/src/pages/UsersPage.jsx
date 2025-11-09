@@ -305,8 +305,8 @@ const UserPage = () => {
         return;
       }
 
-      const response = await axios.post(
-        `${API_URL}/api/v1/user/bulk-delete`,
+      const response = await axios.put(
+        `${API_URL}/api/v1/user/admin/delete-multiple-users`,
         { userIds: selectedPlayerIds },
         getHeaders()
       );

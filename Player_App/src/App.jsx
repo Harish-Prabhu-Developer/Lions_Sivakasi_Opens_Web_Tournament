@@ -62,6 +62,7 @@ const Layout = ({ loggedIn }) => {
         <Routes>
           {/* No auth routes and public routes */}
           <Route path="/" element={<HomePage />} />
+          {/* Bulk Entries Role */}
           {/* Public routes */}
           <Route element={<PublicRoute />}>
             <Route path="/register" element={<RegisterPage />} />
