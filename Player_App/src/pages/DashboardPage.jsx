@@ -441,10 +441,10 @@ const handleLogout = async () => {
 
           <button
             className={`flex items-center justify-center gap-2 px-6 py-2 rounded-md shadow text-white font-semibold transition duration-200 text-sm sm:text-base ${
-              (!canAddNewEntry && totalPaidCount!==4)
-                ? "bg-gradient-to-r from-cyan-500 to-cyan-400 hover:scale-105"
+              (totalPaidCount===4)
+                ? "bg-gray-600 cursor-not-allowed"
                 
-                : "bg-gray-600 cursor-not-allowed"
+                : "bg-gradient-to-r from-cyan-500 to-cyan-400 hover:scale-105"
             }`}
             onClick={handleEntry}
             // disabled={!canAddNewEntry}

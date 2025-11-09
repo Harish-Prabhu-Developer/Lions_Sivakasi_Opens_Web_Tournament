@@ -185,9 +185,9 @@ useEffect(() => {
           }}
           
           className={`px-10 py-3.5 rounded-full font-bold shadow-lg transition-all duration-300 ${
-            totalPaidCount!==4
-              ? "bg-gradient-to-r from-cyan-500 via-sky-400 to-blue-500 text-white hover:from-sky-500 hover:to-cyan-400 hover:shadow-cyan-300/30 active:scale-95"
-              : "bg-gray-600/60 text-gray-300 cursor-not-allowed"
+            totalPaidCount===4
+              ? "bg-gray-600/60 text-gray-300 cursor-not-allowed"
+              : "bg-gradient-to-r from-cyan-500 via-sky-400 to-blue-500 text-white hover:from-sky-500 hover:to-cyan-400 hover:shadow-cyan-300/30 active:scale-95"
           }`}
         >
           Enter Now
