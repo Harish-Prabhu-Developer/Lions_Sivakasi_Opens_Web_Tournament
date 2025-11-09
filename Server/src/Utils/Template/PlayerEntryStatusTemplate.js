@@ -696,7 +696,7 @@ ${partnerName ? `Doubles Partner: ${partnerName}` : ""}
 
 For assistance, contact the Lions Sports Foundation Team:
 Email: lionssivakasiopen@gmail.com
-Phone: +91 1234567890
+Phone: +91 9360933755
 
 Please do not reply to this automated email.
   `.trim();

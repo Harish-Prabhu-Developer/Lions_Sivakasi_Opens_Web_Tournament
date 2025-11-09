@@ -353,7 +353,8 @@ export const AdminEntryRegisterTextTemplate = (playerName, eventDetails, payment
   text += `Date: ${new Date().toLocaleDateString()}\n`;
   
   text += `\nYour entries are now under review. You will receive another email once your registration is approved.\n\n`;
-  text += `For queries: support@lionsfoundation.com\n`;
+  text += `For queries: lionssivakasiopen@gmail.com\n`;
+  text += ` Contact: +91 9360933755\n\n`;
   text += `Lions Sports Foundation`;
   
   return text;

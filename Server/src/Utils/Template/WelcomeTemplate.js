@@ -49,7 +49,7 @@ export const WelcomeTemplate = (name) => `
       <p>Hi ${name || 'Player'},</p>
       <p>Thank you for joining our Tournament platform. We're excited to have you on board!</p>
       <p>You can now participate in upcoming tournaments, track your progress, and compete with players worldwide.</p>
-      <a href="https://lionsivakasiopen.netlify.app/register" class="button">Login to Your Account</a>
+      <a href="https://lionssportsfoundation.org/register" class="button">Login to Your Account</a>
       <p class="footer">If you have any questions, feel free to reply to this email or contact our support team.</p>
       <p class="footer">— The Tournament Team</p>
     </div>

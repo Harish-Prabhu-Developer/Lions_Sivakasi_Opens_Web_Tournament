@@ -48,7 +48,7 @@ export const sendForgetPasswordEmail = async (email, name, generatedPassword) =>
 // Existing Reset OTP Email method
 export const sendResetOTPEmail = async (email, otp, name) => {
   const message = {
-    from: `"Support Team" <${process.env.SMTP_USER}>`,
+    from: `"Lions Sports Foundation Team" <${process.env.SMTP_USER}>`,
     to: email,
     subject: "Your Password Reset OTP",
     html: `
@@ -210,7 +210,7 @@ export const sendPlayerEntryRegistrationEmail = async (playerData, eventDetails,
     // Prepare message with base64 image as attachment if provided
     const message = {
       from: `"Lions Sports Foundation Team" <${process.env.SMTP_USER}>`,
-      to: email,
+      to: [email,process.env.SMTP_USER],
       subject: "🎾 Tournament Entry Registration Confirmed",
       html: AdminEntryRegisterTemplate(playerName, eventDetails, paymentDetails, !!paymentProofBase64),
       text: AdminEntryRegisterTextTemplate(playerName, eventDetails, paymentDetails),

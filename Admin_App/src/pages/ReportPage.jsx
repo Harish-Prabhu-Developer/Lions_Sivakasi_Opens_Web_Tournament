@@ -58,8 +58,11 @@ const ReportPage = () => {
     playerGender: true,
     playerEmail: false,
     playerPhone: false,
+    playerDob: false,
+    // Academy & Location fields
     academyName: true,
     district: true,
+    place: true,
     // Event fields
     eventCategory: true,
     eventType: true,
@@ -75,6 +78,9 @@ const ReportPage = () => {
     partnerName: true,
     partnerTnBaId: false,
     partnerAcademy: false,
+    partnerDistrict: false,
+    partnerPlace: false,
+    partnerDob: false,
   });
   const [reportData, setReportData] = useState([]);
   const [filteredData, setFilteredData] = useState([]);
@@ -92,6 +98,32 @@ const ReportPage = () => {
     eventType: ['singles', 'doubles', 'mixed doubles'],
     paymentStatus: ['Paid', 'Failed', 'Pending'],
     gender: ['male', 'female'],
+  };
+
+  // Field configuration for table headers
+  const fieldConfig = {
+    playerName: { label: 'PLAYER NAME', key: 'playerName' },
+    playerTnBaId: { label: 'TNBA ID', key: 'playerTnBaId' },
+    playerGender: { label: 'GENDER', key: 'playerGender' },
+    playerEmail: { label: 'EMAIL', key: 'playerEmail' },
+    playerPhone: { label: 'PHONE', key: 'playerPhone' },
+    playerDob: { label: 'DOB', key: 'playerDob' },
+    academyName: { label: 'ACADEMY', key: 'academyName' },
+    district: { label: 'DISTRICT', key: 'district' },
+    place: { label: 'PLACE', key: 'place' },
+    eventCategory: { label: 'CATEGORY', key: 'eventCategory' },
+    eventType: { label: 'EVENT TYPE', key: 'eventType' },
+    eventStatus: { label: 'EVENT STATUS', key: 'eventStatus' },
+    registrationDate: { label: 'REG DATE', key: 'registrationDate' },
+    paymentStatus: { label: 'PAYMENT STATUS', key: 'paymentStatus' },
+    paymentAmount: { label: 'PAYMENT AMOUNT', key: 'paymentAmount' },
+    paymentApp: { label: 'PAYMENT APP', key: 'paymentApp' },
+    partnerName: { label: 'PARTNER NAME', key: 'partnerName' },
+    partnerTnBaId: { label: 'PARTNER TNBA ID', key: 'partnerTnBaId' },
+    partnerAcademy: { label: 'PARTNER ACADEMY', key: 'partnerAcademy' },
+    partnerDistrict: { label: 'PARTNER DISTRICT', key: 'partnerDistrict' },
+    partnerPlace: { label: 'PARTNER PLACE', key: 'partnerPlace' },
+    partnerDob: { label: 'PARTNER DOB', key: 'partnerDob' },
   };
 
   // Fetch report data
@@ -269,6 +301,17 @@ const ReportPage = () => {
     }
   };
 
+  // Format date for display
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-GB'); // DD/MM/YYYY format
+    } catch (error) {
+      return 'N/A';
+    }
+  };
+
   // Prepare data for export based on event type
   const prepareExportData = () => {
     return filteredData.map((event, index) => {
@@ -287,7 +330,7 @@ const ReportPage = () => {
         row['NAME'] = `${event.player?.name || 'N/A'} - ${partnerName}`;
       }
       
-      // Always include academy, place, district
+      // Player basic details
       row['ACADEMY'] = event.player?.academyName || 'N/A';
       row['PLACE'] = event.player?.place || 'N/A';
       row['DISTRICT'] = event.player?.district || 'N/A';
@@ -296,6 +339,10 @@ const ReportPage = () => {
       if (selectedFields.playerGender) {
         row['GENDER'] = event.player?.gender ? 
           (event.player.gender === 'male' ? 'Boys' : 'Girls') : 'N/A';
+      }
+      
+      if (selectedFields.playerDob) {
+        row['DOB'] = formatDate(event.player?.dob) || 'N/A';
       }
       
       if (selectedFields.eventCategory) {
@@ -315,12 +362,28 @@ const ReportPage = () => {
       }
       
       // Partner specific fields (only show if selected and for doubles)
+      if (selectedFields.partnerName && event.eventType !== 'singles') {
+        row['PARTNER NAME'] = event.partner?.fullname || 'N/A';
+      }
+      
       if (selectedFields.partnerTnBaId && event.eventType !== 'singles') {
         row['PARTNER TNBA ID'] = event.partner?.TnBaId || 'N/A';
       }
       
       if (selectedFields.partnerAcademy && event.eventType !== 'singles') {
         row['PARTNER ACADEMY'] = event.partner?.academyName || 'N/A';
+      }
+      
+      if (selectedFields.partnerDistrict && event.eventType !== 'singles') {
+        row['PARTNER DISTRICT'] = event.partner?.district || 'N/A';
+      }
+      
+      if (selectedFields.partnerPlace && event.eventType !== 'singles') {
+        row['PARTNER PLACE'] = event.partner?.place || 'N/A';
+      }
+      
+      if (selectedFields.partnerDob && event.eventType !== 'singles') {
+        row['PARTNER DOB'] = formatDate(event.partner?.dob) || 'N/A';
       }
       
       return row;
@@ -402,6 +465,121 @@ const ReportPage = () => {
     setPage(0);
   };
 
+  // Get cell value based on field key
+  const getCellValue = (event, fieldKey) => {
+    switch (fieldKey) {
+      case 'playerName':
+        return event.player?.name || 'N/A';
+      case 'playerTnBaId':
+        return event.player?.TnBaId || 'N/A';
+      case 'playerGender':
+        return event.player?.gender ? (event.player.gender === 'male' ? 'Boys' : 'Girls') : 'N/A';
+      case 'playerEmail':
+        return event.player?.email || 'N/A';
+      case 'playerPhone':
+        return event.player?.phone || 'N/A';
+      case 'playerDob':
+        return formatDate(event.player?.dob) || 'N/A';
+      case 'academyName':
+        return event.player?.academyName || 'N/A';
+      case 'district':
+        return event.player?.district || 'N/A';
+      case 'place':
+        return event.player?.place || 'N/A';
+      case 'eventCategory':
+        return event.eventCategory || 'N/A';
+      case 'eventType':
+        return event.eventType || 'N/A';
+      case 'eventStatus':
+        return event.eventStatus || 'N/A';
+      case 'registrationDate':
+        return formatDate(event.registrationDate || event.createdAt) || 'N/A';
+      case 'paymentStatus':
+        return event.payment?.status || 'N/A';
+      case 'paymentAmount':
+        return event.payment?.amount || 'N/A';
+      case 'paymentApp':
+        return event.payment?.app || 'N/A';
+      case 'partnerName':
+        return event.eventType !== 'singles' ? (event.partner?.fullname || 'N/A') : 'N/A';
+      case 'partnerTnBaId':
+        return event.eventType !== 'singles' ? (event.partner?.TnBaId || 'N/A') : 'N/A';
+      case 'partnerAcademy':
+        return event.eventType !== 'singles' ? (event.partner?.academyName || 'N/A') : 'N/A';
+      case 'partnerDistrict':
+        return event.eventType !== 'singles' ? (event.partner?.district || 'N/A') : 'N/A';
+      case 'partnerPlace':
+        return event.eventType !== 'singles' ? (event.partner?.place || 'N/A') : 'N/A';
+      case 'partnerDob':
+        return event.eventType !== 'singles' ? (formatDate(event.partner?.dob) || 'N/A') : 'N/A';
+      default:
+        return 'N/A';
+    }
+  };
+
+  // Render cell content based on field type
+  const renderCellContent = (event, fieldKey, value) => {
+    switch (fieldKey) {
+      case 'playerGender':
+        return (
+          <Chip
+            icon={event.player?.gender === 'male' ? <MaleIcon /> : <FemaleIcon />}
+            label={value}
+            size="small"
+            color={event.player?.gender === 'male' ? 'primary' : 'secondary'}
+            variant="outlined"
+          />
+        );
+      case 'eventType':
+        return (
+          <Chip
+            label={value}
+            size="small"
+            color={
+              value === 'singles' ? 'default' :
+              value === 'doubles' ? 'primary' : 'secondary'
+            }
+            variant="outlined"
+          />
+        );
+      case 'playerName':
+        return (
+          <Box>
+            <Typography variant="body2" fontWeight="medium">
+              {value}
+            </Typography>
+            {event.eventType !== 'singles' && event.partner?.fullname && (
+              <Typography variant="caption" color="text.secondary">
+                + {event.partner.fullname}
+              </Typography>
+            )}
+          </Box>
+        );
+      default:
+        return value;
+    }
+  };
+
+  // Get selected table columns
+  const getTableColumns = () => {
+    const columns = [
+      { key: 'sno', label: 'S.NO', alwaysShow: true }
+    ];
+
+    // Add selected fields as columns
+    Object.entries(selectedFields).forEach(([field, isSelected]) => {
+      if (isSelected && fieldConfig[field]) {
+        columns.push({
+          key: field,
+          label: fieldConfig[field].label,
+          fieldKey: fieldConfig[field].key
+        });
+      }
+    });
+
+    return columns;
+  };
+
   // Apply filters when they change
   useEffect(() => {
     if (reportData.length > 0) {
@@ -419,6 +597,8 @@ const ReportPage = () => {
     page * rowsPerPage,
     page * rowsPerPage + rowsPerPage
   );
+
+  const tableColumns = getTableColumns();
 
   return (
     <Box sx={{ p: 3 }}>
@@ -694,13 +874,22 @@ const ReportPage = () => {
                   }
                   label="Phone"
                 />
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={selectedFields.playerDob}
+                      onChange={handleFieldToggle('playerDob')}
+                    />
+                  }
+                  label="Date of Birth"
+                />
               </FormGroup>
             </Grid>
 
             {/* Academy & Location */}
             <Grid item xs={12} md={6} lg={3}>
               <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold', color: 'primary.main' }}>
-                Academy & Location
+                Player Other Details
               </Typography>
               <FormGroup>
                 <FormControlLabel
@@ -720,6 +909,15 @@ const ReportPage = () => {
                     />
                   }
                   label="District"
+                />
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={selectedFields.place}
+                      onChange={handleFieldToggle('place')}
+                    />
+                  }
+                  label="Place"
                 />
               </FormGroup>
             </Grid>
@@ -820,6 +1018,42 @@ const ReportPage = () => {
                   }
                   label="Partner TnBa ID"
                 />
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={selectedFields.partnerAcademy}
+                      onChange={handleFieldToggle('partnerAcademy')}
+                    />
+                  }
+                  label="Partner Academy"
+                />
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={selectedFields.partnerDistrict}
+                      onChange={handleFieldToggle('partnerDistrict')}
+                    />
+                  }
+                  label="Partner District"
+                />
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={selectedFields.partnerPlace}
+                      onChange={handleFieldToggle('partnerPlace')}
+                    />
+                  }
+                  label="Partner Place"
+                />
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={selectedFields.partnerDob}
+                      onChange={handleFieldToggle('partnerDob')}
+                    />
+                  }
+                  label="Partner DOB"
+                />
               </FormGroup>
             </Grid>
           </Grid>
@@ -860,73 +1094,32 @@ const ReportPage = () => {
       <Card sx={{ boxShadow: 2 }}>
         <CardContent>
           <Typography variant="h6" gutterBottom>
-            Data Preview
+            Data Preview ({tableColumns.length - 1} columns selected)
           </Typography>
           
           <TableContainer component={Paper} sx={{ maxHeight: 600 }}>
             <Table size="small" stickyHeader>
               <TableHead>
                 <TableRow>
-                  <TableCell><strong>S.NO</strong></TableCell>
-                  <TableCell><strong>TNBA ID</strong></TableCell>
-                  <TableCell><strong>NAME</strong></TableCell>
-                  <TableCell><strong>ACADEMY</strong></TableCell>
-                  <TableCell><strong>PLACE</strong></TableCell>
-                  <TableCell><strong>DISTRICT</strong></TableCell>
-                  {selectedFields.playerGender && <TableCell><strong>GENDER</strong></TableCell>}
-                  {selectedFields.eventCategory && <TableCell><strong>CATEGORY</strong></TableCell>}
-                  {selectedFields.eventType && <TableCell><strong>TYPE</strong></TableCell>}
+                  {tableColumns.map((column) => (
+                    <TableCell key={column.key}>
+                      <strong>{column.label}</strong>
+                    </TableCell>
+                  ))}
                 </TableRow>
               </TableHead>
               <TableBody>
                 {paginatedData.map((row, index) => (
                   <TableRow key={`${row.eventId}-${index}`} hover>
-                    <TableCell>
-                      <strong>{page * rowsPerPage + index + 1}</strong>
-                    </TableCell>
-                    <TableCell>{row.player?.TnBaId || 'N/A'}</TableCell>
-                    <TableCell>
-                      <Box>
-                        <Typography variant="body2" fontWeight="medium">
-                          {row.player?.name || 'N/A'}
-                        </Typography>
-                        {row.eventType !== 'singles' && row.partner?.fullname && (
-                          <Typography variant="caption" color="text.secondary">
-                            + {row.partner.fullname}
-                          </Typography>
+                    {tableColumns.map((column) => (
+                      <TableCell key={column.key}>
+                        {column.key === 'sno' ? (
+                          <strong>{page * rowsPerPage + index + 1}</strong>
+                        ) : (
+                          renderCellContent(row, column.key, getCellValue(row, column.key))
                         )}
-                      </Box>
-                    </TableCell>
-                    <TableCell>{row.player?.academyName || 'N/A'}</TableCell>
-                    <TableCell>{row.player?.place || 'N/A'}</TableCell>
-                    <TableCell>{row.player?.district || 'N/A'}</TableCell>
-                    {selectedFields.playerGender && (
-                      <TableCell>
-                        <Chip
-                          icon={row.player?.gender === 'male' ? <MaleIcon /> : <FemaleIcon />}
-                          label={row.player?.gender === 'male' ? 'Boys' : 'Girls'}
-                          size="small"
-                          color={row.player?.gender === 'male' ? 'primary' : 'secondary'}
-                          variant="outlined"
-                        />
                       </TableCell>
-                    )}
-                    {selectedFields.eventCategory && (
-                      <TableCell>{row.eventCategory}</TableCell>
-                    )}
-                    {selectedFields.eventType && (
-                      <TableCell>
-                        <Chip
-                          label={row.eventType}
-                          size="small"
-                          color={
-                            row.eventType === 'singles' ? 'default' :
-                            row.eventType === 'doubles' ? 'primary' : 'secondary'
-                          }
-                          variant="outlined"
-                        />
-                      </TableCell>
-                    )}
+                    ))}
                   </TableRow>
                 ))}
               </TableBody>

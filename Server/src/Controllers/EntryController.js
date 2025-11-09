@@ -149,10 +149,7 @@ export const getPlayerEntries = async (req, res) => {
 };
 
 
-/** * Get all Event entries for Manage Event Entries Page (Admin)
- * @param {*} req
- * @param {*} res
- */
+
 /**
  * Get all Users entries for Manage User Page with pagination  (Admin)
  * @param {*} req - Expects optional 'page' and 'limit' query params
@@ -165,50 +162,54 @@ export const getUserEntries = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    // Get total count (for pagination metadata)
-    const totalEntries = await EntryModel.countDocuments();
+    // Filter to exclude admin and superadmin roles
+    const userFilter = { 
+      role: { $nin: ['admin', 'superadmin'] } 
+    };
+
+    // Get total count of non-admin users (for pagination metadata)
+    const totalEntries = await UserModel.countDocuments(userFilter);
     // -----------------------------------------------------------------
 
-    const entries = await EntryModel.find()
-      .skip(skip) // Apply skip for current page
-      .limit(limit) // Apply limit for page size
-      .populate("player", "name TnBaId academyName place district gender")
-      .populate({
-        path: "events.payment",
-        // --- MODIFIED: Added 'paymentProof' to selected fields ---
-        select: "status metadata paymentAmount paymentApp paymentProof",
-      })
-      .populate({
-        path: "events.ApproverdBy",
-        select: "name email",
-      })
-      .lean(); // Use lean for performance
+    // Get all non-admin users with pagination
+    const users = await UserModel.find(userFilter)
+      .skip(skip)
+      .limit(limit)
+      .select('name email phone gender TnBaId academyName place district entries createdAt updatedAt _id role')
+      .lean();
 
     // Transform and flatten data for easier frontend consumption
-    const formattedEntries = entries.map(entry => {
-      const { player, events, createdAt, updatedAt, _id } = entry;
+    const formattedEntries = users.map(user => {
+      const { name, email, phone, gender, TnBaId, academyName, place, district, entries, createdAt, updatedAt, _id } = user;
       
-      // Aggregate event summaries
-      const eventCategories = events.map(e => e.category).join(', ');
-      const eventTypes = [...new Set(events.map(e => e.type))].join(', ');
-      const eventStatuses = [...new Set(events.map(e => e.status))].join(', ');
+      // Handle users with no entries (empty array or undefined)
+      const userEntries = entries || [];
+      
+      // Aggregate event summaries from user's entries
+      const eventCategories = userEntries.length > 0 ? userEntries.map(e => e.category).join(', ') : 'No Events';
+      const eventTypes = userEntries.length > 0 ? [...new Set(userEntries.map(e => e.type))].join(', ') : 'No Events';
+      const eventStatuses = userEntries.length > 0 ? [...new Set(userEntries.map(e => e.status))].join(', ') : 'No Events';
       
       return {
-        id: _id, // Primary entry ID
+        id: _id, // User ID as primary ID
         entryDate: createdAt,
         // Player fields
-        playerName: player?.name || 'N/A',
-        playerTnBaId: player?.TnBaId || 'N/A',
-        academy: player?.academyName || 'N/A',
-        district: player?.district || 'N/A',
-        playerGender: player?.gender || 'N/A', 
+        playerName: name || 'N/A',
+        playerID: _id,
+        playerTnBaId: TnBaId || 'N/A',
+        academy: academyName || 'N/A',
+        place: place || 'N/A',
+        district: district || 'N/A',
+        playerGender: gender || 'N/A',
+        email: email || 'N/A',
+        phone: phone || 'N/A', 
         // Event summaries
-        eventCount: events.length,
+        eventCount: userEntries.length,
         categories: eventCategories,
         types: eventTypes,
         statuses: eventStatuses,
         // Full nested events for expansion
-        detailedEvents: events,
+        detailedEvents: userEntries,
       };
     });
 
@@ -230,7 +231,6 @@ export const getUserEntries = async (req, res) => {
     res.status(500).json({ success: false, msg: err.message });
   }
 };
-
 /**
  * Update a specific event item in a player's entry (like updating a cart item)
  * @param {*} req
