@@ -4,6 +4,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import connectDB from './Config/db.js';
 import router from './Routes/index.js';
+import AcademyRouter from './Routes/Academy/index.js';
 
 dotenv.config();
 
@@ -21,7 +22,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 app.use('/api/v1', router);
-
+app.use('/api/v2/academy', AcademyRouter);
 app.get('/', (req, res) => {
     res.json({ message: 'Tournament API Server Running!' });
 });

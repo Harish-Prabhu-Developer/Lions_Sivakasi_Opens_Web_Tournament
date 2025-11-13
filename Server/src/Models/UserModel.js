@@ -45,7 +45,7 @@ const UserModel = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ["user", "admin", "superadmin"],
+      enum: ["user", "admin", "superadmin","academy"],
       default: "user",
     },
     isVerified: {

@@ -1,0 +1,19 @@
+// Payment.js
+export const paymentApps = [
+      { name: "Google Pay", keywords: ["google pay", "gpay", "g pay", "google.com/pay"] },
+      { name: "PhonePe", keywords: ["phonepe", "phone pe"] },
+      { name: "Paytm", keywords: ["paytm", "pay tm"] },
+      { name: "BHIM", keywords: ["bhim", "bhim upi"] },
+      { name: "Amazon Pay", keywords: ["amazon pay", "amazonpay"] },
+      { name: "WhatsApp Pay", keywords: ["whatsapp pay", "whatsapp"] },
+      { name: "Mobikwik", keywords: ["mobikwik", "mobi kwik"] },
+      { name: "Freecharge", keywords: ["freecharge", "free charge"] },
+      { name: "Airtel Payments Bank", keywords: ["airtel payments", "airtel pay"] },
+      { name: "JioMoney", keywords: ["jiomoney", "jio money"] },
+      { name: "ICICI Bank", keywords: ["icici", "icici bank"] },
+      { name: "HDFC Bank", keywords: ["hdfc", "hdfc bank"] },
+      { name: "SBI", keywords: ["state bank", "sbi"] },
+      { name: "Axis Bank", keywords: ["axis bank", "axis"] },
+      { name: "Kotak Bank", keywords: ["kotak", "kotak mahindra"] },
+      { name: "Bank UPI", keywords: ["upi", "unified payments"] },
+    ];
