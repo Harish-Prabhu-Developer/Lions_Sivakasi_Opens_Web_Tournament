@@ -1,5 +1,5 @@
 // ✅ PaymentStep.jsx
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { tournamentData } from "../../../constants";
 import UploadScreenShot from "./UploadScreenShot";
 
@@ -23,11 +23,21 @@ const PaymentStep = ({
     paidEventsCount = 0
   } = eventsAnalysis || {};
 
-  // Debug logs
+  useEffect(() => {
+    // Debug logs
   console.log('PaymentStep received events analysis:', eventsAnalysis);
   console.log('Unpaid events:', unpaidSelectedEvents);
   console.log('Unpaid total fee:', unpaidTotalFee);
-
+  // Add these logs at the top of the component
+  console.log("💰 PAYMENTSTEP: Received props:");
+  console.log("  - selectedEvents:", selectedEvents);
+  console.log("  - player:", player);
+  console.log("  - upi:", upi);
+  console.log("  - eventsAnalysis:", eventsAnalysis);
+  console.log("  - onSubmitSuccess function:", typeof onSubmitSuccess);
+  
+  }, [])
+  
   // ✅ Calculate total fee for ALL selected events
   const totalFee = useMemo(() => {
     return selectedEvents.reduce((acc, event) => {
@@ -36,9 +46,7 @@ const PaymentStep = ({
     }, 0);
   }, [selectedEvents]);
 
-  console.log("Selected Events:", selectedEvents);
-  console.log("Total Fee:", totalFee);
-
+  
   // Determine which amount to use for payment
   const paymentAmount = unpaidTotalFee > 0 ? unpaidTotalFee : totalFee;
 

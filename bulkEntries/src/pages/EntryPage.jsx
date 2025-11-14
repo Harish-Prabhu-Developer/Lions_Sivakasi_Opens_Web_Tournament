@@ -1,4 +1,4 @@
-// EntryPage.jsx
+//src/pages/EntryPage.jsx
 import { ArrowLeft } from "lucide-react";
 import { useEffect, useState, useCallback } from "react";
 import { toast } from "react-hot-toast";
@@ -6,14 +6,21 @@ import { Loader2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import PlayerForm from "../components/Academy/Player/PlayerForm";
 import PaymentStep from "../components/Academy/Player/PaymentStep";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchPlayer } from "../redux/Slices/PlayerSlices";
 
 const EntryPage = () => {
   const navigate = useNavigate();
   const { id: playerId } = useParams();
   const [loading, setLoading] = useState(false);
-  const [currentPlayer, setCurrentPlayer] = useState(null);
+  const { currentPlayer: reduxPlayer } = useSelector((state) => state.player);
+  const [currentPlayer, setCurrentPlayer] = useState(reduxPlayer || null);
   const [step, setStep] = useState(1); // Step 1: Event Selection, Step 2: Partner Forms, Step 3: Payment
   const [currentPartnerFormIndex, setCurrentPartnerFormIndex] = useState(0);
+
+  // State for managing tournament entries and players
+  const [tournamentEntries, setTournamentEntries] = useState([]);
+  const [academyPlayers, setAcademyPlayers] = useState([]);
 
   // Tournament configuration
   const tournamentData = {
@@ -47,32 +54,27 @@ const EntryPage = () => {
   // State variables to store data for future use
   const [selectedEvents, setSelectedEvents] = useState([]);
   const [partnerForms, setPartnerForms] = useState({});
+
   const [currentFormData, setCurrentFormData] = useState({});
   const [playersData, setPlayersData] = useState({
     player: null,
     partners: {}
   });
+  
+  const dispatch = useDispatch();
 
-  // Load player data from localStorage based on playerId
   useEffect(() => {
-    if (playerId) {
-      const savedPlayers = localStorage.getItem('academyPlayers');
-      if (savedPlayers) {
-        const playersData = JSON.parse(savedPlayers);
-        const player = playersData.find(p => p.id === playerId);
-        if (player) {
-          setCurrentPlayer(player);
-          setPlayersData(prev => ({ ...prev, player }));
-        } else {
-          toast.error("Player not found");
-          navigate("/dashboard");
-        }
-      } else {
-        toast.error("No players data found");
-        navigate("/dashboard");
-      }
+    const fetchingPlayer = async (playerId) => {
+      await dispatch(fetchPlayer(playerId));
     }
-  }, [playerId, navigate]);
+    if (playerId) {
+      fetchingPlayer(playerId);
+    } else {
+      navigate("/dashboard");
+    }
+
+    setCurrentPlayer(reduxPlayer);
+  }, [playerId, dispatch, reduxPlayer]);
 
   // Get doubles events that require partner details
   const getDoublesEvents = useCallback(() => {
@@ -331,7 +333,15 @@ const EntryPage = () => {
   const handleFinalSubmit = async (paymentData) => {
     try {
       setLoading(true);
-      
+
+    console.log("🔄 ENTRYPAGE: handleFinalSubmit called with paymentData:", paymentData);
+    console.log("📊 ENTRYPAGE: Current state before submission:");
+    console.log("  - selectedEvents:", selectedEvents);
+    console.log("  - partnerForms:", partnerForms);
+    console.log("  - totalFee:", totalFee);
+    console.log("  - currentPlayer:", currentPlayer);
+    
+    // ... rest of the function remains the same
       // Prepare final data
       const finalEntryData = {
         playerId,
@@ -347,19 +357,18 @@ const EntryPage = () => {
         extractedData: paymentData?.extractedData
       };
 
-      // Store the entry data in localStorage
-      const existingEntries = JSON.parse(localStorage.getItem('tournamentEntries') || '[]');
+      // Create new entry with unique ID
       const newEntry = {
         ...finalEntryData,
         entryId: `entry_${Date.now()}`,
       };
-      
-      existingEntries.push(newEntry);
-      localStorage.setItem('tournamentEntries', JSON.stringify(existingEntries));
 
-      // Also update player's entries
-      const savedPlayers = JSON.parse(localStorage.getItem('academyPlayers') || '[]');
-      const updatedPlayers = savedPlayers.map(player => {
+      // Update tournament entries state
+      const updatedEntries = [...tournamentEntries, newEntry];
+      setTournamentEntries(updatedEntries);
+
+      // Update academy players state
+      const updatedPlayers = academyPlayers.map(player => {
         if (player.id === playerId) {
           const playerEntries = player.entries || [];
           return {
@@ -378,9 +387,17 @@ const EntryPage = () => {
         return player;
       });
       
-      localStorage.setItem('academyPlayers', JSON.stringify(updatedPlayers));
+      setAcademyPlayers(updatedPlayers);
 
-      console.log("Final Entry Data stored:", finalEntryData);
+      // Log the current state
+      console.log("=== CURRENT STATE AFTER SUBMISSION ===");
+      console.log("Tournament Entries:", updatedEntries);
+      console.log("Academy Players:", updatedPlayers);
+      console.log("Final Entry Data:", finalEntryData);
+      console.log("Selected Events:", selectedEvents);
+      console.log("Partner Forms:", partnerForms);
+      console.log("Total Fee:", totalFee);
+      console.log("=====================================");
       
       toast.success("Tournament entry submitted successfully! Awaiting verification.");
       
@@ -569,7 +586,7 @@ const EntryPage = () => {
       <div className="w-full max-w-6xl mb-10">
         <div className="flex items-center gap-3">
           <button
-            onClick={() => navigate(`/player/${playerId}`)}
+            onClick={() => navigate(-1)}
             className="flex items-center gap-2 px-4 py-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition-all"
           >
             <ArrowLeft className="w-4 h-4" />

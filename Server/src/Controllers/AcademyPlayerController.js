@@ -144,19 +144,27 @@ export const getPlayer = async (req, res) => {
     });
   }
 };
-
 // ================= UPDATE PLAYER =================
 export const updatePlayer = async (req, res) => {
   try {
     const { id } = req.params;
     const academyId = req.user.id;
+    
+    // Check if req.body exists and has the required fields
+    if (!req.body) {
+      return res.status(400).json({
+        success: false,
+        msg: "Request body is required.",
+      });
+    }
+
     const { fullName, tnbaId, dob, academy, place, district } = req.body;
 
     // Validate required fields
     if (!fullName || !dob || !academy || !place || !district) {
       return res.status(400).json({
         success: false,
-        msg: "All fields are required.",
+        msg: "All fields (fullName, dob, academy, place, district) are required.",
       });
     }
 

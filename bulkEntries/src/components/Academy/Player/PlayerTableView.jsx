@@ -4,6 +4,8 @@ import { Edit, Trash2, Eye, Plus } from "lucide-react";
 import { eventTypeBadges, getEventTypeCounts } from "../../../utils/playerUtils";
 
 const PlayerTableView = ({ players, onEditPlayer, onDeletePlayer, onViewPlayer, onAddEntry }) => {
+  console.log("Player : ",players);
+  
   return (
     <div className="overflow-x-auto">
       <table className="w-full">

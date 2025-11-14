@@ -1,9 +1,8 @@
 //src/redux/Store.js
 import { configureStore } from '@reduxjs/toolkit'
-import PlayerSlice from './Slices/PlayerSlice';
+import PlayerSlice from './Slices/PlayerSlices';
 const Store = configureStore({
   reducer: {
-
     player:PlayerSlice,
   },
 });

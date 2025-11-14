@@ -1,16 +1,18 @@
 // components/Academy/Player/PlayerDetailsPage.jsx
 import React, { useState, useEffect } from "react";
 import { User, Edit, Plus, ArrowLeft } from "lucide-react";
-import { getEventTypeCounts } from "../../../utils/playerUtils";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-hot-toast";
+import { useDispatch, useSelector } from "react-redux";
 import PlayerFormModal from "./PlayerFormModal";
+import { fetchPlayer, updatePlayer } from "../../../redux/Slices/PlayerSlices";
 
 const PlayerDetailsPage = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const { id } = useParams();
-  const [player, setPlayer] = useState(null);
-  const [players, setPlayers] = useState([]);
+  
+  const { currentPlayer, loading } = useSelector((state) => state.player);
   const [showPlayerForm, setShowPlayerForm] = useState(false);
   const [playerForm, setPlayerForm] = useState({
     fullName: "",
@@ -21,40 +23,26 @@ const PlayerDetailsPage = () => {
     district: "",
   });
 
-  // Load players from localStorage
+  // Load player data
   useEffect(() => {
-    const savedPlayers = localStorage.getItem('academyPlayers');
-    if (savedPlayers) {
-      const playersData = JSON.parse(savedPlayers);
-      setPlayers(playersData);
-      
-      // Find the specific player
-      const foundPlayer = playersData.find(p => p.id === id);
-      if (foundPlayer) {
-        setPlayer(foundPlayer);
-      } else {
-        toast.error("Player not found");
-        navigate("/");
-      }
-    } else {
-      toast.error("No players data found");
-      navigate("/");
+        if (id) {
+      dispatch(fetchPlayer(id));
     }
-  }, [id, navigate]);
+  }, [id, dispatch]);
 
   const handleBack = () => {
-    navigate("/");
+    navigate("/dashboard");
   };
 
   const handleEditPlayer = () => {
-    if (player) {
+    if (currentPlayer) {
       setPlayerForm({
-        fullName: player.fullName,
-        tnbaId: player.tnbaId || "",
-        dob: player.dob,
-        academy: player.academy,
-        place: player.place,
-        district: player.district,
+        fullName: currentPlayer.fullName,
+        tnbaId: currentPlayer.tnbaId || "",
+        dob: currentPlayer.dob,
+        academy: currentPlayer.academy,
+        place: currentPlayer.place,
+        district: currentPlayer.district,
       });
       setShowPlayerForm(true);
     }
@@ -67,7 +55,7 @@ const PlayerDetailsPage = () => {
     }));
   };
 
-  const handleSubmitPlayer = (e) => {
+  const handleSubmitPlayer = async (e) => {
     e.preventDefault();
     
     // Basic validation
@@ -76,38 +64,34 @@ const PlayerDetailsPage = () => {
       return;
     }
 
-    // Update player
-    const updatedPlayers = players.map(p => 
-      p.id === id 
-        ? { ...p, ...playerForm, updatedAt: new Date().toISOString() }
-        : p
-    );
-    
-    setPlayers(updatedPlayers);
-    localStorage.setItem('academyPlayers', JSON.stringify(updatedPlayers));
-    
-    // Update current player state
-    setPlayer(prev => ({ ...prev, ...playerForm }));
-    
-    toast.success("Player updated successfully!");
-    setShowPlayerForm(false);
+    try {
+      await dispatch(updatePlayer({ id, playerForm })).unwrap();
+      setShowPlayerForm(false);
+    } catch (error) {
+      // Error handled in slice
+    }
   };
 
-// In PlayerDetailsPage.jsx - update the handleAddEntry function
-const handleAddEntry = (playerId) => {
-  navigate(`/entry/${playerId}`);
-  toast.success(`Redirecting to entry page`);
-};
+  const handleAddEntry = (playerId) => {
+    navigate(`/entry/${playerId}`);
+    toast.success(`Redirecting to entry page`);
+  };
 
-  if (!player) {
+  if (!currentPlayer && !loading) {
+    return (
+      <div className="min-h-screen bg-linear-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
+        <div className="text-white text-lg">Player not found</div>
+      </div>
+    );
+  }
+
+  if (loading && !currentPlayer) {
     return (
       <div className="min-h-screen bg-linear-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
         <div className="text-white text-lg">Loading player details...</div>
       </div>
     );
   }
-
-  const eventCounts = getEventTypeCounts(player);
 
   return (
     <div className="min-h-screen bg-linear-to-br from-slate-900 via-slate-800 to-slate-900 py-8 px-4 sm:px-6 lg:px-8">
@@ -128,9 +112,9 @@ const handleAddEntry = (playerId) => {
                 <User className="w-8 h-8 text-cyan-300" />
               </div>
               <div>
-                <h1 className="text-3xl font-bold text-white">{player.fullName}</h1>
+                <h1 className="text-3xl font-bold text-white">{currentPlayer?.fullName}</h1>
                 <p className="text-cyan-300 font-semibold mt-1">
-                  {player.tnbaId || 'No TNBA ID'}
+                  {currentPlayer?.tnbaId || 'No TNBA ID'}
                 </p>
               </div>
             </div>
@@ -144,7 +128,7 @@ const handleAddEntry = (playerId) => {
                 Edit Player
               </button>
               <button
-                onClick={() => handleAddEntry(player.id)}
+                onClick={() => handleAddEntry(currentPlayer?.id)}
                 className="px-6 py-3 bg-cyan-600 hover:bg-cyan-500 text-white font-semibold rounded-xl transition-all duration-200 flex items-center justify-center gap-2 hover:scale-105 active:scale-95"
               >
                 <Plus className="w-4 h-4" />
@@ -168,16 +152,16 @@ const handleAddEntry = (playerId) => {
                 <div className="space-y-4">
                   <div>
                     <label className="text-sm text-gray-400 mb-1 block">Full Name</label>
-                    <p className="text-white font-semibold text-lg">{player.fullName}</p>
+                    <p className="text-white font-semibold text-lg">{currentPlayer?.fullName}</p>
                   </div>
                   <div>
                     <label className="text-sm text-gray-400 mb-1 block">Date of Birth</label>
                     <p className="text-white font-semibold">
-                      {new Date(player.dob).toLocaleDateString('en-US', {
+                      {currentPlayer?.dob ? new Date(currentPlayer.dob).toLocaleDateString('en-US', {
                         year: 'numeric',
                         month: 'long',
                         day: 'numeric'
-                      })}
+                      }) : 'N/A'}
                     </p>
                   </div>
                 </div>
@@ -185,15 +169,15 @@ const handleAddEntry = (playerId) => {
                   <div>
                     <label className="text-sm text-gray-400 mb-1 block">TNBA ID</label>
                     <p className={`font-semibold text-lg ${
-                      player.tnbaId ? 'text-cyan-300' : 'text-gray-500'
+                      currentPlayer?.tnbaId ? 'text-cyan-300' : 'text-gray-500'
                     }`}>
-                      {player.tnbaId || 'Not provided'}
+                      {currentPlayer?.tnbaId || 'Not provided'}
                     </p>
                   </div>
                   <div>
                     <label className="text-sm text-gray-400 mb-1 block">Age</label>
                     <p className="text-white font-semibold">
-                      {Math.floor((new Date() - new Date(player.dob)) / (365.25 * 24 * 60 * 60 * 1000))} years
+                      {currentPlayer?.dob ? Math.floor((new Date() - new Date(currentPlayer.dob)) / (365.25 * 24 * 60 * 60 * 1000)) : 'N/A'} years
                     </p>
                   </div>
                 </div>
@@ -209,99 +193,22 @@ const handleAddEntry = (playerId) => {
               <div className="grid md:grid-cols-3 gap-6">
                 <div>
                   <label className="text-sm text-gray-400 mb-1 block">Academy</label>
-                  <p className="text-white font-semibold text-lg">{player.academy}</p>
+                  <p className="text-white font-semibold text-lg">{currentPlayer?.academy}</p>
                 </div>
                 <div>
                   <label className="text-sm text-gray-400 mb-1 block">Place</label>
-                  <p className="text-white font-semibold">{player.place}</p>
+                  <p className="text-white font-semibold">{currentPlayer?.place}</p>
                 </div>
                 <div>
                   <label className="text-sm text-gray-400 mb-1 block">District</label>
-                  <p className="text-white font-semibold">{player.district}</p>
+                  <p className="text-white font-semibold">{currentPlayer?.district}</p>
                 </div>
               </div>
             </div>
-
-            {/* Event Details Card */}
-            {player.entries && player.entries.length > 0 && (
-              <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-600/30 rounded-2xl p-6">
-                <h2 className="text-xl font-semibold text-cyan-300 mb-6 flex items-center gap-2">
-                  <div className="w-2 h-2 bg-cyan-300 rounded-full"></div>
-                  Event Details
-                </h2>
-                <div className="space-y-4">
-                  {player.entries.map((entry, index) => (
-                    <div 
-                      key={index} 
-                      className="p-4 bg-slate-700/30 rounded-xl border border-slate-600/20 hover:border-slate-500/30 transition-colors"
-                    >
-                      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <span className="font-bold text-white text-lg">
-                              {entry.category} - {entry.type}
-                            </span>
-                            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                              entry.status === 'approved' 
-                                ? 'bg-green-500/20 text-green-300 border border-green-500/30' 
-                                : entry.status === 'pending'
-                                ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30'
-                                : 'bg-red-500/20 text-red-300 border border-red-500/30'
-                            }`}>
-                              {entry.status}
-                            </span>
-                          </div>
-                          {entry.partner && (
-                            <div className="text-sm text-gray-300">
-                              Partner: <span className="text-cyan-300">{entry.partner.name}</span>
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-4">
-                          <div className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                            entry.paymentStatus === 'Paid'
-                              ? 'bg-green-500/20 text-green-300 border border-green-500/30'
-                              : 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30'
-                          }`}>
-                            {entry.paymentStatus}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
 
-          {/* Right Column - Events Summary */}
+          {/* Right Column - Quick Actions */}
           <div className="space-y-8">
-            {/* Events Summary Card */}
-            <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-600/30 rounded-2xl p-6">
-              <h2 className="text-xl font-semibold text-cyan-300 mb-6 flex items-center gap-2">
-                <div className="w-2 h-2 bg-cyan-300 rounded-full"></div>
-                Events Summary
-              </h2>
-              <div className="space-y-4">
-                <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-5 hover:border-blue-500/30 transition-colors">
-                  <div className="text-3xl font-bold text-blue-300 mb-1">{eventCounts.singles}</div>
-                  <div className="text-blue-400 font-semibold">Singles Events</div>
-                </div>
-                <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-5 hover:border-green-500/30 transition-colors">
-                  <div className="text-3xl font-bold text-green-300 mb-1">{eventCounts.doubles}</div>
-                  <div className="text-green-400 font-semibold">Doubles Events</div>
-                </div>
-                <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl p-5 hover:border-purple-500/30 transition-colors">
-                  <div className="text-3xl font-bold text-purple-300 mb-1">{eventCounts.mixedDoubles}</div>
-                  <div className="text-purple-400 font-semibold">Mixed Doubles</div>
-                </div>
-                <div className="bg-cyan-500/10 border border-cyan-500/20 rounded-xl p-5 hover:border-cyan-500/30 transition-colors">
-                  <div className="text-3xl font-bold text-cyan-300 mb-1">{eventCounts.total}</div>
-                  <div className="text-cyan-400 font-semibold">Total Events</div>
-                </div>
-              </div>
-            </div>
-
             {/* Quick Actions Card */}
             <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-600/30 rounded-2xl p-6">
               <h2 className="text-xl font-semibold text-cyan-300 mb-6 flex items-center gap-2">
@@ -317,7 +224,7 @@ const handleAddEntry = (playerId) => {
                   Edit Player Details
                 </button>
                 <button
-                  onClick={() => handleAddEntry(player.id)}
+                  onClick={() => handleAddEntry(currentPlayer?.id)}
                   className="w-full px-4 py-3 bg-cyan-600 hover:bg-cyan-500 text-white font-semibold rounded-xl transition-all duration-200 flex items-center justify-center gap-2 hover:scale-105 active:scale-95"
                 >
                   <Plus className="w-4 h-4" />
@@ -332,11 +239,12 @@ const handleAddEntry = (playerId) => {
       {/* Player Form Modal */}
       {showPlayerForm && (
         <PlayerFormModal
-          editingPlayer={player}
+          editingPlayer={currentPlayer}
           playerForm={playerForm}
           onInputChange={handleInputChange}
           onSubmit={handleSubmitPlayer}
           onClose={() => setShowPlayerForm(false)}
+          loading={loading}
         />
       )}
     </div>

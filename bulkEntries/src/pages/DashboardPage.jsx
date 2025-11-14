@@ -1,8 +1,9 @@
-//DashboardPage.jsx
+// DashboardPage.jsx
 import React, { useState, useEffect } from "react";
 import { LogOut, Trophy } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
+import { useDispatch, useSelector } from "react-redux";
 import FloatingActionButton from "../components/Academy/Player/FloatingActionButton";
 import PlayerFormModal from "../components/Academy/Player/PlayerFormModal";
 import PlayersView from "../components/Academy/Player/PlayersView";
@@ -11,10 +12,19 @@ import DashboardStats from "../components/Academy/DashboardStats";
 import { getUser, IsLoggedIn, Logout } from "../utils/authHelpers";
 import axios from "axios";
 import { API_URL } from "../constants";
+import { 
+  fetchPlayers, 
+  createPlayer, 
+  updatePlayer, 
+  deletePlayer, 
+  fetchPlayerStats 
+} from "../redux/Slices/PlayerSlices";
 
 const DashboardPage = () => {
   const navigate = useNavigate();
-  const [players, setPlayers] = useState([]);
+  const dispatch = useDispatch();
+  const { players, stats, loading } = useSelector((state) => state.player);
+
   const [filteredPlayers, setFilteredPlayers] = useState([]);
   const [showPlayerForm, setShowPlayerForm] = useState(false);
   const [editingPlayer, setEditingPlayer] = useState(null);
@@ -29,6 +39,7 @@ const DashboardPage = () => {
     place: "",
     district: "",
   });
+
   // ✅ Local auth state
   const [user, setUser] = useState(getUser());
   const [isLoggedIn, setIsLoggedIn] = useState(IsLoggedIn());
@@ -51,20 +62,11 @@ const DashboardPage = () => {
     };
   }, []);
 
-  // Load players from localStorage on component mount
+  // Load players from API on component mount
   useEffect(() => {
-    const savedPlayers = localStorage.getItem("academyPlayers");
-    if (savedPlayers) {
-      const playersData = JSON.parse(savedPlayers);
-      setPlayers(playersData);
-      setFilteredPlayers(playersData);
-    }
-  }, []);
-
-  // Save players to localStorage whenever players change
-  useEffect(() => {
-    localStorage.setItem("academyPlayers", JSON.stringify(players));
-  }, [players]);
+    dispatch(fetchPlayers());
+    dispatch(fetchPlayerStats());
+  }, [dispatch]);
 
   // Filter players based on search term
   useEffect(() => {
@@ -97,7 +99,6 @@ const DashboardPage = () => {
   };
 
   // Logout
-
   const handleLogout = async () => {
     try {
       const token = localStorage.getItem("bulkapp_token");
@@ -119,6 +120,7 @@ const DashboardPage = () => {
       toast.error("Logout failed. Please try again.");
     }
   };
+
   const handleInputChange = (field, value) => {
     setPlayerForm((prev) => ({
       ...prev,
@@ -126,42 +128,31 @@ const DashboardPage = () => {
     }));
   };
 
-  const handleSubmitPlayer = (e) => {
-    e.preventDefault();
+const handleSubmitPlayer = async (e) => {
+  e.preventDefault();
 
-    // Basic validation
-    if (
-      !playerForm.fullName.trim() ||
-      !playerForm.dob ||
-      !playerForm.academy.trim() ||
-      !playerForm.place.trim() ||
-      !playerForm.district.trim()
-    ) {
-      toast.error("Please fill in all required fields");
-      return;
-    }
+  // Basic validation
+  if (
+    !playerForm.fullName.trim() ||
+    !playerForm.dob ||
+    !playerForm.academy.trim() ||
+    !playerForm.place.trim() ||
+    !playerForm.district.trim()
+  ) {
+    toast.error("Please fill in all required fields");
+    return;
+  }
 
+  try {
     if (editingPlayer) {
-      // Update existing player
-      setPlayers((prev) =>
-        prev.map((player) =>
-          player.id === editingPlayer.id
-            ? { ...player, ...playerForm, updatedAt: new Date().toISOString() }
-            : player
-        )
-      );
-      toast.success("Player updated successfully!");
+      // Update existing player - pass the complete playerForm object
+      await dispatch(updatePlayer({ 
+        id: editingPlayer.id, 
+        playerData: playerForm // Make sure this is the complete form data
+      })).unwrap();
     } else {
       // Add new player
-      const newPlayer = {
-        id: Date.now().toString(),
-        ...playerForm,
-        entries: [],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-      setPlayers((prev) => [...prev, newPlayer]);
-      toast.success("Player added successfully!");
+      await dispatch(createPlayer(playerForm)).unwrap();
     }
 
     setShowPlayerForm(false);
@@ -174,7 +165,14 @@ const DashboardPage = () => {
       district: "",
     });
     setEditingPlayer(null);
-  };
+    
+    // Refresh players list
+    dispatch(fetchPlayers());
+  } catch (error) {
+    // Error handled in the slice
+    console.error("Submit player error:", error);
+  }
+};
 
   const handleEditPlayer = (player) => {
     setEditingPlayer(player);
@@ -189,23 +187,25 @@ const DashboardPage = () => {
     setShowPlayerForm(true);
   };
 
-  const handleDeletePlayer = (playerId) => {
+  const handleDeletePlayer = async (playerId) => {
     if (window.confirm("Are you sure you want to delete this player?")) {
-      setPlayers((prev) => prev.filter((player) => player.id !== playerId));
-      toast.success("Player deleted successfully!");
+      try {
+        await dispatch(deletePlayer(playerId)).unwrap();
+        // Players list will be updated automatically via Redux
+      } catch (error) {
+        // Error handled in the slice
+      }
     }
   };
 
-  // In DashboardPage.jsx - update the handleAddEntry function
   const handleAddEntry = (playerId) => {
     navigate(`/entry/${playerId}`);
-    toast.success(`Redirecting to entry page for player`);
   };
 
-  // Also update the handleViewPlayer if needed
   const handleViewPlayer = (player) => {
     navigate(`/player/${player.id}`);
   };
+
   return (
     <div className="min-h-screen pt-8 px-4 bg-linear-to-br from-[#141C2F] to-[#16213C] text-white transition-all duration-300 relative overflow-hidden">
       {/* Top Section */}
@@ -227,7 +227,7 @@ const DashboardPage = () => {
       </div>
 
       {/* Stats Section */}
-      <DashboardStats players={players} />
+      <DashboardStats stats={stats} />
 
       {/* Search and Controls Section */}
       <SearchControls
@@ -235,6 +235,8 @@ const DashboardPage = () => {
         setSearchTerm={setSearchTerm}
         viewMode={viewMode}
         setViewMode={setViewMode}
+        onSearch={(term) => dispatch(fetchPlayers(term))}
+        loading={loading}
       />
 
       {/* Players List Section */}
@@ -246,6 +248,7 @@ const DashboardPage = () => {
         onDeletePlayer={handleDeletePlayer}
         onViewPlayer={handleViewPlayer}
         onAddEntry={handleAddEntry}
+        loading={loading}
       />
 
       {/* Player Form Modal */}
@@ -256,6 +259,7 @@ const DashboardPage = () => {
           onInputChange={handleInputChange}
           onSubmit={handleSubmitPlayer}
           onClose={() => setShowPlayerForm(false)}
+          loading={loading}
         />
       )}
 
