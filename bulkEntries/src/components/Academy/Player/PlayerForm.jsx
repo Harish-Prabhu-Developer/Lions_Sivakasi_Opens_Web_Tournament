@@ -15,8 +15,6 @@ const PlayerForm = ({ currentForm, form, onFormChange, onNext, onBack }) => {
     if (field.key === "tnbaId") return true; // skip validation for tnbaId
     return form[field.key] && form[field.key].trim() !== "";
   });
-    console.log("Field: ",playerFields);
-    console.log("isValid : ",isValid);
       
     if (!isValid) {
       toast.error(`Please fill in all details for ${title}.`);
@@ -40,7 +38,7 @@ const PlayerForm = ({ currentForm, form, onFormChange, onNext, onBack }) => {
                 id={field.key}
                 type={field.type === 'date' ? 'date' : 'text'}
                 placeholder={field.type === 'date' ? 'mm/dd/yyyy' : field.label}
-                value={form[field.key] || ''}
+                value={form[field.key]|| ''}
                 onChange={(e) => onFormChange(field.key, e.target.value)}
                 disabled={isPlayer&&field.key==="dob"?true:false} //The player dob field is not editable
                 required={field.key==="tnbaId"?false:true} //The tnbaId field is not required 

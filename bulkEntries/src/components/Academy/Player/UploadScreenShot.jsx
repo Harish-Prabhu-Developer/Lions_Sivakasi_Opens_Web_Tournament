@@ -5,10 +5,14 @@ import toast from "react-hot-toast";
 import { PiFileImageBold } from "react-icons/pi";
 import Tesseract from "tesseract.js";
 import { paymentApps } from "../../../utils/Payment";
+import { useDispatch } from "react-redux";
+import { addToAcademyEventPayment } from "../../../redux/Slices/EntriesSlice";
 
 const UploadScreenShot = ({ 
   expectedAmount, 
   expectedUPI, 
+  playerId,
+  EntryId,
   onBack, 
   selectedEvents, 
   unpaidEventsCount,
@@ -21,7 +25,7 @@ const UploadScreenShot = ({
   const [extractedData, setExtractedData] = useState(null);
   const [progress, setProgress] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
+  const dispatch = useDispatch();
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -62,8 +66,10 @@ const UploadScreenShot = ({
       });
 
       const extractedText = result.data.text;
-      const extractedTextLower = extractedText.toLowerCase();
 
+      const extractedTextLower = extractedText.toLowerCase();
+      console.log("extractedText : ",extractedText);
+      console.log("extractedLower : ",extractedTextLower);
       const paymentApp = detectPaymentApp(extractedTextLower);
       const isPaymentScreenshot = validatePaymentKeywords(extractedTextLower);
 
@@ -190,11 +196,14 @@ const UploadScreenShot = ({
 
     try {
       // Prepare payment data
+
       const paymentData = {
         paymentProof: preview,
-        extractedData: extractedData,
-        status: "Paid",
         ActualAmount: expectedAmount,
+            expertedData:{
+             paymentAmount:expectedAmount,
+             receiverUpiId:expectedUPI
+            },
         metadata: {
           paymentApp: extractedData.app,
           paymentAmount: extractedData.amount,
@@ -203,13 +212,18 @@ const UploadScreenShot = ({
         },
       };
 
-      console.log("💳 Payment Data:", paymentData);
 
+      console.log("Player ID : ",playerId);
+      console.log("Entry ID : ",EntryId);
+      
+      
+      console.log("💳 Payment Data:", paymentData);
+      await dispatch(addToAcademyEventPayment({playerID:playerId, entryID:EntryId, paymentData:paymentData}));
       // Call the success callback from parent
       if (onSubmitSuccess) {
         await onSubmitSuccess(paymentData);
       } else {
-        toast.success("Payment verified successfully! Entry submitted.");
+        toast.success("Payment Screenshot uploaded successfully! Entry submitted.");
       }
 
     } catch (err) {

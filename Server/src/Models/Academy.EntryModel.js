@@ -2,7 +2,7 @@
 import mongoose from "mongoose";
 
 export const PlayerEntrySchema = new mongoose.Schema({
-  fullname: { type: String },
+  fullName: { type: String },
   dob: { type: String },
   TnBaId: { type: String },
   academyName: { type: String },

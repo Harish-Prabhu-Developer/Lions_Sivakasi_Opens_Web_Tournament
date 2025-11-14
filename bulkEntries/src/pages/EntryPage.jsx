@@ -8,6 +8,10 @@ import PlayerForm from "../components/Academy/Player/PlayerForm";
 import PaymentStep from "../components/Academy/Player/PaymentStep";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchPlayer } from "../redux/Slices/PlayerSlices";
+import {
+  addToAcademyEvents,
+  getAcademyPlayerEntries,
+} from "../redux/Slices/EntriesSlice";
 
 const EntryPage = () => {
   const navigate = useNavigate();
@@ -43,7 +47,7 @@ const EntryPage = () => {
     ],
     upi: "9360933755@iob",
     upiName: "TNBA Tournament",
-    upiQrUrl: "https://via.placeholder.com/150?text=UPI+QR" // Replace with actual QR URL
+    upiQrUrl: "https://via.placeholder.com/150?text=UPI+QR", // Replace with actual QR URL
   };
 
   // Event limits
@@ -58,24 +62,33 @@ const EntryPage = () => {
   const [currentFormData, setCurrentFormData] = useState({});
   const [playersData, setPlayersData] = useState({
     player: null,
-    partners: {}
+    partners: {},
   });
-  
+
   const dispatch = useDispatch();
 
   useEffect(() => {
-    const fetchingPlayer = async (playerId) => {
-      await dispatch(fetchPlayer(playerId));
-    }
+    const fetchingPlayer = async (playerID) => {
+      await dispatch(fetchPlayer(playerID));
+      const response = await dispatch(getAcademyPlayerEntries(playerID));
+      if (response.payload.success) {
+        setSelectedEvents(response.payload.data.events || []);
+      }
+    };
+
     if (playerId) {
       fetchingPlayer(playerId);
     } else {
       navigate("/dashboard");
     }
+  }, [playerId, dispatch, navigate]); // Remove reduxPlayer from dependencies
 
-    setCurrentPlayer(reduxPlayer);
-  }, [playerId, dispatch, reduxPlayer]);
-
+  // Add a separate useEffect to handle when reduxPlayer updates
+  useEffect(() => {
+    if (reduxPlayer) {
+      setCurrentPlayer(reduxPlayer);
+    }
+  }, [reduxPlayer]); // This only runs when reduxPlayer actually changes
   // Get doubles events that require partner details
   const getDoublesEvents = useCallback(() => {
     return selectedEvents.filter(
@@ -87,7 +100,9 @@ const EntryPage = () => {
   const partnerFormsConfig = getDoublesEvents().map((ev, index) => {
     const categoryLabel = ev.category.replace("Boys & Girls", "").trim();
     // Find the category to get afterBorn requirement
-    const category = tournamentData.categories.find(cat => cat.name === ev.category);
+    const category = tournamentData.categories.find(
+      (cat) => cat.name === ev.category
+    );
     return {
       key: `${ev.category}|${ev.type}|${index}`,
       label: `${categoryLabel} Partner Details (${ev.type})`,
@@ -95,24 +110,100 @@ const EntryPage = () => {
       category: ev.category,
       eventType: ev.type,
       afterBorn: category?.afterBorn || 0,
-      isLast: index === getDoublesEvents().length - 1
+      isLast: index === getDoublesEvents().length - 1,
     };
   });
+
+  // FIXED: Update current form data when partner form index changes
+  // FIXED: Update current form data when partner form index changes
+  // Initialize partnerForms from selectedEvents when entering step 2 or when selectedEvents changes
+  useEffect(() => {
+    if (selectedEvents.length > 0) {
+      const doublesEvents = selectedEvents.filter(
+        (ev) => ev.type === "doubles" || ev.type === "mixed doubles"
+      );
+
+      if (doublesEvents.length > 0) {
+        const initializedPartnerForms = {};
+        let hasUpdates = false;
+
+        doublesEvents.forEach((event, index) => {
+          const formKey = `${event.category}|${event.type}|${index}`;
+
+          // Check if the event already has partner data
+          if (event.partner) {
+            // Convert from event.partner format to form field format
+            initializedPartnerForms[formKey] = {
+              fullName: event.partner.fullName || "",
+              dob: event.partner.dob || "",
+              TnBaId: event.partner.TnBaId || "",
+              academyName: event.partner.academyName || "",
+              place: event.partner.place || "",
+              district: event.partner.district || "",
+            };
+            hasUpdates = true;
+            console.log(
+              `Initialized partner form for ${formKey}:`,
+              initializedPartnerForms[formKey]
+            );
+          } else if (!partnerForms[formKey]) {
+            // Initialize empty form if no existing data
+            initializedPartnerForms[formKey] = {
+              fullName: "",
+              dob: "",
+              TnBaId: "",
+              academyName: "",
+              place: "",
+              district: "",
+            };
+            hasUpdates = true;
+          } else {
+            // Keep existing partner form data
+            initializedPartnerForms[formKey] = partnerForms[formKey];
+          }
+        });
+
+        // Update partnerForms state if we found any partner data or need to initialize
+        if (
+          hasUpdates &&
+          JSON.stringify(partnerForms) !==
+            JSON.stringify(initializedPartnerForms)
+        ) {
+          console.log(
+            "Setting partnerForms from selectedEvents:",
+            initializedPartnerForms
+          );
+          setPartnerForms(initializedPartnerForms);
+        }
+      }
+    }
+  }, [selectedEvents, step]); // Add step to dependency to re-initialize when entering step 2
 
   // FIXED: Update current form data when partner form index changes
   useEffect(() => {
     if (step === 2 && partnerFormsConfig.length > 0) {
       const currentForm = partnerFormsConfig[currentPartnerFormIndex];
+
+      // Get partner data from partnerForms state (which now contains data from selectedEvents)
       const currentPartnerData = partnerForms[currentForm.key] || {};
-      
+
+      console.log("CurrentForm : ", currentForm);
+      console.log("CurrentPartnerData from partnerForms: ", currentPartnerData);
+
       // Only update if the data has actually changed
-      if (JSON.stringify(currentFormData) !== JSON.stringify(currentPartnerData)) {
+      if (
+        JSON.stringify(currentFormData) !== JSON.stringify(currentPartnerData)
+      ) {
         setCurrentFormData(currentPartnerData);
       }
     }
-  }, [currentPartnerFormIndex, step, partnerFormsConfig]); // Removed partnerForms from dependencies
-
-  // Filter categories based on player's DOB
+  }, [
+    currentPartnerFormIndex,
+    step,
+    partnerFormsConfig,
+    partnerForms,
+    currentFormData,
+  ]); // Filter categories based on player's DOB
   const getFilteredCategories = () => {
     if (!currentPlayer || !currentPlayer.dob) return tournamentData.categories;
 
@@ -128,11 +219,14 @@ const EntryPage = () => {
 
   // Validate partner DOB based on event category (SAME RULES AS PLAYER)
   const validatePartnerDOB = (partnerDOB, eventCategory) => {
-    if (!partnerDOB) return { isValid: false, message: "Partner DOB is required" };
+    if (!partnerDOB)
+      return { isValid: false, message: "Partner DOB is required" };
 
     const partnerBirthYear = new Date(partnerDOB).getFullYear();
-    const category = tournamentData.categories.find(cat => cat.name === eventCategory);
-    
+    const category = tournamentData.categories.find(
+      (cat) => cat.name === eventCategory
+    );
+
     if (!category) {
       return { isValid: false, message: "Invalid event category" };
     }
@@ -140,19 +234,28 @@ const EntryPage = () => {
     // PARTNER MUST MEET THE SAME ELIGIBILITY AS PLAYER
     // Partner birth year must be >= category.afterBorn (same rule as player)
     const isEligible = partnerBirthYear >= category.afterBorn;
-    
+
     if (!isEligible) {
       const maxAge = new Date().getFullYear() - category.afterBorn;
-      return { 
-        isValid: false, 
-        message: `Partner must be born in ${category.afterBorn} or later (under ${maxAge} years old)` 
+      return {
+        isValid: false,
+        message: `Partner must be born in ${category.afterBorn} or later (under ${maxAge} years old)`,
       };
     }
 
-    return { 
-      isValid: true, 
-      message: `Partner is eligible for ${eventCategory.replace("Boys & Girls", "").trim()} category` 
+    return {
+      isValid: true,
+      message: `Partner is eligible for ${eventCategory
+        .replace("Boys & Girls", "")
+        .trim()} category`,
     };
+  };
+  // Check if event is paid and cannot be unselected
+  const isEventPaidAndLocked = (categoryName, type) => {
+    const event = selectedEvents.find(
+      (e) => e.category === categoryName && e.type === type
+    );
+    return event && event.payment && event.payment.status === "Paid";
   };
 
   // Get current partner form configuration
@@ -210,6 +313,12 @@ const EntryPage = () => {
   };
 
   const handleToggleEvent = (categoryName, type) => {
+    // Check if event is paid and locked - prevent unselecting
+    if (isEventPaidAndLocked(categoryName, type)) {
+      toast.error("This event has been paid and cannot be modified");
+      return;
+    }
+
     const newEvent = { category: categoryName, type: type };
     const isCurrentlySelected = isEventSelected(categoryName, type);
 
@@ -235,12 +344,17 @@ const EntryPage = () => {
     }
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (selectedEvents.length === 0) {
       toast.error("Please select at least one event.");
       return;
     }
-
+    const addToEvent = {
+      playerID: playerId,
+      events: selectedEvents,
+    };
+    console.log("add to DB :", addToEvent);
+    await dispatch(addToAcademyEvents(addToEvent));
     // If there are doubles events, move to partner forms
     const doublesEvents = getDoublesEvents();
     if (doublesEvents.length > 0) {
@@ -253,7 +367,7 @@ const EntryPage = () => {
 
   const handlePartnerFormChange = (key, value) => {
     const currentForm = partnerFormsConfig[currentPartnerFormIndex];
-    
+
     // If DOB is being updated, validate it
     if (key === "dob" && value) {
       const validation = validatePartnerDOB(value, currentForm.category);
@@ -267,34 +381,45 @@ const EntryPage = () => {
       ...partnerForms,
       [currentForm.key]: {
         ...partnerForms[currentForm.key],
-        [key]: value
-      }
+        [key]: value,
+      },
     };
 
     setPartnerForms(updatedPartnerForms);
-    setCurrentFormData(prev => ({
+    setCurrentFormData((prev) => ({
       ...prev,
-      [key]: value
+      [key]: value,
     }));
   };
 
-  const handlePartnerFormNext = () => {
+  const handlePartnerFormNext = async () => {
     const currentForm = partnerFormsConfig[currentPartnerFormIndex];
     const currentPartnerData = partnerForms[currentForm.key] || {};
-    
+
     // Validate all required fields
-    const requiredFields = ['fullName', 'dob', 'academy', 'place', 'district'];
-    const hasAllFields = requiredFields.every(field => 
-      currentPartnerData[field]?.trim() !== ""
+    const requiredFields = [
+      "fullName",
+      "dob",
+      "academyName",
+      "place",
+      "district",
+    ];
+    const hasAllFields = requiredFields.every(
+      (field) => currentPartnerData[field]?.trim() !== ""
     );
 
     if (!hasAllFields) {
-      toast.error(`Please fill in all required details for ${currentForm.label}`);
+      toast.error(
+        `Please fill in all required details for ${currentForm.label}`
+      );
       return;
     }
 
     // Validate partner DOB specifically
-    const dobValidation = validatePartnerDOB(currentPartnerData.dob, currentForm.category);
+    const dobValidation = validatePartnerDOB(
+      currentPartnerData.dob,
+      currentForm.category
+    );
     if (!dobValidation.isValid) {
       toast.error(dobValidation.message);
       return;
@@ -302,16 +427,61 @@ const EntryPage = () => {
 
     if (currentPartnerFormIndex < partnerFormsConfig.length - 1) {
       // Move to next partner form
-      setCurrentPartnerFormIndex(prev => prev + 1);
+      setCurrentPartnerFormIndex((prev) => prev + 1);
     } else {
       // All partner forms completed, proceed to payment
+      // All partner forms completed, prepare and log the data in the required format
+      const eventsData = {
+        events: selectedEvents.map((event) => {
+          // For singles events, don't include partner field
+          if (event.type === "singles") {
+            return {
+              category: event.category,
+              type: event.type,
+              // No partner field for singles
+            };
+          }
+
+          // For doubles events, include partner data
+          const eventKey = `${event.category}|${event.type}`;
+          const partnerFormKey = Object.keys(partnerForms).find((key) =>
+            key.startsWith(eventKey)
+          );
+
+          const partnerData = partnerFormKey
+            ? partnerForms[partnerFormKey]
+            : {};
+
+          return {
+            category: event.category,
+            type: event.type,
+            partner: {
+              fullName: partnerData.fullName || "",
+              dob: partnerData.dob || "",
+              TnBaId: partnerData.TnBaId || "",
+              academyName: partnerData.academyName || "",
+              place: partnerData.place || "",
+              district: partnerData.district || "",
+            },
+          };
+        }),
+      };
+
+      const addToEventPartner = {
+        playerID: playerId,
+        events: eventsData.events,
+      };
+      await dispatch(addToAcademyEvents(addToEventPartner));
+      // Log the data in the specified format
+      console.log("Events and Partner Data:", addToEventPartner);
+
       setStep(3);
     }
   };
 
   const handlePartnerFormBack = () => {
     if (currentPartnerFormIndex > 0) {
-      setCurrentPartnerFormIndex(prev => prev - 1);
+      setCurrentPartnerFormIndex((prev) => prev - 1);
     } else {
       // Back to event selection
       setStep(1);
@@ -330,82 +500,13 @@ const EntryPage = () => {
   };
 
   // Handle final submission after payment
+  // Handle final submission after payment
   const handleFinalSubmit = async (paymentData) => {
     try {
-      setLoading(true);
-
-    console.log("🔄 ENTRYPAGE: handleFinalSubmit called with paymentData:", paymentData);
-    console.log("📊 ENTRYPAGE: Current state before submission:");
-    console.log("  - selectedEvents:", selectedEvents);
-    console.log("  - partnerForms:", partnerForms);
-    console.log("  - totalFee:", totalFee);
-    console.log("  - currentPlayer:", currentPlayer);
-    
-    // ... rest of the function remains the same
-      // Prepare final data
-      const finalEntryData = {
-        playerId,
-        player: currentPlayer,
-        selectedEvents,
-        partners: partnerForms,
-        totalFee,
-        paymentScreenshot: paymentData?.paymentProof,
-        upiId: tournamentData.upi,
-        submittedAt: new Date().toISOString(),
-        paymentVerified: false,
-        status: 'pending',
-        extractedData: paymentData?.extractedData
-      };
-
-      // Create new entry with unique ID
-      const newEntry = {
-        ...finalEntryData,
-        entryId: `entry_${Date.now()}`,
-      };
-
-      // Update tournament entries state
-      const updatedEntries = [...tournamentEntries, newEntry];
-      setTournamentEntries(updatedEntries);
-
-      // Update academy players state
-      const updatedPlayers = academyPlayers.map(player => {
-        if (player.id === playerId) {
-          const playerEntries = player.entries || [];
-          return {
-            ...player,
-            entries: [...playerEntries, {
-              entryId: newEntry.entryId,
-              events: selectedEvents,
-              partners: partnerForms,
-              totalFee,
-              submittedAt: newEntry.submittedAt,
-              status: 'pending',
-              paymentScreenshot: paymentData?.paymentProof
-            }]
-          };
-        }
-        return player;
-      });
-      
-      setAcademyPlayers(updatedPlayers);
-
-      // Log the current state
-      console.log("=== CURRENT STATE AFTER SUBMISSION ===");
-      console.log("Tournament Entries:", updatedEntries);
-      console.log("Academy Players:", updatedPlayers);
-      console.log("Final Entry Data:", finalEntryData);
-      console.log("Selected Events:", selectedEvents);
-      console.log("Partner Forms:", partnerForms);
-      console.log("Total Fee:", totalFee);
-      console.log("=====================================");
-      
-      toast.success("Tournament entry submitted successfully! Awaiting verification.");
-      
       // Navigate back to player details after delay
       setTimeout(() => {
         navigate(`/player/${playerId}`);
       }, 3000);
-      
     } catch (err) {
       console.error("Submission error:", err);
       toast.error("Failed to submit entry");
@@ -413,7 +514,6 @@ const EntryPage = () => {
       setLoading(false);
     }
   };
-
   const RuleTag = ({ label, count, limit }) => (
     <div
       className={`px-3 py-1 text-sm rounded-full font-medium ${
@@ -439,22 +539,28 @@ const EntryPage = () => {
         <h3 className="text-cyan-300 font-semibold mb-3">Selected Events:</h3>
         <div className="space-y-2">
           {selectedEvents.map((e, idx) => {
-            const category = tournamentData.categories.find(cat => cat.name === e.category);
+            const category = tournamentData.categories.find(
+              (cat) => cat.name === e.category
+            );
             return (
-              <div key={idx} className="flex items-center justify-between bg-[#0f1d38] p-3 rounded-lg">
+              <div
+                key={idx}
+                className="flex items-center justify-between bg-[#0f1d38] p-3 rounded-lg"
+              >
                 <div>
                   <span className="text-cyan-50">
                     {e.category.replace("Boys & Girls", "").trim()}
                   </span>
-                  <span className="text-cyan-400 text-xs ml-2">
-                    ({e.type})
-                  </span>
+                  <span className="text-cyan-400 text-xs ml-2">({e.type})</span>
                   <div className="text-xs text-gray-400 mt-1">
                     Born after: {category?.afterBorn}
                   </div>
                 </div>
                 <span className="text-yellow-300 text-sm font-semibold">
-                  ₹{e.type === "singles" ? tournamentData.entryFees.singles : tournamentData.entryFees.doubles}
+                  ₹
+                  {e.type === "singles"
+                    ? tournamentData.entryFees.singles
+                    : tournamentData.entryFees.doubles}
                 </span>
               </div>
             );
@@ -467,7 +573,7 @@ const EntryPage = () => {
   // PartnerDetailsCard component to show stored partner details
   const PartnerDetailsCard = () => {
     const doublesEvents = getDoublesEvents();
-    
+
     if (doublesEvents.length === 0 || Object.keys(partnerForms).length === 0) {
       return null;
     }
@@ -477,56 +583,73 @@ const EntryPage = () => {
         <h3 className="text-green-300 font-semibold mb-3">Partner Details:</h3>
         <div className="space-y-3">
           {Object.entries(partnerForms).map(([key, partnerData], index) => {
-            const [category, eventType] = key.split('|');
-            const categoryData = tournamentData.categories.find(cat => cat.name === category);
+            const [category, eventType] = key.split("|");
+            const categoryData = tournamentData.categories.find(
+              (cat) => cat.name === category
+            );
             const validation = validatePartnerDOB(partnerData.dob, category);
-            const partnerAge = getPartnerAgeForCategory(partnerData.dob, categoryData);
-            
+            const partnerAge = getPartnerAgeForCategory(
+              partnerData.dob,
+              categoryData
+            );
+
             return (
               <div key={key} className="bg-[#0f1d38] p-3 rounded-lg">
                 <div className="flex justify-between items-start mb-2">
                   <div>
                     <span className="text-green-50 font-semibold">
-                      {category.replace("Boys & Girls", "").trim()} - {eventType}
+                      {category.replace("Boys & Girls", "").trim()} -{" "}
+                      {eventType}
                     </span>
                     <div className="text-xs text-gray-400 mt-1">
                       Must be born after: {categoryData?.afterBorn}
                     </div>
                   </div>
-                  <span className={`text-xs px-2 py-1 rounded ${
-                    validation.isValid 
-                      ? "bg-green-800/30 text-green-400" 
-                      : "bg-red-800/30 text-red-400"
-                  }`}>
+                  <span
+                    className={`text-xs px-2 py-1 rounded ${
+                      validation.isValid
+                        ? "bg-green-800/30 text-green-400"
+                        : "bg-red-800/30 text-red-400"
+                    }`}
+                  >
                     {validation.isValid ? "Eligible ✓" : "Not Eligible ✗"}
                   </span>
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <div>
                     <span className="text-gray-400">Name:</span>
-                    <span className="text-white ml-2">{partnerData.fullName || "Not provided"}</span>
+                    <span className="text-white ml-2">
+                      {partnerData.fullName || "Not provided"}
+                    </span>
                   </div>
                   <div>
                     <span className="text-gray-400">DOB:</span>
-                    <span className="text-white ml-2">{partnerData.dob || "Not provided"}</span>
+                    <span className="text-white ml-2">
+                      {partnerData.dob || "Not provided"}
+                    </span>
                     {partnerData.dob && (
-                      <div className={`text-xs mt-1 ${
-                        validation.isValid ? "text-green-400" : "text-red-400"
-                      }`}>
-                        {validation.isValid 
-                          ? `Age: ${partnerAge} years (Eligible)` 
-                          : validation.message
-                        }
+                      <div
+                        className={`text-xs mt-1 ${
+                          validation.isValid ? "text-green-400" : "text-red-400"
+                        }`}
+                      >
+                        {validation.isValid
+                          ? `Age: ${partnerAge} years (Eligible)`
+                          : validation.message}
                       </div>
                     )}
                   </div>
                   <div>
                     <span className="text-gray-400">Academy:</span>
-                    <span className="text-white ml-2">{partnerData.academy || "Not provided"}</span>
+                    <span className="text-white ml-2">
+                      {partnerData.academyName || "Not provided"}
+                    </span>
                   </div>
                   <div>
                     <span className="text-gray-400">Place:</span>
-                    <span className="text-white ml-2">{partnerData.place || "Not provided"}</span>
+                    <span className="text-white ml-2">
+                      {partnerData.place || "Not provided"}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -561,7 +684,10 @@ const EntryPage = () => {
             </div>
             <div className="text-gray-400">
               <p>Player date of birth: {currentPlayer.dob}</p>
-              <p className="mt-2">Please contact tournament organizers for eligibility information.</p>
+              <p className="mt-2">
+                Please contact tournament organizers for eligibility
+                information.
+              </p>
             </div>
           </div>
         </div>
@@ -603,9 +729,11 @@ const EntryPage = () => {
         {/* Player Info Banner */}
         <div className="mb-6 p-4 bg-blue-900/30 border border-blue-500/30 rounded-lg">
           <div className="text-sm text-blue-300">
-            <span className="font-semibold">Player:</span> {currentPlayer.fullName} |
+            <span className="font-semibold">Player:</span>{" "}
+            {currentPlayer.fullName} |
             <span className="font-semibold"> DOB:</span> {currentPlayer.dob} |
-            <span className="font-semibold"> Academy:</span> {currentPlayer.academy}
+            <span className="font-semibold"> Academy:</span>{" "}
+            {currentPlayer.academy}
           </div>
         </div>
 
@@ -663,25 +791,38 @@ const EntryPage = () => {
                     <div className="flex flex-col gap-2">
                       {category.events.map((type) => {
                         const isSelected = isEventSelected(category.name, type);
-                        const canBeSelected = canSelectEvent(type) || isSelected;
+                        const isPaidAndLocked = isEventPaidAndLocked(
+                          category.name,
+                          type
+                        );
+                        const canBeSelected =
+                          canSelectEvent(type) || isSelected;
+                        const isDisabled =
+                          (!canBeSelected && !isSelected) || isPaidAndLocked;
 
                         return (
                           <button
                             key={type}
-                            onClick={() => handleToggleEvent(category.name, type)}
-                            disabled={!canBeSelected && !isSelected}
+                            onClick={() =>
+                              !isPaidAndLocked &&
+                              handleToggleEvent(category.name, type)
+                            }
+                            disabled={isDisabled}
                             className={`
-                              w-full capitalize py-2 rounded-lg font-semibold transition-all duration-200
-                              ${
-                                isSelected
-                                  ? "bg-cyan-500 hover:bg-cyan-600 text-white shadow-lg shadow-cyan-500/50 transform scale-[1.02]"
-                                  : canBeSelected
-                                  ? "bg-gray-700 hover:bg-gray-600 text-gray-200"
-                                  : "bg-gray-800 text-gray-500 cursor-not-allowed opacity-60"
-                              }
-                            `}
+          w-full capitalize py-2 rounded-lg font-semibold transition-all duration-200
+          ${
+            isPaidAndLocked
+              ? "bg-green-600 text-white cursor-not-allowed shadow-lg shadow-green-500/30"
+              : isSelected
+              ? "bg-cyan-500 hover:bg-cyan-600 text-white shadow-lg shadow-cyan-500/50 transform scale-[1.02]"
+              : canBeSelected
+              ? "bg-gray-700 hover:bg-gray-600 text-gray-200"
+              : "bg-gray-800 text-gray-500 cursor-not-allowed opacity-60"
+          }
+        `}
                           >
                             {type}
+                            {isPaidAndLocked && " ✓"}
                           </button>
                         );
                       })}
@@ -721,12 +862,22 @@ const EntryPage = () => {
             {/* Show eligibility information for current partner form */}
             <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-4 mb-6">
               <div className="text-yellow-300 text-sm">
-                <strong>Eligibility Requirement:</strong> Partner must be born in{" "}
-                <strong>{getCurrentPartnerFormConfig()?.afterBorn} or later</strong> to be eligible for{" "}
-                <strong>{getCurrentPartnerFormConfig()?.category.replace("Boys & Girls", "").trim()}</strong> category
+                <strong>Eligibility Requirement:</strong> Partner must be born
+                in{" "}
+                <strong>
+                  {getCurrentPartnerFormConfig()?.afterBorn} or later
+                </strong>{" "}
+                to be eligible for{" "}
+                <strong>
+                  {getCurrentPartnerFormConfig()
+                    ?.category.replace("Boys & Girls", "")
+                    .trim()}
+                </strong>{" "}
+                category
                 <br />
                 <span className="text-yellow-200">
-                  <strong>Same rule as player:</strong> Born after {getCurrentPartnerFormConfig()?.afterBorn}
+                  <strong>Same rule as player:</strong> Born after{" "}
+                  {getCurrentPartnerFormConfig()?.afterBorn}
                 </span>
               </div>
             </div>
@@ -734,7 +885,7 @@ const EntryPage = () => {
             {/* Show stored selected events and partner details */}
             <SelectedEventCard />
             <PartnerDetailsCard />
-            
+
             {/* Current Partner Form */}
             <PlayerForm
               currentForm={partnerFormsConfig[currentPartnerFormIndex]}
@@ -761,7 +912,7 @@ const EntryPage = () => {
               unpaidSelectedEvents: selectedEvents, // All events are unpaid initially
               unpaidTotalFee: totalFee,
               unpaidEventsCount: selectedEvents.length,
-              paidEventsCount: 0
+              paidEventsCount: 0,
             }}
           />
         )}

@@ -19,7 +19,7 @@ export const CRYPTO_SECRET=import.meta.env.VITE_CRYPTO_SECRET || "TestSecretKey1
 
 export const playerFields = [
   { key: 'fullName', label: 'Full Name', type: 'text' },
-  { key: 'tnbaId', label: 'TNBA ID', type: 'text' },
+  { key: 'TnBaId', label: 'TNBA ID', type: 'text' },
   { key: 'dob', label: 'Date of Birth', type: 'date' },
   { key: 'academyName', label: 'Academy Name', type: 'text' },
   { key: 'place', label: 'Place', type: 'text' },

@@ -1,7 +1,9 @@
 // ✅ PaymentStep.jsx
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { tournamentData } from "../../../constants";
 import UploadScreenShot from "./UploadScreenShot";
+import { useDispatch } from "react-redux";
+import { getAcademyPlayerEntries } from "../../../redux/Slices/EntriesSlice";
 
 const PaymentStep = ({
   setPlayersData,
@@ -23,20 +25,24 @@ const PaymentStep = ({
     paidEventsCount = 0
   } = eventsAnalysis || {};
 
+  const [EntryIds, setEntryIds] = useState('');
+  const dispatch = useDispatch();
   useEffect(() => {
-    // Debug logs
-  console.log('PaymentStep received events analysis:', eventsAnalysis);
-  console.log('Unpaid events:', unpaidSelectedEvents);
-  console.log('Unpaid total fee:', unpaidTotalFee);
-  // Add these logs at the top of the component
-  console.log("💰 PAYMENTSTEP: Received props:");
-  console.log("  - selectedEvents:", selectedEvents);
-  console.log("  - player:", player);
-  console.log("  - upi:", upi);
-  console.log("  - eventsAnalysis:", eventsAnalysis);
-  console.log("  - onSubmitSuccess function:", typeof onSubmitSuccess);
-  
-  }, [])
+      const fetchingPlayer = async () => {
+        console.log("Player : ",player);
+        
+       const response =  await dispatch(getAcademyPlayerEntries(player.id));
+       console.log("Res : ",response);
+       
+        if (response.payload.success) {
+          console.log("id : ",response.payload.data.entries[0]._id);
+          
+          setEntryIds(response.payload.data.entries[0]._id||"");
+         setSelectedEvents(response.payload.data.events|| []); 
+        }
+      };
+    fetchingPlayer();
+  }, [dispatch])
   
   // ✅ Calculate total fee for ALL selected events
   const totalFee = useMemo(() => {
@@ -81,7 +87,7 @@ const PaymentStep = ({
                     <span className="ml-2 text-gray-400">
                       (Partner:{" "}
                       <span className="text-cyan-300 font-medium">
-                        {event.partner?.fullname || "N/A"}
+                        {event.partner?.fullName || "N/A"}
                       </span>
                       )
                     </span>
@@ -155,6 +161,8 @@ const PaymentStep = ({
         expectedAmount={paymentAmount} // Pass the dynamic payment amount
         expectedUPI={upi}
         onBack={onBack}
+        playerId={player.id}
+        EntryId={EntryIds}
         selectedEvents={selectedEvents}
         unpaidEventsCount={unpaidEventsCount} // Pass additional context
         onSubmitSuccess={onSubmitSuccess}

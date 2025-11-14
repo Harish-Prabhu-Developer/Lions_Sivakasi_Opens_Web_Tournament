@@ -120,7 +120,23 @@ export const getAcademyPlayerEntries = async (req, res) => {
     .populate("Academy", "name email academyName place district")
     .populate("player", "fullName tnbaId dob academy place district")
     .populate("events.ApproverdBy", "name email role")
-    .sort({ createdAt: -1 });
+     // ✅ Nested populate (events → payment → paymentProof)
+  .populate({
+    path: "events",
+    populate: [
+      {
+        path: "payment",
+        model: "AcademyPayment",
+        populate: {
+          path: "paymentProof",
+          model: "AcademyPaymentProof"
+        }
+      }
+    ]
+  })
+      
+     .sort({ createdAt: -1 })
+      .lean();
 
     return res.status(200).json({
       success: true,
@@ -137,6 +153,8 @@ export const getAcademyPlayerEntries = async (req, res) => {
           age: player.age,
         },
         entries: entries,
+        entryIDs: entries[0]._id,
+        events: entries.flatMap(entry => entry.events || []),
         totalEntries: entries.length,
       },
     });
