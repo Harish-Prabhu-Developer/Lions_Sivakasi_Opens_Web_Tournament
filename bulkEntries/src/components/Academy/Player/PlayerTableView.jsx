@@ -1,11 +1,9 @@
 // components/Academy/PlayerTableView.jsx
 import React from "react";
-import { Edit, Trash2, Eye, Plus } from "lucide-react";
-import { eventTypeBadges, getEventTypeCounts } from "../../../utils/playerUtils";
+import { Edit, Trash2, Eye, Plus, CheckCircle, XCircle } from "lucide-react";
+import { eventTypeBadges } from "../../../utils/playerUtils";
 
 const PlayerTableView = ({ players, onEditPlayer, onDeletePlayer, onViewPlayer, onAddEntry }) => {
-  console.log("Player : ",players);
-  
   return (
     <div className="overflow-x-auto">
       <table className="w-full">
@@ -21,9 +19,19 @@ const PlayerTableView = ({ players, onEditPlayer, onDeletePlayer, onViewPlayer, 
         </thead>
         <tbody>
           {players.map((player) => {
-            const eventCounts = getEventTypeCounts(player);
+            const eventCounts = player.states?.entries.events.counts || { 
+              singles: 0, 
+              doubles: 0, 
+              mixedDoubles: 0, 
+              total: 0 
+            };
+            const totalEvents = player.states?.entries.events.total || 0;
+            const paidEvents = player.states?.entries.events.paid || 0;
+            const pendingEvents = player.states?.entries.events.pending || 0;
+            const playerId = player.id || player._id;
+
             return (
-              <tr key={player.id} className="border-b border-gray-800 hover:bg-cyan-400/5 transition-colors">
+              <tr key={playerId} className="border-b border-gray-800 hover:bg-cyan-400/5 transition-colors">
                 <td className="py-3 px-4">
                   <div>
                     <div className="font-semibold text-white">{player.fullName}</div>
@@ -64,16 +72,31 @@ const PlayerTableView = ({ players, onEditPlayer, onDeletePlayer, onViewPlayer, 
                         {eventCounts.mixedDoubles}M
                       </span>
                     )}
-                    {eventCounts.total === 0 && (
+                    {totalEvents === 0 && (
                       <span className="text-xs text-gray-500">No events</span>
                     )}
                   </div>
                 </td>
                 <td className="py-3 px-4">
                   <div className="text-sm">
-                    <div className="text-cyan-300 font-medium">{eventCounts.total} total</div>
-                    <div className="text-gray-400 text-xs">
-                      {player.entries?.filter(e => e.paymentStatus === 'Paid').length || 0} paid
+                    <div className="text-cyan-300 font-medium">{totalEvents} total</div>
+                    <div className="flex items-center gap-1 text-xs">
+                      {paidEvents > 0 ? (
+                        <div className="flex items-center gap-1 text-green-400">
+                          <CheckCircle className="w-3 h-3" />
+                          <span>{paidEvents} paid</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1 text-red-400">
+                          <XCircle className="w-3 h-3" />
+                          <span>0 paid</span>
+                        </div>
+                      )}
+                      {pendingEvents > 0 && (
+                        <div className="text-yellow-400 text-xs">
+                          ({pendingEvents} pending)
+                        </div>
+                      )}
                     </div>
                   </div>
                 </td>
@@ -94,14 +117,14 @@ const PlayerTableView = ({ players, onEditPlayer, onDeletePlayer, onViewPlayer, 
                       <Edit className="w-4 h-4" />
                     </button>
                     <button
-                      onClick={() => onAddEntry(player.id)}
+                      onClick={() => onAddEntry(playerId)}
                       className="p-2 text-green-400 hover:bg-green-400/10 rounded-lg transition-colors"
                       title="Add entry"
                     >
                       <Plus className="w-4 h-4" />
                     </button>
                     <button
-                      onClick={() => onDeletePlayer(player.id)}
+                      onClick={() => onDeletePlayer(playerId)}
                       className="p-2 text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
                       title="Delete player"
                     >

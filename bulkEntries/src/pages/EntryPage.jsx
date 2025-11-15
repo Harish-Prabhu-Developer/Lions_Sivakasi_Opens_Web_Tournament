@@ -12,7 +12,7 @@ import {
   addToAcademyEvents,
   getAcademyPlayerEntries,
 } from "../redux/Slices/EntriesSlice";
-
+import UPIQR from "../assets/UpiQR.png";
 const EntryPage = () => {
   const navigate = useNavigate();
   const { id: playerId } = useParams();
@@ -21,10 +21,6 @@ const EntryPage = () => {
   const [currentPlayer, setCurrentPlayer] = useState(reduxPlayer || null);
   const [step, setStep] = useState(1); // Step 1: Event Selection, Step 2: Partner Forms, Step 3: Payment
   const [currentPartnerFormIndex, setCurrentPartnerFormIndex] = useState(0);
-
-  // State for managing tournament entries and players
-  const [tournamentEntries, setTournamentEntries] = useState([]);
-  const [academyPlayers, setAcademyPlayers] = useState([]);
 
   // Tournament configuration
   const tournamentData = {
@@ -47,7 +43,7 @@ const EntryPage = () => {
     ],
     upi: "9360933755@iob",
     upiName: "TNBA Tournament",
-    upiQrUrl: "https://via.placeholder.com/150?text=UPI+QR", // Replace with actual QR URL
+    upiQrUrl: UPIQR, // Replace with actual QR URL
   };
 
   // Event limits
@@ -66,7 +62,63 @@ const EntryPage = () => {
   });
 
   const dispatch = useDispatch();
+  // Add this function to analyze paid/unpaid events
+  // Update the analyzeEvents function to be more comprehensive
+  const analyzeEvents = useCallback(() => {
+    if (!selectedEvents || selectedEvents.length === 0) {
+      return {
+        unpaidSelectedEvents: [],
+        unpaidTotalFee: 0,
+        unpaidEventsCount: 0,
+        paidEventsCount: 0,
+        paidEvents: [],
+        allEvents: [],
+      };
+    }
 
+    // Separate paid and unpaid events
+    const unpaidEvents = selectedEvents.filter(
+      (event) => !event.payment || event.payment.status !== "Paid"
+    );
+
+    const paidEvents = selectedEvents.filter(
+      (event) => event.payment && event.payment.status === "Paid"
+    );
+
+    // Calculate fees
+    const unpaidTotalFee = unpaidEvents.reduce((acc, event) => {
+      const feeKey = event.type === "singles" ? "singles" : "doubles";
+      return acc + tournamentData.entryFees[feeKey];
+    }, 0);
+
+    const paidTotalFee = paidEvents.reduce((acc, event) => {
+      const feeKey = event.type === "singles" ? "singles" : "doubles";
+      return acc + tournamentData.entryFees[feeKey];
+    }, 0);
+
+    const totalFee = unpaidTotalFee + paidTotalFee;
+
+    return {
+      unpaidSelectedEvents: unpaidEvents,
+      unpaidTotalFee,
+      unpaidEventsCount: unpaidEvents.length,
+      paidEventsCount: paidEvents.length,
+      paidEvents,
+      paidTotalFee,
+      totalFee,
+      allEvents: selectedEvents,
+    };
+  }, [selectedEvents]);
+
+  // Use this in your component
+  const eventsAnalysis = analyzeEvents();
+
+  // Update the calculateTotalFee function to show amount due
+  const calculateTotalFee = () => {
+    return eventsAnalysis.unpaidTotalFee; // Show only unpaid amount
+  };
+
+  const totalFee = calculateTotalFee();
   useEffect(() => {
     const fetchingPlayer = async (playerID) => {
       await dispatch(fetchPlayer(playerID));
@@ -114,7 +166,6 @@ const EntryPage = () => {
     };
   });
 
-  // FIXED: Update current form data when partner form index changes
   // FIXED: Update current form data when partner form index changes
   // Initialize partnerForms from selectedEvents when entering step 2 or when selectedEvents changes
   useEffect(() => {
@@ -204,6 +255,7 @@ const EntryPage = () => {
     partnerForms,
     currentFormData,
   ]); // Filter categories based on player's DOB
+
   const getFilteredCategories = () => {
     if (!currentPlayer || !currentPlayer.dob) return tournamentData.categories;
 
@@ -289,15 +341,8 @@ const EntryPage = () => {
   ).length;
   const totalCount = selectedEvents.length;
 
-  // Calculate total fee
-  const calculateTotalFee = () => {
-    return selectedEvents.reduce((acc, event) => {
-      const feeKey = event.type === "singles" ? "singles" : "doubles";
-      return acc + tournamentData.entryFees[feeKey];
-    }, 0);
-  };
-
-  const totalFee = calculateTotalFee();
+  const isEventPaid = (categoryName, type) =>
+    selectedEvents.some((e) => e.category === categoryName && e.payment);
 
   const isEventSelected = (categoryName, type) =>
     selectedEvents.some((e) => e.category === categoryName && e.type === type);
@@ -430,40 +475,39 @@ const EntryPage = () => {
       setCurrentPartnerFormIndex((prev) => prev + 1);
     } else {
       // All partner forms completed, proceed to payment
-      // All partner forms completed, prepare and log the data in the required format
       const eventsData = {
         events: selectedEvents.map((event) => {
-          // For singles events, don't include partner field
-          if (event.type === "singles") {
-            return {
-              category: event.category,
-              type: event.type,
-              // No partner field for singles
-            };
-          }
-
-          // For doubles events, include partner data
-          const eventKey = `${event.category}|${event.type}`;
-          const partnerFormKey = Object.keys(partnerForms).find((key) =>
-            key.startsWith(eventKey)
-          );
-
-          const partnerData = partnerFormKey
-            ? partnerForms[partnerFormKey]
-            : {};
-
-          return {
+          // Create base event object with all existing properties
+          const updatedEvent = {
             category: event.category,
             type: event.type,
-            partner: {
+            // Preserve all existing properties except partner (we'll update this)
+            ...event,
+          };
+
+          // For doubles events, update partner data
+          if (event.type !== "singles") {
+            const eventKey = `${event.category}|${event.type}`;
+            const partnerFormKey = Object.keys(partnerForms).find((key) =>
+              key.startsWith(eventKey)
+            );
+
+            const partnerData = partnerFormKey
+              ? partnerForms[partnerFormKey]
+              : {};
+
+            // Update partner information while preserving other properties
+            updatedEvent.partner = {
               fullName: partnerData.fullName || "",
               dob: partnerData.dob || "",
               TnBaId: partnerData.TnBaId || "",
               academyName: partnerData.academyName || "",
               place: partnerData.place || "",
               district: partnerData.district || "",
-            },
-          };
+            };
+          }
+
+          return updatedEvent;
         }),
       };
 
@@ -471,14 +515,16 @@ const EntryPage = () => {
         playerID: playerId,
         events: eventsData.events,
       };
+
+      console.log(
+        "Updating events with preserved payment data:",
+        addToEventPartner
+      );
       await dispatch(addToAcademyEvents(addToEventPartner));
-      // Log the data in the specified format
-      console.log("Events and Partner Data:", addToEventPartner);
 
       setStep(3);
     }
   };
-
   const handlePartnerFormBack = () => {
     if (currentPartnerFormIndex > 0) {
       setCurrentPartnerFormIndex((prev) => prev - 1);
@@ -525,6 +571,7 @@ const EntryPage = () => {
   );
 
   // SelectedEventCard component
+  // SelectedEventCard component - Updated to show paid/unpaid status
   const SelectedEventCard = () => {
     if (selectedEvents.length === 0) {
       return (
@@ -542,21 +589,45 @@ const EntryPage = () => {
             const category = tournamentData.categories.find(
               (cat) => cat.name === e.category
             );
+            const isPaid = e.payment && e.payment.status === "Paid";
+
             return (
               <div
                 key={idx}
-                className="flex items-center justify-between bg-[#0f1d38] p-3 rounded-lg"
+                className={`flex items-center justify-between p-3 rounded-lg ${
+                  isPaid
+                    ? "bg-green-900/20 border border-green-500/30"
+                    : "bg-[#0f1d38] border border-yellow-500/30"
+                }`}
               >
-                <div>
-                  <span className="text-cyan-50">
-                    {e.category.replace("Boys & Girls", "").trim()}
-                  </span>
-                  <span className="text-cyan-400 text-xs ml-2">({e.type})</span>
-                  <div className="text-xs text-gray-400 mt-1">
-                    Born after: {category?.afterBorn}
+                <div className="flex items-center gap-3">
+                  <div>
+                    <span className="text-cyan-50">
+                      {e.category.replace("Boys & Girls", "").trim()}
+                    </span>
+                    <span className="text-cyan-400 text-xs ml-2">
+                      ({e.type})
+                    </span>
+                    <div className="text-xs text-gray-400 mt-1">
+                      Born after: {category?.afterBorn}
+                    </div>
                   </div>
+                  {isPaid && (
+                    <span className="bg-green-600 text-white text-xs px-2 py-1 rounded-full">
+                      Paid ✓
+                    </span>
+                  )}
+                  {!isPaid && (
+                    <span className="bg-yellow-600 text-white text-xs px-2 py-1 rounded-full">
+                      Unpaid
+                    </span>
+                  )}
                 </div>
-                <span className="text-yellow-300 text-sm font-semibold">
+                <span
+                  className={`text-sm font-semibold ${
+                    isPaid ? "text-green-300" : "text-yellow-300"
+                  }`}
+                >
                   ₹
                   {e.type === "singles"
                     ? tournamentData.entryFees.singles
@@ -566,11 +637,33 @@ const EntryPage = () => {
             );
           })}
         </div>
+
+        {/* Payment Summary */}
+        <div className="mt-4 pt-3 border-t border-cyan-700/30">
+          <div className="flex justify-between text-sm">
+            <span className="text-green-400">Paid Events:</span>
+            <span className="text-green-400">
+              {eventsAnalysis.paidEventsCount} events
+            </span>
+          </div>
+          <div className="flex justify-between text-sm mt-1">
+            <span className="text-yellow-400">Unpaid Events:</span>
+            <span className="text-yellow-400">
+              {eventsAnalysis.unpaidEventsCount} events
+            </span>
+          </div>
+          <div className="flex justify-between text-lg font-bold mt-2 pt-2 border-t border-cyan-700/30">
+            <span className="text-cyan-300">Amount Due:</span>
+            <span className="text-yellow-300">
+              ₹{eventsAnalysis.unpaidTotalFee}
+            </span>
+          </div>
+        </div>
       </div>
     );
   };
-
   // PartnerDetailsCard component to show stored partner details
+  // PartnerDetailsCard component - Updated to show paid/unpaid status
   const PartnerDetailsCard = () => {
     const doublesEvents = getDoublesEvents();
 
@@ -593,17 +686,40 @@ const EntryPage = () => {
               categoryData
             );
 
+            // Find if this event is paid
+            const correspondingEvent = selectedEvents.find(
+              (event) =>
+                event.category === category &&
+                event.type === eventType &&
+                event.partner?.fullName === partnerData.fullName
+            );
+            const isPaid = correspondingEvent?.payment?.status === "Paid";
+
             return (
-              <div key={key} className="bg-[#0f1d38] p-3 rounded-lg">
+              <div
+                key={key}
+                className={`p-3 rounded-lg ${
+                  isPaid
+                    ? "bg-green-900/20 border border-green-500/30"
+                    : "bg-[#0f1d38] border border-yellow-500/30"
+                }`}
+              >
                 <div className="flex justify-between items-start mb-2">
-                  <div>
+                  <div className="flex items-center gap-2">
                     <span className="text-green-50 font-semibold">
                       {category.replace("Boys & Girls", "").trim()} -{" "}
                       {eventType}
                     </span>
-                    <div className="text-xs text-gray-400 mt-1">
-                      Must be born after: {categoryData?.afterBorn}
-                    </div>
+                    {isPaid && (
+                      <span className="bg-green-600 text-white text-xs px-2 py-1 rounded-full">
+                        Paid ✓
+                      </span>
+                    )}
+                    {!isPaid && (
+                      <span className="bg-yellow-600 text-white text-xs px-2 py-1 rounded-full">
+                        Unpaid
+                      </span>
+                    )}
                   </div>
                   <span
                     className={`text-xs px-2 py-1 rounded ${
@@ -614,6 +730,9 @@ const EntryPage = () => {
                   >
                     {validation.isValid ? "Eligible ✓" : "Not Eligible ✗"}
                   </span>
+                </div>
+                <div className="text-xs text-gray-400 mb-2">
+                  Must be born after: {categoryData?.afterBorn}
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <div>
@@ -659,7 +778,6 @@ const EntryPage = () => {
       </div>
     );
   };
-
   // Show message if no categories are available
   if (filteredCategories.length === 0 && currentPlayer && step === 1) {
     return (
@@ -760,8 +878,15 @@ const EntryPage = () => {
                 count={mixedDoublesCount}
                 limit={MIXED_DOUBLES_LIMIT}
               />
-              <div className="text-lg font-bold text-yellow-300">
-                Total Price: ₹{totalFee}
+              <div className="flex flex-col items-end">
+                <div className="text-lg font-bold text-yellow-300">
+                  Amount Due: ₹{eventsAnalysis.unpaidTotalFee}
+                </div>
+                {eventsAnalysis.paidEventsCount > 0 && (
+                  <div className="text-sm text-green-400">
+                    {eventsAnalysis.paidEventsCount} event(s) paid
+                  </div>
+                )}
               </div>
             </div>
 
@@ -898,24 +1023,20 @@ const EntryPage = () => {
         )}
 
         {/* Step 3: Payment */}
-        {step === 3 && (
-          <PaymentStep
-            setPlayersData={setPlayersData}
-            setSelectedEvents={setSelectedEvents}
-            selectedEvents={selectedEvents}
-            player={currentPlayer}
-            upi={tournamentData.upi}
-            upiQrUrl={tournamentData.upiQrUrl}
-            onBack={handlePaymentBack}
-            onSubmitSuccess={handleFinalSubmit}
-            eventsAnalysis={{
-              unpaidSelectedEvents: selectedEvents, // All events are unpaid initially
-              unpaidTotalFee: totalFee,
-              unpaidEventsCount: selectedEvents.length,
-              paidEventsCount: 0,
-            }}
-          />
-        )}
+
+{step === 3 && (
+  <PaymentStep
+    setPlayersData={setPlayersData}
+    setSelectedEvents={setSelectedEvents}
+    selectedEvents={eventsAnalysis.unpaidSelectedEvents} // ✅ Pass only unpaid events
+    player={currentPlayer}
+    upi={tournamentData.upi}
+    upiQrUrl={tournamentData.upiQrUrl}
+    onBack={handlePaymentBack}
+    onSubmitSuccess={handleFinalSubmit}
+    eventsAnalysis={eventsAnalysis}
+  />
+)}
       </div>
     </div>
   );

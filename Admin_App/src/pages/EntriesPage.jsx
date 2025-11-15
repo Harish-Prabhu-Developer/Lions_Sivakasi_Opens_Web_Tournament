@@ -736,15 +736,16 @@ const EntriesPage = () => {
       )}
 
       {/* Status Update Modal */}
-      {showUpdateModal && selectedEntry && (
-        <StatusModal 
-          entry={selectedEntry}
-          selectedStatus={selectedStatus}
-          setSelectedStatus={setSelectedStatus}
-          handleCloseUpdateModal={handleCloseUpdateModal}
-          handleUpdateStatus={handleUpdateStatus}
-        />
-      )}
+
+{showUpdateModal && selectedEntry && (
+  <StatusModal 
+    entry={selectedEntry}
+    selectedStatus={selectedStatus}
+    setSelectedStatus={setSelectedStatus}
+    handleCloseUpdateModal={handleCloseUpdateModal}
+    handleUpdateStatus={handleUpdateStatus}
+  />
+)}
     </div>
   );
 };

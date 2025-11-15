@@ -7,6 +7,7 @@ import UsersPage from './pages/UsersPage';
 import ReportPage from './pages/ReportPage';
 import PartnerChangeRequestPage from './pages/PartnerChangeRequestPage';
 import EntriesDetailPage from './pages/EntriesDetailPage';
+import AcademyEntriesPage from './pages/Academy/AcademyEntriesPage';
 function ProtectedRoute() {
   const isLoggedIn = localStorage.getItem('token');
   return isLoggedIn ? <Outlet /> : <Navigate to="/login" replace />;
@@ -33,6 +34,7 @@ function App() {
             <Route path='/entries' element={<EntriesPage/>}/>
             <Route path="/entryDetail/:id" element={<EntriesDetailPage />} />
             <Route path='/users' element={<UsersPage/>}/>
+            <Route path='/academyEntries' element={<AcademyEntriesPage/>}/>
             <Route path='/reports'element={<ReportPage/>}/>
             <Route path='/partners'element={<PartnerChangeRequestPage/>}/>
             {/* Add more nested pages below */}

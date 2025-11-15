@@ -1,6 +1,6 @@
 // Controller/AcademyPlayerController.js
 import AcademyPlayer from "../Models/AcademyPlayerModel.js";
-
+import AcademyEntryModel from "../Models/Academy.EntryModel.js";
 // ================= CREATE PLAYER =================
 export const createPlayer = async (req, res) => {
   try {
@@ -65,7 +65,6 @@ export const createPlayer = async (req, res) => {
     });
   }
 };
-
 // ================= GET ALL PLAYERS FOR ACADEMY =================
 export const getPlayers = async (req, res) => {
   try {
@@ -74,11 +73,73 @@ export const getPlayers = async (req, res) => {
 
     const players = await AcademyPlayer.findByAcademy(academyId, search);
 
-    res.status(200).json({
-      success: true,
-      msg: "Players retrieved successfully.",
-      data: {
-        players: players.map(player => ({
+    // Get entries and payment stats for all players
+    const playersWithStats = await Promise.all(
+      players.map(async (player) => {
+        // Get all entries for this player
+        const entries = await AcademyEntryModel.find({
+          Academy: academyId,
+          player: player._id
+        })
+        .populate({
+          path: "events",
+          populate: [
+            {
+              path: "payment",
+              model: "AcademyPayment",
+              populate: {
+                path: "paymentProof",
+                model: "AcademyPaymentProof"
+              }
+            }
+          ]
+        })
+        .lean();
+
+        // Calculate event counts and payment status
+        let totalEvents = 0;
+        let paidEvents = 0;
+        let pendingEvents = 0;
+        let totalEntries = entries.length;
+
+        const eventCounts = {
+          singles: 0,
+          doubles: 0,
+          mixedDoubles: 0,
+          total: 0
+        };
+
+        entries.forEach(entry => {
+          if (entry.events && Array.isArray(entry.events)) {
+            entry.events.forEach(event => {
+              totalEvents++;
+              
+              // Count event types
+              switch (event.type) {
+                case 'singles':
+                  eventCounts.singles++;
+                  break;
+                case 'doubles':
+                  eventCounts.doubles++;
+                  break;
+                case 'mixed doubles':
+                  eventCounts.mixedDoubles++;
+                  break;
+              }
+
+              // Count payment status
+              if (event.payment?.status === 'Paid') {
+                paidEvents++;
+              } else {
+                pendingEvents++;
+              }
+            });
+          }
+        });
+
+        eventCounts.total = totalEvents;
+
+        return {
           id: player._id,
           fullName: player.fullName,
           tnbaId: player.tnbaId,
@@ -87,8 +148,33 @@ export const getPlayers = async (req, res) => {
           place: player.place,
           district: player.district,
           createdAt: player.createdAt,
-          updatedAt: player.updatedAt
-        }))
+          updatedAt: player.updatedAt,
+          // Add states
+          states: {
+            entries: {
+              total: totalEntries,
+              events: {
+                total: totalEvents,
+                paid: paidEvents,
+                pending: pendingEvents,
+                counts: eventCounts
+              }
+            },
+            payment: {
+              totalPaid: paidEvents,
+              totalPending: pendingEvents,
+              paymentStatus: paidEvents > 0 ? (pendingEvents > 0 ? 'partial' : 'paid') : 'unpaid'
+            }
+          }
+        };
+      })
+    );
+
+    res.status(200).json({
+      success: true,
+      msg: "Players retrieved successfully.",
+      data: {
+        players: playersWithStats
       }
     });
   } catch (error) {
@@ -99,7 +185,6 @@ export const getPlayers = async (req, res) => {
     });
   }
 };
-
 // ================= GET SINGLE PLAYER =================
 export const getPlayer = async (req, res) => {
   try {

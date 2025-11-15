@@ -1,4 +1,4 @@
-// src/redux/slices/PlayerSlice.js
+// redux/Slices/PlayerSlices.js
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
 import { API_URL } from "../../constants";
@@ -7,35 +7,39 @@ import { toast } from "react-hot-toast";
 // Get token from localStorage
 const getToken = () => localStorage.getItem("bulkapp_token");
 
-// Fetch all players
+// Async thunks
 export const fetchPlayers = createAsyncThunk(
   "player/fetchPlayers",
-  async (searchTerm = "") => {
-    const token = getToken();
-    const url = searchTerm 
-      ? `${API_URL}/api/v2/academy/player?search=${encodeURIComponent(searchTerm)}`
-      : `${API_URL}/api/v2/academy/player`;
-    
-    const response = await axios.get(url, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    return response.data.data.players;
+  async (searchTerm = "", { rejectWithValue }) => {
+    try {
+      const token = getToken();
+      const response = await axios.get(
+        `${API_URL}/api/v2/academy/player?search=${searchTerm}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data || error.message);
+    }
   }
 );
 
-// Fetch player stats
-export const fetchPlayerStats = createAsyncThunk(
-  "player/fetchPlayerStats",
-  async () => {
-    const token = getToken();
-    const response = await axios.get(`${API_URL}/api/v2/academy/player/stats`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    return response.data.data.stats;
+export const fetchPlayer = createAsyncThunk(
+  "player/fetchPlayer",
+  async (playerId, { rejectWithValue }) => {
+    try {
+      const token = getToken();
+      const response = await axios.get(
+        `${API_URL}/api/v2/academy/player/${playerId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data || error.message);
+    }
   }
 );
 
-// Create new player
 export const createPlayer = createAsyncThunk(
   "player/createPlayer",
   async (playerData, { rejectWithValue }) => {
@@ -44,49 +48,32 @@ export const createPlayer = createAsyncThunk(
       const response = await axios.post(
         `${API_URL}/api/v2/academy/player/create`,
         playerData,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-      toast.success(response.data.msg);
-      return response.data.data.player;
+      return response.data;
     } catch (error) {
-      toast.error(error.response?.data?.msg || "Failed to create player");
-      return rejectWithValue(error.response?.data);
+      return rejectWithValue(error.response?.data || error.message);
     }
   }
 );
 
-// Update player - FIXED VERSION
 export const updatePlayer = createAsyncThunk(
   "player/updatePlayer",
   async ({ id, playerData }, { rejectWithValue }) => {
     try {
       const token = getToken();
-      console.log("Updating player with data:", { id, playerData }); // Debug log
-      
       const response = await axios.put(
         `${API_URL}/api/v2/academy/player/${id}`,
-        playerData, // Send the entire playerData object
-        {
-          headers: { 
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-        }
+        playerData,
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-      toast.success(response.data.msg);
-      return response.data.data.player;
+      return response.data;
     } catch (error) {
-      console.error("Update player error:", error.response?.data || error.message);
-      toast.error(error.response?.data?.msg || "Failed to update player");
-      return rejectWithValue(error.response?.data);
+      return rejectWithValue(error.response?.data || error.message);
     }
   }
 );
 
-
-// Delete player
 export const deletePlayer = createAsyncThunk(
   "player/deletePlayer",
   async (playerId, { rejectWithValue }) => {
@@ -94,38 +81,58 @@ export const deletePlayer = createAsyncThunk(
       const token = getToken();
       const response = await axios.delete(
         `${API_URL}/api/v2/academy/player/${playerId}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-      toast.success(response.data.msg);
-      return playerId;
+      return response.data;
     } catch (error) {
-      toast.error(error.response?.data?.msg || "Failed to delete player");
-      return rejectWithValue(error.response?.data);
+      return rejectWithValue(error.response?.data || error.message);
     }
   }
 );
 
-// Fetch single player
-export const fetchPlayer = createAsyncThunk(
-  "player/fetchPlayer",
-  async (playerId, { rejectWithValue }) => {
+export const fetchPlayerStats = createAsyncThunk(
+  "player/fetchPlayerStats",
+  async (_, { rejectWithValue }) => {
     try {
       const token = getToken();
       const response = await axios.get(
-        `${API_URL}/api/v2/academy/player/${playerId}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        `${API_URL}/api/v2/academy/player/stats`,
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-      return response.data.data.player;
+      return response.data;
     } catch (error) {
-      toast.error(error.response?.data?.msg || "Failed to fetch player");
-      return rejectWithValue(error.response?.data);
+      return rejectWithValue(error.response?.data || error.message);
     }
   }
 );
+
+// Helper function to add default states to player
+const addDefaultStates = (player) => {
+  return {
+    ...player,
+    states: {
+      entries: {
+        total: 0,
+        events: {
+          total: 0,
+          paid: 0,
+          pending: 0,
+          counts: {
+            singles: 0,
+            doubles: 0,
+            mixedDoubles: 0,
+            total: 0
+          }
+        }
+      },
+      payment: {
+        totalPaid: 0,
+        totalPending: 0,
+        paymentStatus: 'unpaid'
+      }
+    }
+  };
+};
 
 const playerSlice = createSlice({
   name: "player",
@@ -137,11 +144,11 @@ const playerSlice = createSlice({
     error: null,
   },
   reducers: {
-    clearCurrentPlayer: (state) => {
-      state.currentPlayer = null;
-    },
     clearError: (state) => {
       state.error = null;
+    },
+    clearCurrentPlayer: (state) => {
+      state.currentPlayer = null;
     },
   },
   extraReducers: (builder) => {
@@ -153,56 +160,137 @@ const playerSlice = createSlice({
       })
       .addCase(fetchPlayers.fulfilled, (state, action) => {
         state.loading = false;
-        state.players = action.payload;
+        
+        // Handle both old and new response structures
+        const playersData = action.payload.data?.players || [];
+        
+        // Ensure all players have the states object
+        state.players = playersData.map(player => {
+          // If player already has states, keep them, otherwise add default states
+          return player.states ? player : addDefaultStates(player);
+        });
+        
       })
       .addCase(fetchPlayers.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.error.message;
+        state.error = action.payload?.msg || "Failed to fetch players";
+        toast.error(action.payload?.msg || "Failed to fetch players");
       })
-      // Fetch Player Stats
-      .addCase(fetchPlayerStats.fulfilled, (state, action) => {
-        state.stats = action.payload;
+
+      // Fetch Single Player
+      .addCase(fetchPlayer.pending, (state) => {
+        state.loading = true;
+        state.error = null;
       })
+      .addCase(fetchPlayer.fulfilled, (state, action) => {
+        state.loading = false;
+        const playerData = action.payload.data?.player || null;
+        
+        // Ensure the player has states object
+        state.currentPlayer = playerData ? 
+          (playerData.states ? playerData : addDefaultStates(playerData)) : 
+          null;
+      })
+      .addCase(fetchPlayer.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload?.msg || "Failed to fetch player";
+        toast.error(action.payload?.msg || "Failed to fetch player");
+      })
+
       // Create Player
       .addCase(createPlayer.pending, (state) => {
         state.loading = true;
+        state.error = null;
       })
       .addCase(createPlayer.fulfilled, (state, action) => {
         state.loading = false;
-        state.players.push(action.payload);
+        if (action.payload.data?.player) {
+          // Add default states for new player
+          const newPlayer = addDefaultStates(action.payload.data.player);
+          state.players.push(newPlayer);
+        }
+        toast.success(action.payload.msg || "Player created successfully");
       })
       .addCase(createPlayer.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload?.msg || action.error.message;
+        state.error = action.payload?.msg || "Failed to create player";
+        toast.error(action.payload?.msg || "Failed to create player");
       })
+
       // Update Player
       .addCase(updatePlayer.pending, (state) => {
         state.loading = true;
+        state.error = null;
       })
       .addCase(updatePlayer.fulfilled, (state, action) => {
         state.loading = false;
-        const index = state.players.findIndex(player => player.id === action.payload.id);
-        if (index !== -1) {
-          state.players[index] = action.payload;
+        if (action.payload.data?.player) {
+          const updatedPlayer = action.payload.data.player;
+          const index = state.players.findIndex(p => p.id === updatedPlayer.id);
+          
+          if (index !== -1) {
+            // Preserve the existing states when updating player
+            const existingStates = state.players[index].states;
+            state.players[index] = {
+              ...updatedPlayer,
+              states: existingStates // Keep existing states
+            };
+          }
+          
+          // Also update currentPlayer if it's the same player
+          if (state.currentPlayer && state.currentPlayer.id === updatedPlayer.id) {
+            state.currentPlayer = {
+              ...updatedPlayer,
+              states: state.currentPlayer.states // Keep existing states
+            };
+          }
         }
-        if (state.currentPlayer && state.currentPlayer.id === action.payload.id) {
-          state.currentPlayer = action.payload;
-        }
+        toast.success(action.payload.msg || "Player updated successfully");
       })
       .addCase(updatePlayer.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload?.msg || action.error.message;
+        state.error = action.payload?.msg || "Failed to update player";
+        toast.error(action.payload?.msg || "Failed to update player");
       })
+
       // Delete Player
-      .addCase(deletePlayer.fulfilled, (state, action) => {
-        state.players = state.players.filter(player => player.id !== action.payload);
+      .addCase(deletePlayer.pending, (state) => {
+        state.loading = true;
+        state.error = null;
       })
-      // Fetch Single Player
-      .addCase(fetchPlayer.fulfilled, (state, action) => {
-        state.currentPlayer = action.payload;
+      .addCase(deletePlayer.fulfilled, (state, action) => {
+        state.loading = false;
+        const playerId = action.meta.arg;
+        state.players = state.players.filter(player => player.id !== playerId);
+        
+        if (state.currentPlayer && state.currentPlayer.id === playerId) {
+          state.currentPlayer = null;
+        }
+        
+        toast.success(action.payload.msg || "Player deleted successfully");
+      })
+      .addCase(deletePlayer.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload?.msg || "Failed to delete player";
+        toast.error(action.payload?.msg || "Failed to delete player");
+      })
+
+      // Fetch Player Stats
+      .addCase(fetchPlayerStats.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchPlayerStats.fulfilled, (state, action) => {
+        state.loading = false;
+        state.stats = action.payload.data?.stats || null;
+      })
+      .addCase(fetchPlayerStats.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload?.msg || "Failed to fetch stats";
+        toast.error(action.payload?.msg || "Failed to fetch stats");
       });
   },
 });
 
-export const { clearCurrentPlayer, clearError } = playerSlice.actions;
+export const { clearError, clearCurrentPlayer } = playerSlice.actions;
 export default playerSlice.reducer;

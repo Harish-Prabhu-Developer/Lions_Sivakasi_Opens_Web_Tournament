@@ -14,18 +14,26 @@ const UploadScreenShot = ({
   playerId,
   EntryId,
   onBack, 
-  selectedEvents, 
+  selectedEvents, // This should now be unpaidSelectedEvents
   unpaidEventsCount,
+  paidEventsCount,
+  totalEventsCount,
   onSubmitSuccess 
 }) => {
-  const [selectedFile, setSelectedFile] = useState(null);
+const [selectedFile, setSelectedFile] = useState(null);
   const [preview, setPreview] = useState(null);
   const [validationStatus, setValidationStatus] = useState(null);
   const [validationMessage, setValidationMessage] = useState("");
   const [extractedData, setExtractedData] = useState(null);
   const [progress, setProgress] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const dispatch = useDispatch();
+  const dispatch=useDispatch();
+  const navigate=useNavigate();
+  
+  useEffect(() => {
+    console.log("unpaidEventsCount",unpaidEventsCount);
+  },[selectedEvents,unpaidEventsCount]);
+  
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -66,10 +74,8 @@ const UploadScreenShot = ({
       });
 
       const extractedText = result.data.text;
-
       const extractedTextLower = extractedText.toLowerCase();
-      console.log("extractedText : ",extractedText);
-      console.log("extractedLower : ",extractedTextLower);
+
       const paymentApp = detectPaymentApp(extractedTextLower);
       const isPaymentScreenshot = validatePaymentKeywords(extractedTextLower);
 
@@ -96,11 +102,23 @@ const UploadScreenShot = ({
         }
       }
 
-      if (expectedUPI && receiverUPI && !receiverUPI.toLowerCase().includes(expectedUPI.toLowerCase())) {
-        setValidationStatus("error");
-        setValidationMessage(`Receiver UPI ID mismatch! Expected ${expectedUPI}, found ${receiverUPI}`);
-        setExtractedData({ amount: extractedAmount, senderUPI, receiverUPI, app: paymentApp });
-        return;
+      // ✅ SINGLE UPI VALIDATION BLOCK - REMOVED DUPLICATE
+      if (expectedUPI) {
+        // We expect the SENDER UPI to match the player's registered UPI
+        if (senderUPI && !senderUPI.toLowerCase().includes(expectedUPI.toLowerCase())) {
+          setValidationStatus("error");
+          setValidationMessage(`Sender UPI ID mismatch! Expected ${expectedUPI}, found ${senderUPI}`);
+          setExtractedData({ amount: extractedAmount, senderUPI, receiverUPI, app: paymentApp });
+          return;
+        }
+        
+        // Also validate that we have a sender UPI
+        if (!senderUPI) {
+          setValidationStatus("error");
+          setValidationMessage("Could not detect sender UPI ID in the screenshot");
+          setExtractedData({ amount: extractedAmount, senderUPI, receiverUPI, app: paymentApp });
+          return;
+        }
       }
 
       setValidationStatus("success");
@@ -144,24 +162,110 @@ const UploadScreenShot = ({
     const allUPIs = text.match(upiPattern) || [];
     let senderUPI = null, receiverUPI = null;
 
-    const senderKeywords = ["from", "paid by", "sender"];
-    const receiverKeywords = ["to", "paid to", "receiver"];
+    // Enhanced keyword lists based on your screenshot patterns
+    const senderKeywords = [
+      "from", "paid by", "sender", "debited from", "your upi", "my upi", 
+      "from:", "sent from", "paid from", "sent by", "payer"
+    ];
+    
+    const receiverKeywords = [
+      "to", "paid to", "receiver", "beneficiary", "credited to", "upi id",
+      "to:", "received by", "pay to", "recipient", "beneficiary upi"
+    ];
+
     const lines = text.split('\n');
 
-    for (const line of lines) {
+    // First pass: Look for explicit sender/receiver indicators
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
       const lineLower = line.toLowerCase();
       const upisInLine = line.match(upiPattern);
-      if (upisInLine) {
-        if (senderKeywords.some(kw => lineLower.includes(kw))) senderUPI = senderUPI || upisInLine[0];
-        if (receiverKeywords.some(kw => lineLower.includes(kw))) receiverUPI = receiverUPI || upisInLine[0];
+      
+      if (upisInLine && upisInLine.length > 0) {
+        const upi = upisInLine[0];
+        
+        // Check for sender patterns
+        const isSenderLine = senderKeywords.some(kw => lineLower.includes(kw)) ||
+                            lineLower.includes('from') && lineLower.includes('@');
+        
+        // Check for receiver patterns  
+        const isReceiverLine = receiverKeywords.some(kw => lineLower.includes(kw)) ||
+                              lineLower.includes('to') && lineLower.includes('@');
+
+        if (isSenderLine && !senderUPI) {
+          senderUPI = upi;
+        } else if (isReceiverLine && !receiverUPI) {
+          receiverUPI = upi;
+        }
+
+        // Also check next line for context (common in payment screenshots)
+        if (i < lines.length - 1) {
+          const nextLineLower = lines[i + 1].toLowerCase();
+          if (senderKeywords.some(kw => nextLineLower.includes(kw)) && !senderUPI) {
+            senderUPI = upi;
+          }
+          if (receiverKeywords.some(kw => nextLineLower.includes(kw)) && !receiverUPI) {
+            receiverUPI = upi;
+          }
+        }
       }
     }
 
-    if (allUPIs.length >= 2 && (!senderUPI || !receiverUPI)) {
-      senderUPI = senderUPI || allUPIs[0];
-      receiverUPI = receiverUPI || allUPIs[1];
-    } else if (allUPIs.length === 1) {
-      receiverUPI = allUPIs[0];
+    // Second pass: Look for specific patterns from your screenshots
+    // Pattern 1: "To: Name" followed by UPI on next line (Gpay example)
+    const toPattern = /to:.*\n.*([\w.-]+@[\w.-]+)/gi;
+    const toMatch = toPattern.exec(text);
+    if (toMatch && !receiverUPI) {
+      receiverUPI = toMatch[1];
+    }
+
+    // Pattern 2: "From: Name" followed by UPI on next line (Gpay example)  
+    const fromPattern = /from:.*\n.*([\w.-]+@[\w.-]+)/gi;
+    const fromMatch = fromPattern.exec(text);
+    if (fromMatch && !senderUPI) {
+      senderUPI = fromMatch[1];
+    }
+
+    // Pattern 3: "Received from" pattern (PhonePe example)
+    if (textLower.includes('received from') && allUPIs.length > 0 && !senderUPI) {
+      senderUPI = allUPIs[0];
+    }
+
+    // Pattern 4: Transaction flow analysis
+    if (!senderUPI && !receiverUPI && allUPIs.length >= 2) {
+      // In most payment apps, the pattern is: Transaction → From UPI → To UPI
+      const fromIndex = textLower.indexOf('from');
+      const toIndex = textLower.indexOf('to');
+      
+      if (fromIndex !== -1 && toIndex !== -1) {
+        // If "from" appears before "to", first UPI is likely sender
+        if (fromIndex < toIndex) {
+          senderUPI = allUPIs[0];
+          receiverUPI = allUPIs[1];
+        } else {
+          // If "to" appears before "from", first UPI is likely receiver
+          receiverUPI = allUPIs[0];
+          senderUPI = allUPIs[1];
+        }
+      } else {
+        // Default: first UPI = sender, second UPI = receiver
+        senderUPI = allUPIs[0];
+        receiverUPI = allUPIs[1];
+      }
+    }
+
+    // Single UPI handling
+    if (allUPIs.length === 1) {
+      if (textLower.includes('received') || textLower.includes('credited')) {
+        // If it says "received", the single UPI is the receiver
+        receiverUPI = allUPIs[0];
+      } else if (textLower.includes('sent') || textLower.includes('paid')) {
+        // If it says "sent", the single UPI is the sender
+        senderUPI = allUPIs[0];
+      } else {
+        // Default: assume it's the receiver (most common case for payment verification)
+        receiverUPI = allUPIs[0];
+      }
     }
 
     return { senderUPI, receiverUPI };
@@ -176,64 +280,78 @@ const UploadScreenShot = ({
     setProgress(0);
   };
 
-  const handleSubmit = async () => {
-    if (!preview) {
-      toast.error("Please upload a screenshot first.");
-      return;
+    // Update the handleSubmit function to show proper context
+  // UploadScreenShot.jsx - Update the handleSubmit function
+const handleSubmit = async () => {
+  if (!preview) {
+    toast.error("Please upload a screenshot first.");
+    return;
+  }
+
+  if (!selectedFile || validationStatus !== "success") {
+    toast.error("Please upload a valid payment screenshot.");
+    return;
+  }
+
+  if (!selectedEvents || selectedEvents.length === 0) {
+    toast.error("No unpaid events found to link payment!");
+    return;
+  }
+
+  setIsSubmitting(true);
+
+  try {
+    // ✅ NEW: Prepare paid events array with category and type
+    const paidEventsData = selectedEvents.map(event => ({
+      category: event.category,
+      type: event.type
+    }));
+
+    // Prepare payment data
+    const paymentData = {
+      paymentProof: preview,
+      ActualAmount: expectedAmount,
+      expertedData: {
+        paymentAmount: expectedAmount,
+        receiverUpiId: expectedUPI
+      },
+      metadata: {
+        paymentApp: extractedData.app,
+        paymentAmount: extractedData.amount,
+        senderUpiId: extractedData.senderUPI,
+        receiverUpiId: extractedData.receiverUPI,
+        eventsCount: unpaidEventsCount,
+        totalEventsCount: totalEventsCount
+      },
+      // ✅ NEW: Include which events are being paid for
+      paidEvents: paidEventsData
+    };
+
+    console.log("💰 Payment for", unpaidEventsCount, "unpaid events:", paidEventsData);
+    console.log("Player ID:", playerId);
+    console.log("Entry ID:", EntryId);
+    console.log("Payment Data:", paymentData);
+    
+    await dispatch(addToAcademyEventPayment({
+      playerID: playerId, 
+      entryID: EntryId, 
+      paymentData: paymentData
+    }));
+    
+    // Call the success callback from parent
+    if (onSubmitSuccess) {
+      await onSubmitSuccess(paymentData);
+    } else {
+      toast.success(`Payment verified for ${unpaidEventsCount} event${unpaidEventsCount !== 1 ? 's' : ''}!`);
     }
 
-    if (!selectedFile || validationStatus !== "success") {
-      toast.error("Please upload a valid payment screenshot.");
-      return;
-    }
-
-    if (!selectedEvents || selectedEvents.length === 0) {
-      toast.error("No events selected to link payment!");
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    try {
-      // Prepare payment data
-
-      const paymentData = {
-        paymentProof: preview,
-        ActualAmount: expectedAmount,
-            expertedData:{
-             paymentAmount:expectedAmount,
-             receiverUpiId:expectedUPI
-            },
-        metadata: {
-          paymentApp: extractedData.app,
-          paymentAmount: extractedData.amount,
-          senderUpiId: extractedData.senderUPI,
-          receiverUpiId: extractedData.receiverUPI,
-        },
-      };
-
-
-      console.log("Player ID : ",playerId);
-      console.log("Entry ID : ",EntryId);
-      
-      
-      console.log("💳 Payment Data:", paymentData);
-      await dispatch(addToAcademyEventPayment({playerID:playerId, entryID:EntryId, paymentData:paymentData}));
-      // Call the success callback from parent
-      if (onSubmitSuccess) {
-        await onSubmitSuccess(paymentData);
-      } else {
-        toast.success("Payment Screenshot uploaded successfully! Entry submitted.");
-      }
-
-    } catch (err) {
-      console.error("❌ Payment Error:", err);
-      toast.error(err.message || "Error submitting payment.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
+  } catch (err) {
+    console.error("❌ Payment Error:", err);
+    toast.error(err.message || "Error submitting payment.");
+  } finally {
+    setIsSubmitting(false);
+  }
+};
   return (
     <div className="w-full space-y-6">
       {/* Upload Card */}

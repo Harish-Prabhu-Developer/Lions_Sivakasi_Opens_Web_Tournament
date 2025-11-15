@@ -340,7 +340,8 @@ const UserPage = () => {
           item.categories?.toLowerCase().includes(lowerSearch) ||
           item.email?.toLowerCase().includes(lowerSearch) ||
           item.phone?.toLowerCase().includes(lowerSearch) ||
-          item.place?.toLowerCase().includes(lowerSearch)
+          item.place?.toLowerCase().includes(lowerSearch)||
+          item.role?.toLowerCase().includes(lowerSearch)
       );
     }
 
@@ -452,6 +453,12 @@ const UserPage = () => {
         accessor: "playerTnBaId", 
         responsive: "md-up",
         cell: (item) => item.playerTnBaId || 'N/A'
+      },
+            { 
+        header: "Role", 
+        accessor: "role", 
+        responsive: "lg-up",
+        cell: (item) => item.role==="user"?"Player":item.role || 'N/A'
       },
       { 
         header: "Email", 

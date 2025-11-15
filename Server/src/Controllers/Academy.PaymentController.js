@@ -5,7 +5,7 @@ import AcademyEntry from "../Models/Academy.EntryModel.js";
 import AcademyPlayer from "../Models/AcademyPlayerModel.js";
 
 /**
- * Add payment for player's event entry
+ * Add payment for specific player events
  * @param {*} req
  * @param {*} res
  */
@@ -18,7 +18,8 @@ export const addToAcademyEventPayment = async (req, res) => {
       ActualAmount, 
       expertedData, 
       metadata, 
-      status = "Paid" 
+      status = "Paid",
+      paidEvents = [] // ✅ NEW: Receive which events are being paid for
     } = req.body;
 
     // Validate required fields
@@ -43,14 +44,12 @@ export const addToAcademyEventPayment = async (req, res) => {
       });
     }
 
-    // Validate expertedData if provided
-    if (expertedData) {
-      if (expertedData.paymentAmount && expertedData.paymentAmount <= 0) {
-        return res.status(400).json({
-          success: false,
-          msg: "Valid expected payment amount is required",
-        });
-      }
+    // ✅ NEW: Validate paidEvents array
+    if (!paidEvents || !Array.isArray(paidEvents) || paidEvents.length === 0) {
+      return res.status(400).json({
+        success: false,
+        msg: "Paid events array is required",
+      });
     }
 
     // Check if player exists and belongs to the academy
@@ -89,6 +88,50 @@ export const addToAcademyEventPayment = async (req, res) => {
       });
     }
 
+    // ✅ NEW: Validate that paidEvents actually exist in the entry
+    const validPaidEvents = [];
+    let calculatedTotal = 0;
+
+    for (const paidEvent of paidEvents) {
+      const existingEvent = entry.events.find(event => 
+        event.category === paidEvent.category && 
+        event.type === paidEvent.type
+      );
+
+      if (!existingEvent) {
+        return res.status(400).json({
+          success: false,
+          msg: `Event ${paidEvent.category} ${paidEvent.type} not found in entry`,
+        });
+      }
+
+      // Check if event is already paid
+      if (existingEvent.payment) {
+        return res.status(400).json({
+          success: false,
+          msg: `Event ${paidEvent.category} ${paidEvent.type} is already paid`,
+        });
+      }
+
+      // Calculate event fee
+      const eventFee = paidEvent.type === "singles" ? 900 : 1300;
+      calculatedTotal += eventFee;
+
+      validPaidEvents.push({
+        category: paidEvent.category,
+        type: paidEvent.type,
+        amount: eventFee
+      });
+    }
+
+    // ✅ NEW: Validate payment amount matches calculated total
+    if (Math.abs(ActualAmount - calculatedTotal) > 1) {
+      return res.status(400).json({
+        success: false,
+        msg: `Payment amount ₹${ActualAmount} does not match events total ₹${calculatedTotal}`,
+      });
+    }
+
     // Create payment proof with new fields
     const paymentProofDoc = new AcademyPaymentProof({
       paymentProof: paymentProof,
@@ -102,54 +145,60 @@ export const addToAcademyEventPayment = async (req, res) => {
         paymentAmount: metadata?.paymentAmount || ActualAmount,
         senderUpiId: metadata?.senderUpiId || "",
         receiverUpiId: metadata?.receiverUpiId || expertedData?.receiverUpiId || "",
+        paidEventsCount: validPaidEvents.length,
+        eventsDetails: validPaidEvents.map(event => `${event.category} ${event.type}`)
       },
       paymentBy: academyID,
     });
 
     const savedPaymentProof = await paymentProofDoc.save();
 
-    // Create payment record for each event in the entry
-    const paymentPromises = entry.events.map(async (event) => {
-      const payment = new AcademyPayment({
-        Academy: academyID,
-        player: playerID,
-        PaidedEvent: entryID,
-        status: status,
-        paymentProof: savedPaymentProof._id,
-      });
-
-      return await payment.save();
+    // ✅ UPDATED: Create a single payment record for this batch of events
+    const payment = new AcademyPayment({
+      Academy: academyID,
+      player: playerID,
+      PaidedEvent: entryID,
+      paidEvents: validPaidEvents,
+      paymentAmount: ActualAmount,
+      status: status,
+      paymentProof: savedPaymentProof._id,
     });
 
-    const payments = await Promise.all(paymentPromises);
+    const savedPayment = await payment.save();
 
-    // Update entry events with payment references
-    entry.events.forEach((event, index) => {
-      event.payment = payments[index]._id;
+    // ✅ UPDATED: Update only the specific events that were paid for
+    entry.events.forEach(event => {
+      const isPaidEvent = validPaidEvents.some(paidEvent => 
+        paidEvent.category === event.category && 
+        paidEvent.type === event.type
+      );
+      
+      if (isPaidEvent) {
+        event.payment = savedPayment._id;
+      }
     });
 
     await entry.save();
 
     // Populate the response data
-    const populatedPayments = await AcademyPayment.find({
-      _id: { $in: payments.map(p => p._id) }
-    })
-    .populate("Academy", "name email academyName place district")
-    .populate("player", "fullName tnbaId dob academy place district")
-    .populate("PaidedEvent")
-    .populate({
-      path: "paymentProof",
-      select: "paymentProof ActualAmount expertedData metadata paymentBy"
-    });
+    const populatedPayment = await AcademyPayment.findById(savedPayment._id)
+      .populate("Academy", "name email academyName place district")
+      .populate("player", "fullName tnbaId dob academy place district")
+      .populate("PaidedEvent")
+      .populate({
+        path: "paymentProof",
+        select: "paymentProof ActualAmount expertedData metadata paymentBy"
+      });
 
     return res.status(201).json({
       success: true,
-      msg: "Payment added successfully for all events",
+      msg: `Payment added successfully for ${validPaidEvents.length} event(s)`,
       data: {
         paymentProof: savedPaymentProof,
-        payments: populatedPayments,
-        totalEvents: payments.length,
-        entry: entry
+        payment: populatedPayment,
+        paidEvents: validPaidEvents,
+        totalPaid: ActualAmount,
+        remainingEvents: entry.events.filter(event => !event.payment).length
       },
     });
 

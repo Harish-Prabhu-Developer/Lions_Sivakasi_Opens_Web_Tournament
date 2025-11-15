@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import {
   ArrowLeft,
@@ -19,23 +19,71 @@ import {
   Building,
   Navigation,
   X,
+  IndianRupee,
+  Loader2,
 } from "lucide-react";
 import axios from "axios";
 import { API_URL } from "../config";
 import toast from "react-hot-toast";
 
 const EntriesDetailPage = () => {
-
   const navigate = useNavigate();
   const location = useLocation();
 
   // Get the entry data from route state
   const entry = location.state?.entry;
- console.log("Entry : ",entry);
- 
+  console.log("Entry : ", entry);
+
   // State for update status modal
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState("");
+
+  // State for payment events
+  const [paymentEvents, setPaymentEvents] = useState([]);
+  const [totalPaymentAmount, setTotalPaymentAmount] = useState(0);
+  const [loadingPaymentEvents, setLoadingPaymentEvents] = useState(false);
+
+  // Fetch payment events data
+  const fetchPaymentEvents = async () => {
+    if (!entry.payment?.id) return;
+
+    try {
+      setLoadingPaymentEvents(true);
+      const token = localStorage.getItem("token");
+      const response = await axios.get(
+        `${API_URL}/api/v1/entry/payment-events/${entry.payment.id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.data.success) {
+        const data = response.data.data;
+        setPaymentEvents(data.paidEvents || []);
+        setTotalPaymentAmount(data.totalAmount || entry.payment.ActualAmount || 0);
+      }
+    } catch (error) {
+      console.error("❌ Error fetching payment events:", error);
+      // Fallback to current entry if API fails
+      setPaymentEvents([{
+        category: entry.eventCategory,
+        type: entry.eventType,
+        calculatedAmount: entry.payment?.amount || 1100,
+        player: entry.player
+      }]);
+      setTotalPaymentAmount(entry.payment?.ActualAmount || entry.payment?.amount || 0);
+    } finally {
+      setLoadingPaymentEvents(false);
+    }
+  };
+
+  useEffect(() => {
+    if (entry?.payment?.id) {
+      fetchPaymentEvents();
+    }
+  }, [entry]);
 
   // Status badge component
   const StatusBadge = ({ status }) => {
@@ -99,6 +147,16 @@ const EntriesDetailPage = () => {
         {status}
       </span>
     );
+  };
+
+  // Format currency for display
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
   };
 
   // Handle view payment proof
@@ -218,55 +276,55 @@ const EntriesDetailPage = () => {
     setSelectedStatus("");
   };
 
+  const handleUpdateStatus = async () => {
+    if (!selectedStatus) {
+      toast.error("⚠️ Please select a status");
+      return;
+    }
 
-const handleUpdateStatus = async () => {
-  if (!selectedStatus) {
-    toast.error("⚠️ Please select a status");
-    return;
-  }
+    console.log("Update Status Data:", {
+      status: selectedStatus,
+      entryId: entry.entryRefId,
+      eventID: entry.eventId,
+    });
 
-  console.log("Update Status Data:", {
-    status: selectedStatus,
-    entryId: entry.entryRefId,
-    eventID: entry.eventId,
-  });
+    try {
+      const token = localStorage.getItem("token");
 
-  try {
-    const token = localStorage.getItem("token");
-
-    const res = await axios.put(
-      `${API_URL}/api/v1/entry/approve/${entry.entryRefId}/${entry.eventId}`,
-      { status: selectedStatus },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      }
-    );
-
-    console.log("✅ Approve API Response:", res.data);
-
-    if (res.data.success) {
-      toast.success(
-       `Event status updated to ${selectedStatus.toUpperCase()} successfully!`
+      const res = await axios.put(
+        `${API_URL}/api/v1/entry/approve/${entry.entryRefId}/${entry.eventId}`,
+        { status: selectedStatus },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
       );
 
-      handleCloseUpdateModal();
+      console.log("✅ Approve API Response:", res.data);
 
-      // Optional: refresh table after update
-      // if (typeof fetchEntries === "function") fetchEntries();
-    } else {
-      toast.error(res.data.msg || "❌ Failed to update event status");
+      if (res.data.success) {
+        toast.success(
+          `Event status updated to ${selectedStatus.toUpperCase()} successfully!`
+        );
+
+        handleCloseUpdateModal();
+
+        // Optional: refresh table after update
+        // if (typeof fetchEntries === "function") fetchEntries();
+      } else {
+        toast.error(res.data.msg || "❌ Failed to update event status");
+      }
+    } catch (error) {
+      console.error("❌ Error updating event status:", error.response?.data || error.message);
+
+      toast.error(
+        error.response?.data?.msg || "🚨 Something went wrong updating event status."
+      );
     }
-  } catch (error) {
-    console.error("❌ Error updating event status:", error.response?.data || error.message);
+  };
 
-    toast.error(
-      error.response?.data?.msg || "🚨 Something went wrong updating event status."
-    );
-  }
-};
   // Get payment proof URL for display
   const getPaymentProofUrl = () => {
     if (!entry.payment?.paymentProof) return null;
@@ -638,14 +696,15 @@ const handleUpdateStatus = async () => {
                   </div>
                 </div>
 
-                {entry.payment.amount && (
+                {entry.payment?.ActualAmount && (
                   <div>
                     <label className="text-sm font-medium text-gray-500">
-                      Amount
+                      Total Amount
                     </label>
-                    <p className="text-lg text-gray-900 mt-1">
-                      ${entry.payment.amount}
-                    </p>
+                    <div className="flex items-center gap-1 text-lg text-gray-900 mt-1">
+                      <IndianRupee className="w-4 h-4" />
+                      <span>{entry.payment.ActualAmount}</span>
+                    </div>
                   </div>
                 )}
                 {entry.payment && (
@@ -726,26 +785,62 @@ const handleUpdateStatus = async () => {
                       <p className="text-sm text-gray-600 mb-3">
                         Payment proof uploaded
                       </p>
-                      {/* Actual Payment Amount */}
-                      <div className="flex items-center justify-center py-4 gap-2">
-                        <span className="text-sm font-medium text-gray-500">
-                          Payment Amount:
+                      
+                      {/* Total Payment Amount */}
+                      <div className="flex items-center justify-center py-2 gap-2 bg-blue-50 rounded-lg mb-3">
+                        <IndianRupee className="w-4 h-4 text-blue-600" />
+                        <span className="text-sm font-medium text-gray-700">
+                          Total Payment Amount:
                         </span>
-                        <span className="text-md text-gray-900">
-                          {entry.payment?.ActualAmount|| 'N/A'} 
-                        </span>
-                      </div>
-                      {/* Expected Payment Amount */}
-                      <div className="flex items-center justify-center py-4 gap-2">
-                        <span className="text-sm font-medium text-gray-500">
-                          Expected Payment Amount:
-                        </span>
-                        <span className="text-md text-gray-900">
-                          {entry.payment?.amount|| 'Can not find amount'} 
+                        <span className="text-md font-bold text-blue-900">
+                          {formatCurrency(totalPaymentAmount)}
                         </span>
                       </div>
+
+                      {/* Paid Events Section */}
+                      <div className="mt-4">
+                        <h4 className="text-sm font-medium text-gray-700 mb-3 text-left">
+                          Paid Events ({formatCurrency(totalPaymentAmount)})
+                        </h4>
+                        
+                        {loadingPaymentEvents ? (
+                          <div className="flex items-center justify-center py-4">
+                            <Loader2 className="w-5 h-5 animate-spin text-indigo-600 mr-2" />
+                            <span className="text-sm text-gray-600">Loading events...</span>
+                          </div>
+                        ) : (
+                          <div className="space-y-2 max-h-40 overflow-y-auto">
+                            {paymentEvents.map((event, index) => (
+                              <div 
+                                key={index}
+                                className="flex justify-between items-center py-2 px-3 bg-green-50 rounded border border-green-200 text-left"
+                              >
+                                <div className="flex-1">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-xs font-medium text-gray-900">
+                                      {event.category} {event.type}
+                                    </span>
+                                    <span className="text-xs font-semibold text-green-700">
+                                      {formatCurrency(event.calculatedAmount || 1100)}
+                                    </span>
+                                  </div>
+                                  {event.player && (
+                                    <div className="text-xs text-gray-600 mt-1">
+                                      <span>Player: {event.player.name}</span>
+                                      {event.player.TnBaId && (
+                                        <span className="ml-2">(ID: {event.player.TnBaId})</span>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
                       {/* Action Buttons */}
-                      <div className="flex flex-col gap-2">
+                      <div className="flex flex-col gap-2 mt-4">
                         <button
                           onClick={handleViewPaymentProof}
                           className="flex items-center justify-center gap-2 bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition text-sm font-medium"

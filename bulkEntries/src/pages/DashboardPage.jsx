@@ -19,6 +19,7 @@ import {
   deletePlayer, 
   fetchPlayerStats 
 } from "../redux/Slices/PlayerSlices";
+import { getAcademyPlayerEntries } from "../redux/Slices/EntriesSlice";
 
 const DashboardPage = () => {
   const navigate = useNavigate();
@@ -63,11 +64,10 @@ const DashboardPage = () => {
   }, []);
 
   // Load players from API on component mount
-  useEffect(() => {
-    dispatch(fetchPlayers());
-    dispatch(fetchPlayerStats());
-  }, [dispatch]);
-
+useEffect(() => {
+  dispatch(fetchPlayers());
+  dispatch(fetchPlayerStats());
+}, [dispatch]);
   // Filter players based on search term
   useEffect(() => {
     if (!searchTerm.trim()) {
@@ -168,6 +168,7 @@ const handleSubmitPlayer = async (e) => {
     
     // Refresh players list
     dispatch(fetchPlayers());
+    
   } catch (error) {
     // Error handled in the slice
     console.error("Submit player error:", error);
@@ -239,17 +240,18 @@ const handleSubmitPlayer = async (e) => {
         loading={loading}
       />
 
-      {/* Players List Section */}
-      <PlayersView
-        players={filteredPlayers}
-        viewMode={viewMode}
-        searchTerm={searchTerm}
-        onEditPlayer={handleEditPlayer}
-        onDeletePlayer={handleDeletePlayer}
-        onViewPlayer={handleViewPlayer}
-        onAddEntry={handleAddEntry}
-        loading={loading}
-      />
+
+{/* Players List Section */}
+<PlayersView
+  players={filteredPlayers}
+  viewMode={viewMode}
+  searchTerm={searchTerm}
+  onEditPlayer={handleEditPlayer}
+  onDeletePlayer={handleDeletePlayer}
+  onViewPlayer={handleViewPlayer}
+  onAddEntry={handleAddEntry}
+  loading={loading}
+/>
 
       {/* Player Form Modal */}
       {showPlayerForm && (

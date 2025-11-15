@@ -180,7 +180,7 @@ export const getUserEntries = async (req, res) => {
 
     // Transform and flatten data for easier frontend consumption
     const formattedEntries = users.map(user => {
-      const { name, email, phone, gender, TnBaId, academyName, place, district, entries, createdAt, updatedAt, _id } = user;
+      const { name, email, phone, gender, TnBaId, academyName, place, district, entries, createdAt, role,updatedAt, _id } = user;
       
       // Handle users with no entries (empty array or undefined)
       const userEntries = entries || [];
@@ -202,7 +202,8 @@ export const getUserEntries = async (req, res) => {
         district: district || 'N/A',
         playerGender: gender || 'N/A',
         email: email || 'N/A',
-        phone: phone || 'N/A', 
+        phone: phone || 'N/A',
+        role: role || 'N/A', 
         // Event summaries
         eventCount: userEntries.length,
         categories: eventCategories,
@@ -473,12 +474,196 @@ export const addPartnerToEvent = async (req, res) => {
 
 
 
+// Add this to EntryController.js
+
+// Add this to EntryController.js
+
 /**
- * Get individual Event Entries for Admin Management (Recommended)
- * This uses the Aggregation Pipeline to flatten events, lookup related data, and paginate efficiently.
- * @param {*} req - Expects optional 'page', 'limit', 'status', 'category', 'type' query params
- * @param {*} res
- */
+ * Get payment details with all paid events and their actual amounts
+ * @param {*} req
+ * @param {*} res
+ */
+export const getPaymentWithEvents = async (req, res) => {
+  try {
+    const { paymentId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(paymentId)) {
+      return res.status(400).json({ success: false, msg: "Invalid Payment ID format." });
+    }
+
+    // Find the payment with populated entryId
+    const payment = await PaymentModel.findById(paymentId)
+      .populate({
+        path: 'entryId',
+        populate: {
+          path: 'player',
+          select: 'name email TnBaId phone gender academyName place district'
+        }
+      })
+      .lean();
+
+    if (!payment) {
+      return res.status(404).json({ success: false, msg: "Payment not found" });
+    }
+
+    // Extract all events linked to this payment from all entries
+    const paidEvents = [];
+    let totalCalculatedAmount = 0;
+
+    // Process each entry linked to this payment
+    if (payment.entryId && payment.entryId.length > 0) {
+      for (const entry of payment.entryId) {
+        if (entry && entry.events) {
+          entry.events.forEach(event => {
+            // Check if this event has the current payment ID
+            if (event.payment && event.payment.toString() === paymentId) {
+              
+              // Calculate amount for this event based on category and type
+              const eventAmount = calculateEventAmount(event.category, event.type);
+              
+              paidEvents.push({
+                category: event.category,
+                type: event.type,
+                status: event.status,
+                registrationDate: event.RegistrationDate,
+                partner: event.partner || null,
+                player: {
+                  name: entry.player?.name,
+                  TnBaId: entry.player?.TnBaId,
+                  phone: entry.player?.phone,
+                  gender: entry.player?.gender,
+                  academyName: entry.player?.academyName
+                },
+                calculatedAmount: eventAmount
+              });
+              
+              totalCalculatedAmount += eventAmount;
+            }
+          });
+        }
+      }
+    }
+
+    // If no events found with calculated amounts, use the payment's ActualAmount
+    const finalAmount = totalCalculatedAmount > 0 ? totalCalculatedAmount : payment.ActualAmount;
+
+    res.status(200).json({
+      success: true,
+      data: {
+        payment: {
+          _id: payment._id,
+          paymentProof: payment.paymentProof,
+          status: payment.status,
+          ActualAmount: payment.ActualAmount,
+          metadata: payment.metadata,
+          createdAt: payment.createdAt,
+          entryIds: payment.entryId?.map(entry => entry._id) || []
+        },
+        paidEvents,
+        totalAmount: finalAmount,
+        totalEvents: paidEvents.length,
+        amountBreakdown: {
+          calculated: totalCalculatedAmount,
+          fromPayment: payment.ActualAmount
+        }
+      }
+    });
+
+  } catch (err) {
+    console.error("❌ getPaymentWithEvents Error:", err);
+    res.status(500).json({ success: false, msg: err.message });
+  }
+};
+
+/**
+ * Calculate event amount based on category and type
+ * @param {string} category - Event category
+ * @param {string} type - Event type
+ * @returns {number} - Calculated amount
+ */
+const calculateEventAmount = (category, type) => {
+  // Define your pricing structure here
+  const basePrices = {
+    singles: 900,
+    doubles: 1300,
+    'mixed doubles': 1300
+  };
+
+  // You can add category-based pricing if needed
+  const categoryMultipliers = {
+    'Under 09': 1.0,
+    'Under 11': 1.0,
+    'Under 13': 1.0,
+    'Under 15': 1.0,
+    'Under 17': 1.0,
+    'Under 19': 1.0
+  };
+
+  const basePrice = basePrices[type] || 1100; // Default to 1100
+  const multiplier = categoryMultipliers[category] || 1.0;
+  
+  return basePrice * multiplier;
+};
+
+
+/**
+ * Helper function to get payment events data
+ */
+const getPaymentEventsData = async (paymentId) => {
+  try {
+    const payment = await PaymentModel.findById(paymentId)
+      .populate({
+        path: 'entryId',
+        populate: {
+          path: 'player',
+          select: 'name TnBaId phone gender academyName'
+        }
+      })
+      .lean();
+
+    if (!payment) {
+      return { success: false, msg: "Payment not found" };
+    }
+
+    const paidEvents = [];
+    let totalAmount = 0;
+
+    if (payment.entryId && payment.entryId.length > 0) {
+      for (const entry of payment.entryId) {
+        if (entry && entry.events) {
+          entry.events.forEach(event => {
+            if (event.payment && event.payment.toString() === paymentId.toString()) {
+              const eventAmount = calculateEventAmount(event.category, event.type);
+              
+              paidEvents.push({
+                category: event.category,
+                type: event.type,
+                calculatedAmount: eventAmount,
+                player: entry.player
+              });
+              
+              totalAmount += eventAmount;
+            }
+          });
+        }
+      }
+    }
+
+    return {
+      success: true,
+      data: {
+        paidEvents,
+        totalAmount: totalAmount > 0 ? totalAmount : payment.ActualAmount
+      }
+    };
+  } catch (error) {
+    console.error("❌ Error in getPaymentEventsData:", error);
+    return { success: false, msg: error.message };
+  }
+};
+/**
+ * Enhanced getEntries to include payment events data
+ */
 export const getEntries = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -575,6 +760,8 @@ export const getEntries = async (req, res) => {
             paymentsenderUPI: "$paymentDetails.metadata.senderUpiId",
             createdAt: "$paymentDetails.createdAt",
             paymentProof: "$paymentDetails.paymentProof",
+            // Include payment ID for frontend reference
+            paymentId: "$paymentDetails._id"
           },
           approvedBy: {
             _id: "$approvedByUser._id",
@@ -637,7 +824,6 @@ export const getEntries = async (req, res) => {
     return res.status(500).json({ success: false, msg: err.message });
   }
 };
-
 // Add this to your EntryController.js
 
 /**

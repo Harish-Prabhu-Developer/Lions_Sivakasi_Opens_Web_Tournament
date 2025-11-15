@@ -1,6 +1,6 @@
-// components/Academy/PlayersView.jsx
+// components/Academy/PlayersView.jsx - Add loading state
 import React from "react";
-import { Users } from "lucide-react";
+import { Users, Loader2 } from "lucide-react";
 import PlayerCardsView from "./PlayerCardsView";
 import PlayerTableView from "./PlayerTableView";
 
@@ -11,8 +11,21 @@ const PlayersView = ({
   onEditPlayer,
   onDeletePlayer,
   onViewPlayer,
-  onAddEntry
+  onAddEntry,
+  loading
 }) => {
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="max-w-7xl mx-auto bg-[#192339]/80 rounded-2xl shadow-lg border border-cyan-400/10 p-6">
+        <div className="text-center py-12">
+          <Loader2 className="w-16 h-16 text-cyan-400 mx-auto mb-4 animate-spin" />
+          <p className="text-gray-400 text-lg">Loading players...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (players.length === 0) {
     return (
       <div className="max-w-7xl mx-auto bg-[#192339]/80 rounded-2xl shadow-lg border border-cyan-400/10 p-6">

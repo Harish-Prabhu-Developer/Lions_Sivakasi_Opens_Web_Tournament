@@ -10,9 +10,9 @@ const PlayerForm = ({ currentForm, form, onFormChange, onNext, onBack }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     // Basic validation check (e.g., if all fields are non-empty)
-     // Allow tnbaId to be empty, but all other fields must be filled
+     // Allow TnBaId to be empty, but all other fields must be filled
   const isValid = playerFields.every(field => {
-    if (field.key === "tnbaId") return true; // skip validation for tnbaId
+    if (field.key === "TnBaId") return true; // skip validation for TnBaId
     return form[field.key] && form[field.key].trim() !== "";
   });
       
@@ -41,7 +41,7 @@ const PlayerForm = ({ currentForm, form, onFormChange, onNext, onBack }) => {
                 value={form[field.key]|| ''}
                 onChange={(e) => onFormChange(field.key, e.target.value)}
                 disabled={isPlayer&&field.key==="dob"?true:false} //The player dob field is not editable
-                required={field.key==="tnbaId"?false:true} //The tnbaId field is not required 
+                required={field.key==="TnBaId"?false:true} //The TnBaId field is not required 
                 className={`w-full px-4 py-2 border rounded-lg text-white focus:ring-cyan-500 focus:border-cyan-500 transition-colors duration-200 ${
                   isPlayer && field.key === "dob" 
                     ? "bg-[#1a253f] border-gray-600 text-gray-400 bg-opacity-50 cursor-not-allowed" 
