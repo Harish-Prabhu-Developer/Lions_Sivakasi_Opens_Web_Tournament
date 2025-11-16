@@ -16,6 +16,8 @@ import { useDispatch, useSelector } from "react-redux";
 import PlayerFormModal from "./PlayerFormModal";
 import { fetchPlayer, updatePlayer } from "../../../redux/Slices/PlayerSlices";
 import { getAcademyPlayerEntries } from "../../../redux/Slices/EntriesSlice";
+import { Users, Venus, Mars } from "lucide-react"; // Add Venus and Mars for gender icons
+
 
 const PlayerDetailsPage = () => {
   const navigate = useNavigate();
@@ -32,11 +34,22 @@ const PlayerDetailsPage = () => {
     fullName: "",
     tnbaId: "",
     dob: "",
+    gender: "",
     academy: "",
     place: "",
     district: "",
   });
 
+
+  const genderIcon = currentPlayer?.gender === 'female' ? 
+  <Venus className="w-4 h-4 text-pink-400" /> : 
+  <Mars className="w-4 h-4 text-blue-400" />;
+
+// Helper function to format gender for display
+const formatGenderDisplay = (gender) => {
+  if (!gender) return 'N/A';
+  return gender === 'male' ? 'Boys' : 'Girls';
+};
   // Load player data and entries
   useEffect(() => {
     if (id) {
@@ -55,6 +68,7 @@ const PlayerDetailsPage = () => {
         fullName: currentPlayer.fullName,
         tnbaId: currentPlayer.tnbaId || "",
         dob: currentPlayer.dob,
+        gender: currentPlayer.gender,
         academy: currentPlayer.academy,
         place: currentPlayer.place,
         district: currentPlayer.district,
@@ -70,28 +84,36 @@ const PlayerDetailsPage = () => {
     }));
   };
 
-  const handleSubmitPlayer = async (e) => {
-    e.preventDefault();
+const handleSubmitPlayer = async (e) => {
+  e.preventDefault();
 
-    // Basic validation
-    if (
-      !playerForm.fullName.trim() ||
-      !playerForm.dob ||
-      !playerForm.academy.trim() ||
-      !playerForm.place.trim() ||
-      !playerForm.district.trim()
-    ) {
-      toast.error("Please fill in all required fields");
-      return;
-    }
+  // Basic validation
+  if (
+    !playerForm.fullName.trim() ||
+    !playerForm.dob ||
+    !playerForm.gender ||
+    !playerForm.academy.trim() ||
+    !playerForm.place.trim() ||
+    !playerForm.district.trim()
+  ) {
+    toast.error("Please fill in all required fields");
+    return;
+  }
 
-    try {
-      await dispatch(updatePlayer({ id, playerForm })).unwrap();
-      setShowPlayerForm(false);
-    } catch (error) {
-      // Error handled in slice
-    }
-  };
+  try {
+    // Fix: Send playerData instead of playerForm
+    await dispatch(updatePlayer({ 
+      id, 
+      playerData: playerForm // Changed from playerForm to playerData
+    })).unwrap();
+    setShowPlayerForm(false);
+    // Refresh the player data after update
+    dispatch(fetchPlayer(id));
+  } catch (error) {
+    // Error handled in slice
+    console.error("Update player error:", error);
+  }
+};
 
   const handleAddEntry = (playerId) => {
     navigate(`/entry/${playerId}`);
@@ -233,65 +255,59 @@ const PlayerDetailsPage = () => {
                 <div className="w-2 h-2 bg-cyan-300 rounded-full"></div>
                 Personal Information
               </h2>
-              <div className="grid md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-sm text-gray-400 mb-1 block">
-                      Full Name
-                    </label>
-                    <p className="text-white font-semibold text-lg">
-                      {currentPlayer?.fullName}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="text-sm text-gray-400 mb-1 block">
-                      Date of Birth
-                    </label>
-                    <p className="text-white font-semibold">
-                      {currentPlayer?.dob
-                        ? new Date(currentPlayer.dob).toLocaleDateString(
-                            "en-US",
-                            {
-                              year: "numeric",
-                              month: "long",
-                              day: "numeric",
-                            }
-                          )
-                        : "N/A"}
-                    </p>
-                  </div>
-                </div>
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-sm text-gray-400 mb-1 block">
-                      TNBA ID
-                    </label>
-                    <p
-                      className={`font-semibold text-lg ${
-                        currentPlayer?.tnbaId
-                          ? "text-cyan-300"
-                          : "text-gray-500"
-                      }`}
-                    >
-                      {currentPlayer?.tnbaId || "Not provided"}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="text-sm text-gray-400 mb-1 block">
-                      Age
-                    </label>
-                    <p className="text-white font-semibold">
-                      {currentPlayer?.dob
-                        ? Math.floor(
-                            (new Date() - new Date(currentPlayer.dob)) /
-                              (365.25 * 24 * 60 * 60 * 1000)
-                          )
-                        : "N/A"}{" "}
-                      years
-                    </p>
-                  </div>
-                </div>
-              </div>
+<div className="grid md:grid-cols-2 gap-6">
+  <div className="space-y-4">
+    <div>
+      <label className="text-sm text-gray-400 mb-1 block">Full Name</label>
+      <p className="text-white font-semibold text-lg">{currentPlayer?.fullName}</p>
+    </div>
+    <div>
+      <label className="text-sm text-gray-400 mb-1 block">Date of Birth</label>
+      <p className="text-white font-semibold">
+        {currentPlayer?.dob
+          ? new Date(currentPlayer.dob).toLocaleDateString("en-US", {
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            })
+          : "N/A"}
+      </p>
+    </div>
+    
+    {/* ADD GENDER FIELD HERE */}
+    <div>
+      <label className="text-sm text-gray-400 mb-1 block">Category / Gender</label>
+      <div className="flex items-center gap-2">
+        {genderIcon}
+        <p className="text-white font-semibold">
+          {formatGenderDisplay(currentPlayer?.gender)}
+        </p>
+      </div>
+    </div>
+  </div>
+  <div className="space-y-4">
+    <div>
+      <label className="text-sm text-gray-400 mb-1 block">TNBA ID</label>
+      <p className={`font-semibold text-lg ${
+        currentPlayer?.tnbaId ? "text-cyan-300" : "text-gray-500"
+      }`}>
+        {currentPlayer?.tnbaId || "Not provided"}
+      </p>
+    </div>
+    <div>
+      <label className="text-sm text-gray-400 mb-1 block">Age</label>
+      <p className="text-white font-semibold">
+        {currentPlayer?.dob
+          ? Math.floor(
+              (new Date() - new Date(currentPlayer.dob)) /
+                (365.25 * 24 * 60 * 60 * 1000)
+            )
+          : "N/A"}{" "}
+        years
+      </p>
+    </div>
+  </div>
+</div>
             </div>
 
             {/* Academy Information Card */}

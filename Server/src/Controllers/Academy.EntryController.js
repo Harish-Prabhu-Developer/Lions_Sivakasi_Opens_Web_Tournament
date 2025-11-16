@@ -2,6 +2,9 @@
 import AcademyEntryModel from "../Models/Academy.EntryModel.js";
 import AcademyPlayer from "../Models/AcademyPlayerModel.js";
 import UserModel from "../Models/UserModel.js";
+import AcademyPayment from "../Models/Academy.PaymentModel.js";
+import AcademyPaymentProof from "../Models/Academy.PaymentProof.js";
+import { sendPlayerEntryStatusEmail } from "../Services/EmailService.js";
 
 /**
  * Add or update player's events (Add to Cart style)
@@ -171,71 +174,47 @@ export const getAcademyPlayerEntries = async (req, res) => {
     });
   }
 };
-// Controllers/Academy.EntryController.js
+
+
 /**
- * Get individual Event Entries for Admin Management with filtering and pagination
- * @param {*} req - Expects optional 'page', 'limit', 'category', 'type', 'paymentStatus', 'eventStatus' query params
- * @param {*} res
+ * Get Academy Entries with Payment Status "Paid" - Events Wise
  */
 export const getAcademyEntries = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
+    const search = req.query.search || "";
+    const status = req.query.status || "";
+    const category = req.query.category || "";
+    const type = req.query.type || "";
 
-    // Build match filters
-    const matchFilters = {};
-    
-    // Filter by payment status if provided
-    if (req.query.paymentStatus) {
-      matchFilters["paymentDetails.status"] = req.query.paymentStatus;
-    } else {
-      // Default: show only paid entries
-      matchFilters["paymentDetails.status"] = "Paid";
-    }
-    
-    // Filter by event category if provided
-    if (req.query.category) {
-      matchFilters["events.category"] = req.query.category;
-    }
-    
-    // Filter by event type if provided
-    if (req.query.type) {
-      matchFilters["events.type"] = req.query.type;
-    }
-    
-    // Filter by event status if provided
-    if (req.query.eventStatus) {
-      matchFilters["events.status"] = req.query.eventStatus;
-    }
+    console.log("Fetching academy entries with filters:", {
+      page,
+      limit,
+      search,
+      status,
+      category,
+      type
+    });
 
-    // 🔹 Flatten events from each Entry
+    // Build match filters for aggregation
+    const matchFilters = {
+      "paymentDetails.status": "Paid" // Only paid entries
+    };
+
+    // Add event filters if provided
+    const eventMatchFilters = {};
+    if (status) eventMatchFilters["events.status"] = status;
+    if (category) eventMatchFilters["events.category"] = category;
+    if (type) eventMatchFilters["events.type"] = type;
+
+    // Aggregation pipeline to get events individually
     const pipeline = [
+      // Unwind events to get each event as separate document
       { $unwind: "$events" },
 
-      // 🔹 Lookup player details from AcademyPlayer
-      {
-        $lookup: {
-          from: "academyplayers",
-          localField: "player",
-          foreignField: "_id",
-          as: "playerDetails",
-        },
-      },
-      { $unwind: "$playerDetails" },
-
-      // 🔹 Lookup academy details from User
-      {
-        $lookup: {
-          from: "users",
-          localField: "Academy",
-          foreignField: "_id",
-          as: "academyDetails",
-        },
-      },
-      { $unwind: "$academyDetails" },
-
-      // 🔹 Lookup payment details from AcademyPayment
+      // Lookup payment details
       {
         $lookup: {
           from: "academypayments",
@@ -250,7 +229,34 @@ export const getAcademyEntries = async (req, res) => {
         },
       },
 
-      // 🔹 Lookup payment proof details
+      // Apply payment status filter
+      {
+        $match: matchFilters
+      },
+
+      // Lookup player details
+      {
+        $lookup: {
+          from: "academyplayers",
+          localField: "player",
+          foreignField: "_id",
+          as: "playerDetails",
+        },
+      },
+      { $unwind: "$playerDetails" },
+
+      // Lookup academy details
+      {
+        $lookup: {
+          from: "users",
+          localField: "Academy",
+          foreignField: "_id",
+          as: "academyDetails",
+        },
+      },
+      { $unwind: "$academyDetails" },
+
+      // Lookup payment proof details
       {
         $lookup: {
           from: "academypaymentproofs",
@@ -265,114 +271,463 @@ export const getAcademyEntries = async (req, res) => {
         },
       },
 
-      // 🔹 Apply filters
+      // Apply event filters
       {
-        $match: matchFilters
+        $match: eventMatchFilters
       },
 
-      // 🔹 Lookup approvedBy user (optional)
+      // Apply search filter
       {
-        $lookup: {
-          from: "users",
-          localField: "events.ApproverdBy",
-          foreignField: "_id",
-          as: "approvedByUser",
-        },
-      },
-      {
-        $addFields: {
-          approvedByUser: { $arrayElemAt: ["$approvedByUser", 0] },
-        },
+        $match: search.trim() ? {
+          $or: [
+            { "playerDetails.fullName": { $regex: search, $options: "i" } },
+            { "academyDetails.academyName": { $regex: search, $options: "i" } },
+            { "playerDetails.tnbaId": { $regex: search, $options: "i" } },
+            { "playerDetails.place": { $regex: search, $options: "i" } },
+            { "playerDetails.district": { $regex: search, $options: "i" } }
+          ]
+        } : {}
       },
 
-      // 🔹 Shape the output
+      // Project the required fields
       {
         $project: {
           _id: 0,
-          entryRefId: "$_id",
+          id: "$_id", // Entry ID
           eventId: "$events._id",
-          registrationDate: "$events.RegistrationDate",
-          eventStatus: "$events.status",
-          eventCategory: "$events.category",
-          eventType: "$events.type",
-          isDoubles: {
-            $or: [
-              { $eq: ["$events.type", "doubles"] },
-              { $eq: ["$events.type", "mixed doubles"] },
-            ],
+          Academy: {
+            _id: "$academyDetails._id",
+            name: "$academyDetails.name",
+            email: "$academyDetails.email",
+            academyName: "$academyDetails.academyName",
+            place: "$academyDetails.place",
+            district: "$academyDetails.district"
           },
-          partner: "$events.partner",
-          
-          // Player details from AcademyPlayer
           player: {
-            id: "$playerDetails._id",
+            _id: "$playerDetails._id",
             fullName: "$playerDetails.fullName",
-            TnBaId: "$playerDetails.tnbaId",
+            tnbaId: "$playerDetails.tnbaId",
             dob: "$playerDetails.dob",
             academy: "$playerDetails.academy",
             place: "$playerDetails.place",
             district: "$playerDetails.district",
-            isActive: "$playerDetails.isActive",
-            createdAt: "$playerDetails.createdAt",
-            updatedAt: "$playerDetails.updatedAt",
+            isActive: "$playerDetails.isActive"
           },
-
-          // Academy details from User
-          academy: {
-            id: "$academyDetails._id",
-            name: "$academyDetails.name",
-            email: "$academyDetails.email",
-            phone: "$academyDetails.phone",
-            academyName: "$academyDetails.academyName",
-            place: "$academyDetails.place",
-            district: "$academyDetails.district",
-          },
-
-          // Payment details from AcademyPayment
+          eventCategory: "$events.category",
+          eventType: "$events.type",
+          partner: "$events.partner",
+          eventStatus: "$events.status",
+          registrationDate: "$events.RegistrationDate",
           payment: {
-            id: "$paymentDetails._id",
+            _id: "$paymentDetails._id",
             status: "$paymentDetails.status",
             paymentAmount: "$paymentDetails.paymentAmount",
-            paidEvents: "$paymentDetails.paidEvents",
-            createdAt: "$paymentDetails.createdAt",
-            updatedAt: "$paymentDetails.updatedAt",
+            paymentProof: "$paymentProofDetails",
+            paidEvents: "$paymentDetails.paidEvents"
           },
-
-          // Payment proof details from AcademyPaymentProof
-          paymentProof: {
-            id: "$paymentProofDetails._id",
-            ActualAmount: "$paymentProofDetails.ActualAmount",
-            paymentProof: "$paymentProofDetails.paymentProof",
-            expertedData: "$paymentProofDetails.expertedData",
-            metadata: "$paymentProofDetails.metadata",
-            paymentBy: "$paymentProofDetails.paymentBy",
-          },
-
-          // Approved by user details
-          approvedBy: {
-            _id: "$approvedByUser._id",
-            name: "$approvedByUser.name",
-            email: "$approvedByUser.email",
-            phone: "$approvedByUser.phone",
-          },
-        },
+          createdAt: "$createdAt"
+        }
       },
 
-      // 🔹 Sort by registration date (newest first)
+      // Sort by registration date (newest first)
       { $sort: { registrationDate: -1 } },
 
-      // 🔹 Pagination
+      // Pagination
       { $skip: skip },
-      { $limit: limit },
+      { $limit: limit }
     ];
 
-    const eventEntries = await AcademyEntryModel.aggregate(pipeline);
-
-    // 🔹 Total count for pagination (with the same filters)
-    const totalCountPipeline = [
+    // Count pipeline for total documents
+    const countPipeline = [
       { $unwind: "$events" },
+      {
+        $lookup: {
+          from: "academypayments",
+          localField: "events.payment",
+          foreignField: "_id",
+          as: "paymentDetails",
+        },
+      },
+      {
+        $addFields: {
+          paymentDetails: { $arrayElemAt: ["$paymentDetails", 0] },
+        },
+      },
+      { $match: matchFilters },
+      {
+        $lookup: {
+          from: "academyplayers",
+          localField: "player",
+          foreignField: "_id",
+          as: "playerDetails",
+        },
+      },
+      { $unwind: "$playerDetails" },
+      {
+        $lookup: {
+          from: "users",
+          localField: "Academy",
+          foreignField: "_id",
+          as: "academyDetails",
+        },
+      },
+      { $unwind: "$academyDetails" },
+      { $match: eventMatchFilters },
+      {
+        $match: search.trim() ? {
+          $or: [
+            { "playerDetails.fullName": { $regex: search, $options: "i" } },
+            { "academyDetails.academyName": { $regex: search, $options: "i" } },
+            { "playerDetails.tnbaId": { $regex: search, $options: "i" } },
+            { "playerDetails.place": { $regex: search, $options: "i" } },
+            { "playerDetails.district": { $regex: search, $options: "i" } }
+          ]
+        } : {}
+      },
+      { $count: "total" }
+    ];
 
-      // Lookup payment details for filtering
+    // Execute both pipelines
+    const [eventEntries, totalCountResult] = await Promise.all([
+      AcademyEntryModel.aggregate(pipeline),
+      AcademyEntryModel.aggregate(countPipeline)
+    ]);
+
+    const total = totalCountResult[0]?.total || 0;
+
+    console.log(`Found ${eventEntries.length} events out of ${total} total`);
+
+    res.status(200).json({
+      success: true,
+      data: eventEntries,
+      pagination: {
+        total,
+        limit,
+        currentPage: page,
+        totalPages: Math.ceil(total / limit),
+      },
+    });
+
+  } catch (error) {
+    console.error("Get Academy Entries Error:", error);
+    res.status(500).json({
+      success: false,
+      msg: "Internal server error",
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Update Event Status
+ */
+export const updateEventStatus = async (req, res) => {
+  try {
+    const { entryId, eventId } = req.params;
+    const { status } = req.body;
+
+    if (!status || !["pending", "approved", "rejected"].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        msg: "Valid status (pending, approved, rejected) is required"
+      });
+    }
+
+    const entry = await AcademyEntryModel.findById(entryId);
+    
+    if (!entry) {
+      return res.status(404).json({
+        success: false,
+        msg: "Entry not found"
+      });
+    }
+
+    const event = entry.events.id(eventId);
+    
+    if (!event) {
+      return res.status(404).json({
+        success: false,
+        msg: "Event not found"
+      });
+    }
+
+    event.status = status;
+    event.ApproverdBy = req.user.id;
+    
+    await entry.save();
+
+    res.status(200).json({
+      success: true,
+      msg: "Event status updated successfully",
+      data: event
+    });
+
+  } catch (error) {
+    console.error("Update Event Status Error:", error);
+    res.status(500).json({
+      success: false,
+      msg: "Internal server error",
+      error: error.message
+    });
+  }
+};
+
+
+/**
+ * Get Payment with Events Details
+ */
+export const getPaymentWithEvents = async (req, res) => {
+  try {
+    const { paymentId } = req.params;
+
+    if (!paymentId) {
+      return res.status(400).json({
+        success: false,
+        msg: "Payment ID is required"
+      });
+    }
+
+    // Find the payment with populated data
+    const payment = await AcademyPayment.findById(paymentId)
+      .populate('paymentProof')
+      .populate('player')
+      .populate('Academy')
+      .populate('PaidedEvent')
+      .lean();
+
+    if (!payment) {
+      return res.status(404).json({
+        success: false,
+        msg: "Payment not found"
+      });
+    }
+
+    // Find the entry to get all events
+    const entry = await AcademyEntryModel.findById(payment.PaidedEvent)
+      .populate('player')
+      .populate('Academy')
+      .lean();
+
+    if (!entry) {
+      return res.status(404).json({
+        success: false,
+        msg: "Entry not found"
+      });
+    }
+
+    // Get all paid events from the payment
+    const paidEvents = payment.paidEvents || [];
+
+    // Combine with entry events to get complete event details
+    const paidEventsWithDetails = paidEvents.map(paidEvent => {
+      const matchingEvent = entry.events.find(event => 
+        event.category === paidEvent.category && 
+        event.type === paidEvent.type
+      );
+
+      return {
+        category: paidEvent.category,
+        type: paidEvent.type,
+        calculatedAmount: paidEvent.amount,
+        status: matchingEvent?.status || 'pending',
+        registrationDate: matchingEvent?.RegistrationDate,
+        isCurrent: matchingEvent ? true : false
+      };
+    });
+
+    // Calculate total amount
+    const totalAmount = paidEvents.reduce((sum, event) => sum + event.amount, 0);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        payment: {
+          _id: payment._id,
+          status: payment.status,
+          paymentAmount: payment.paymentAmount,
+          paymentProof: payment.paymentProof,
+          paidEvents: paidEventsWithDetails
+        },
+        totalAmount,
+        paidEvents: paidEventsWithDetails,
+        entryDetails: {
+          player: entry.player,
+          Academy: entry.Academy,
+          events: entry.events
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error("Get Payment With Events Error:", error);
+    res.status(500).json({
+      success: false,
+      msg: "Internal server error",
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Get Academy Entry Details by ID
+ */
+export const getAcademyEntryDetails = async (req, res) => {
+  try {
+    const { entryId } = req.params;
+
+    if (!entryId) {
+      return res.status(400).json({
+        success: false,
+        msg: "Entry ID is required"
+      });
+    }
+
+    // Find the entry with all populated data
+    const entry = await AcademyEntryModel.findById(entryId)
+      .populate('Academy', 'name email phone academyName place district')
+      .populate('player', 'fullName tnbaId dob gender academy place district isActive')
+      .populate({
+        path: 'events.payment',
+        model: 'AcademyPayment',
+        populate: {
+          path: 'paymentProof',
+          model: 'AcademyPaymentProof'
+        }
+      })
+      .lean();
+
+    if (!entry) {
+      return res.status(404).json({
+        success: false,
+        msg: "Entry not found"
+      });
+    }
+
+    // Find payment for this entry
+    const payment = await AcademyPayment.findOne({ PaidedEvent: entryId })
+      .populate('paymentProof')
+      .lean();
+
+    // Get main event for display (first event)
+    const mainEvent = entry.events && entry.events.length > 0 ? entry.events[0] : {};
+
+    // Transform data for frontend
+    const transformedEntry = {
+      id: entry._id,
+      Academy: entry.Academy,
+      player: entry.player,
+      events: entry.events || [],
+      eventCategory: mainEvent.category || "N/A",
+      eventType: mainEvent.type || "N/A",
+      partner: mainEvent.partner || null,
+      eventStatus: mainEvent.status || "pending",
+      registrationDate: mainEvent.RegistrationDate || entry.createdAt,
+      payment: payment ? {
+        _id: payment._id,
+        status: payment.status,
+        paymentAmount: payment.paymentAmount,
+        paymentProof: payment.paymentProof,
+        paidEvents: payment.paidEvents || [],
+        createdAt: payment.createdAt
+      } : null
+    };
+
+    res.status(200).json({
+      success: true,
+      data: transformedEntry
+    });
+
+  } catch (error) {
+    console.error("Get Academy Entry Details Error:", error);
+    res.status(500).json({
+      success: false,
+      msg: "Internal server error",
+      error: error.message
+    });
+  }
+};
+
+
+
+
+
+
+
+/**
+ * Get filtered academy events for reports (Admin)
+ * @param {*} req
+ * @param {*} res
+ */
+export const getFilteredEventsForReport = async (req, res) => {
+  try {
+    const { category, type, status, academy, partner, player, startDate, endDate } = req.query;
+
+    // Build match stage for aggregation
+    const matchStage = { $match: {} };
+    
+    if (category) {
+      matchStage.$match['events.category'] = category;
+    }
+    
+    if (type) {
+      matchStage.$match['events.type'] = type;
+    }
+    
+    if (status) {
+      matchStage.$match['events.status'] = status;
+    }
+
+    // Pipeline for aggregation
+    const pipeline = [
+      { $unwind: "$events" },
+      
+      // Apply event filters
+      ...(Object.keys(matchStage.$match).length > 0 ? [matchStage] : []),
+      
+      // Lookup academy details (only role academy)
+      {
+        $lookup: {
+          from: "users",
+          localField: "Academy",
+          foreignField: "_id",
+          as: "academyDetails",
+        },
+      },
+      { $unwind: "$academyDetails" },
+      
+      // Filter only academy role users
+      {
+        $match: {
+          "academyDetails.role": "academy"
+        }
+      },
+      
+      // Apply academy filter after lookup
+      ...(academy ? [{
+        $match: {
+          "academyDetails.academyName": academy
+        }
+      }] : []),
+      
+      // Lookup player details
+      {
+        $lookup: {
+          from: "academyplayers",
+          localField: "player",
+          foreignField: "_id",
+          as: "playerDetails",
+        },
+      },
+      { $unwind: "$playerDetails" },
+      
+      // Apply player filter after lookup
+      ...(player ? [{
+        $match: {
+          "playerDetails.fullName": player
+        }
+      }] : []),
+
+      // Lookup payment details
       {
         $lookup: {
           from: "academypayments",
@@ -387,33 +742,92 @@ export const getAcademyEntries = async (req, res) => {
         },
       },
 
-      // Apply same filters
+      // Filter only Paid payment records
       {
-        $match: matchFilters
+        $match: {
+          "paymentDetails.status": "Paid"
+        }
       },
 
-      { $count: "total" }
+      // Lookup payment proof details
+      {
+        $lookup: {
+          from: "academypaymentproofs",
+          localField: "paymentDetails.paymentProof",
+          foreignField: "_id",
+          as: "paymentProofDetails",
+        },
+      },
+      {
+        $addFields: {
+          paymentProofDetails: { $arrayElemAt: ["$paymentProofDetails", 0] },
+        },
+      },
+
+      // Date range filter
+      ...(startDate || endDate ? [{
+        $match: {
+          "events.RegistrationDate": {
+            ...(startDate && { $gte: new Date(startDate) }),
+            ...(endDate && { $lte: new Date(endDate) })
+          }
+        }
+      }] : []),
+
+      // Shape the output
+      {
+        $project: {
+          id: "$_id",
+          eventId: "$events._id",
+          registrationDate: "$events.RegistrationDate",
+          eventStatus: "$events.status",
+          eventCategory: "$events.category",
+          eventType: "$events.type",
+          partner: "$events.partner",
+          Academy: {
+            id: "$academyDetails._id",
+            academyName: "$academyDetails.academyName",
+            place: "$academyDetails.place",
+            district: "$academyDetails.district",
+            TnBaId: "$academyDetails.TnBaId"
+          },
+          player: {
+            id: "$playerDetails._id",
+            fullName: "$playerDetails.fullName",
+            tnbaId: "$playerDetails.tnbaId",
+            dob: "$playerDetails.dob",
+            gender:"$playerDetails.gender",
+            academy: "$playerDetails.academy",
+            place: "$playerDetails.place",
+            district: "$playerDetails.district"
+          },
+          payment: {
+            status: "$paymentDetails.status",
+            paymentAmount: "$paymentDetails.paymentAmount",
+            paidEvents: "$paymentDetails.paidEvents"
+          },
+          paymentProof: {
+            ActualAmount: "$paymentProofDetails.ActualAmount",
+            paymentApp: "$paymentProofDetails.metadata.paymentApp",
+            senderUpiId: "$paymentProofDetails.metadata.senderUpiId",
+            receiverUpiId: "$paymentProofDetails.metadata.receiverUpiId"
+          }
+        },
+      },
+
+      // Sort by registration date
+      { $sort: { registrationDate: -1 } },
     ];
 
-    const totalCount = await AcademyEntryModel.aggregate(totalCountPipeline);
-    const total = totalCount[0]?.total || 0;
+    const events = await AcademyEntryModel.aggregate(pipeline);
 
     return res.status(200).json({
       success: true,
-      msg: "Entries fetched successfully",
-      data: eventEntries,
-      pagination: {
-        total,
-        limit,
-        currentPage: page,
-        totalPages: Math.ceil(total / limit),
-      },
+      data: events,
+      total: events.length,
     });
   } catch (err) {
-    console.error("❌ getAcademyEntries Error:", err);
-    return res.status(500).json({ 
-      success: false, 
-      msg: err.message || "Something went wrong while fetching entries" 
-    });
+    console.error("❌ getFilteredEventsForReport Error:", err);
+    return res.status(500).json({ success: false, msg: err.message });
   }
 };

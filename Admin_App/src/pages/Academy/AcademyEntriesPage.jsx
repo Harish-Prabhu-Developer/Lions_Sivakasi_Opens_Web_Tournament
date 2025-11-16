@@ -1,42 +1,18 @@
 // AcademyEntriesPage.jsx
 import React, { useState, useEffect, useMemo } from "react";
 import { toast } from "react-hot-toast";
-import { 
-  Loader2, Filter, Eye, Download 
-} from "lucide-react";
+import { Loader2, Filter, Eye, Download } from "lucide-react";
+import axios from "axios";
 
 import SearchBar from "../../components/SearchBar";
 import StatusModal from "../../components/StatusModal";
 import Pagination from "../../components/Pagination";
-
-// --------------------
-// MOCK DATA
-// --------------------
-const mockData = [
-  {
-    id: "E001",
-    player: { name: "Harish", phone: "9876543210", gender: "M", TnBaId: "TN001" },
-    eventCategory: "U19",
-    eventType: "Singles",
-    partner: null,
-    eventStatus: "pending",
-    registrationDate: "2024-12-01",
-    payment: { status: "unpaid" },
-  },
-  {
-    id: "E002",
-    player: { name: "Prabu", phone: "9876500000", gender: "M", TnBaId: "TN002" },
-    eventCategory: "U17",
-    eventType: "Doubles",
-    partner: { fullname: "Vishnu" },
-    eventStatus: "approved",
-    registrationDate: "2024-11-20",
-    payment: { status: "paid" },
-  }
-];
+import { API_URL } from "../../config";
+import AcademyStatusModal from "./AcademyStatusModal";
+import { useNavigate } from "react-router-dom";
+import AcademyFilterModel from "./AcademyFilterModel";
 
 const AcademyEntriesPage = () => {
-
   // SEARCH
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -55,6 +31,8 @@ const AcademyEntriesPage = () => {
   const [pagination, setPagination] = useState({
     currentPage: 1,
     limit: 10,
+    totalEntries: 0,
+    totalPages: 0
   });
 
   // FILTERS
@@ -62,69 +40,168 @@ const AcademyEntriesPage = () => {
     statusFilter: [],
     categoryFilter: [],
     typeFilter: [],
-    genderFilter: [],
+    academyFilter: [],
+    partnerFilter: [],
+    playerFilter: []
   });
 
   // LOADING
   const [loading, setLoading] = useState(false);
+  const [entries, setEntries] = useState([]);
+  const [allEntries, setAllEntries] = useState([]); // Store all entries for client-side filtering
+  const navigate = useNavigate();
 
-  // ----------------------------
-  // FILTER LOGIC
-  // ----------------------------
+  // Extract available filters from all entries data
+  const availableFilters = useMemo(() => {
+    if (!allEntries.length) {
+      return {
+        categoryFilter: [],
+        typeFilter: [],
+        statusFilter: [],
+        academyFilter: [],
+        partnerFilter: [],
+        playerFilter: []
+      };
+    }
 
-  const hasActiveFilters =
-    filters.statusFilter.length ||
-    filters.categoryFilter.length ||
-    filters.typeFilter.length ||
-    filters.genderFilter.length ||
-    searchQuery.trim();
+    // Extract unique values for each filter category
+    const categories = [...new Set(allEntries.map(entry => entry.eventCategory).filter(Boolean))];
+    const types = [...new Set(allEntries.map(entry => entry.eventType).filter(Boolean))];
+    const statuses = [...new Set(allEntries.map(entry => entry.eventStatus).filter(Boolean))];
+    const academies = [...new Set(allEntries.map(entry => entry.Academy?.academyName).filter(Boolean))];
+    const partners = [...new Set(allEntries.map(entry => entry.partner?.fullName).filter(Boolean))];
+    const players = [...new Set(allEntries.map(entry => entry.player?.fullName).filter(Boolean))];
 
-  // Apply filters + search
+    return {
+      categoryFilter: categories,
+      typeFilter: types,
+      statusFilter: statuses,
+      academyFilter: academies,
+      partnerFilter: partners,
+      playerFilter: players
+    };
+  }, [allEntries]);
+
+  // Apply client-side filtering
   const filteredEntries = useMemo(() => {
-    return mockData.filter((e) => {
-      let match = true;
+    if (!allEntries.length) return [];
 
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        match =
-          e.player?.name?.toLowerCase().includes(q) ||
-          e.player?.phone?.includes(q) ||
-          e.player?.TnBaId?.toLowerCase().includes(q);
-      }
+    return allEntries.filter(entry => {
+      // Search filter
+      const matchesSearch = searchQuery.trim() === "" || 
+        entry.player?.fullName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        entry.Academy?.academyName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        entry.partner?.fullName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        entry.player?.tnbaId?.toLowerCase().includes(searchQuery.toLowerCase());
 
-      if (filters.statusFilter.length) {
-        match = match && filters.statusFilter.includes(e.eventStatus);
-      }
-      if (filters.categoryFilter.length) {
-        match = match && filters.categoryFilter.includes(e.eventCategory);
-      }
-      if (filters.typeFilter.length) {
-        match = match && filters.typeFilter.includes(e.eventType);
-      }
-      if (filters.genderFilter.length) {
-        match = match && filters.genderFilter.includes(e.player?.gender);
-      }
+      // Status filter
+      const matchesStatus = filters.statusFilter.length === 0 || 
+        filters.statusFilter.includes(entry.eventStatus);
 
-      return match;
+      // Category filter
+      const matchesCategory = filters.categoryFilter.length === 0 || 
+        filters.categoryFilter.includes(entry.eventCategory);
+
+      // Type filter
+      const matchesType = filters.typeFilter.length === 0 || 
+        filters.typeFilter.includes(entry.eventType);
+
+      // Academy filter
+      const matchesAcademy = filters.academyFilter.length === 0 || 
+        filters.academyFilter.includes(entry.Academy?.academyName);
+
+      // Partner filter
+      const matchesPartner = filters.partnerFilter.length === 0 || 
+        filters.partnerFilter.includes(entry.partner?.fullName);
+
+      // Player filter
+      const matchesPlayer = filters.playerFilter.length === 0 || 
+        filters.playerFilter.includes(entry.player?.fullName);
+
+      return matchesSearch && matchesStatus && matchesCategory && 
+             matchesType && matchesAcademy && matchesPartner && matchesPlayer;
     });
-  }, [filters, searchQuery]);
+  }, [allEntries, searchQuery, filters]);
 
+  // Paginate filtered entries
+  const paginatedEntries = useMemo(() => {
+    const startIndex = (pagination.currentPage - 1) * pagination.limit;
+    const endIndex = startIndex + pagination.limit;
+    return filteredEntries.slice(startIndex, endIndex);
+  }, [filteredEntries, pagination.currentPage, pagination.limit]);
+
+  // ----------------------------
+  // API INTEGRATION - Fetch all data once
+  // ----------------------------
+
+  const fetchAllEntries = async () => {
+    try {
+      setLoading(true);
+      
+      const token = localStorage.getItem('token');
+      const response = await axios.get(
+        `${API_URL}/api/v2/academy/entry/admin/academy-entries`, 
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      console.log("API Response:", response.data);
+
+      if (response.data.success) {
+        const allData = response.data.data || [];
+        setAllEntries(allData);
+        setEntries(paginatedEntries); // Set initial paginated entries
+        setPagination(prev => ({
+          ...prev,
+          totalEntries: allData.length,
+          totalPages: Math.ceil(allData.length / prev.limit)
+        }));
+      } else {
+        toast.error(response.data.msg || "Failed to fetch entries");
+      }
+    } catch (error) {
+      console.error("Error fetching entries:", error);
+      if (error.response?.data?.msg) {
+        toast.error(error.response.data.msg);
+      } else {
+        toast.error("Error loading entries");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAllEntries();
+  }, []);
+
+  // Update paginated entries when filters change
+  useEffect(() => {
+    setEntries(paginatedEntries);
+    setPagination(prev => ({
+      ...prev,
+      totalEntries: filteredEntries.length,
+      totalPages: Math.ceil(filteredEntries.length / prev.limit),
+      currentPage: 1 // Reset to first page when filters change
+    }));
+  }, [paginatedEntries, filteredEntries]);
+
+  // No need for local filtering since we handle it client-side
   const totalFilteredCount = filteredEntries.length;
-
-  // PAGINATION DATA
-  const paginatedData = useMemo(() => {
-    const start = (pagination.currentPage - 1) * pagination.limit;
-    return filteredEntries.slice(start, start + pagination.limit);
-  }, [pagination, filteredEntries]);
-
-  const paginatedDataIds = paginatedData.map((e) => e.id);
 
   // ----------------------------
   // Event Handlers
   // ----------------------------
 
   const handleLimitChange = (limit) => {
-    setPagination((prev) => ({ ...prev, limit: Number(limit), currentPage: 1 }));
+    setPagination((prev) => ({
+      ...prev,
+      limit: Number(limit),
+      currentPage: 1,
+    }));
   };
 
   const handlePageChange = (page) => {
@@ -136,37 +213,35 @@ const AcademyEntriesPage = () => {
       statusFilter: [],
       categoryFilter: [],
       typeFilter: [],
-      genderFilter: [],
+      academyFilter: [],
+      partnerFilter: [],
+      playerFilter: []
     });
     setSearchQuery("");
   };
 
   const toggleRowSelection = (id) => {
     setSelectedRows((prev) =>
-      prev.includes(id)
-        ? prev.filter((v) => v !== id)
-        : [...prev, id]
+      prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id]
     );
   };
 
-  const isAllSelected = paginatedDataIds.every((id) =>
-    selectedRows.includes(id)
+  const isAllSelected = entries.length > 0 && entries.every((entry) =>
+    selectedRows.includes(entry.eventId)
   );
 
   const toggleSelectAll = () => {
     if (isAllSelected) {
-      // remove all
-      setSelectedRows((prev) =>
-        prev.filter((id) => !paginatedDataIds.includes(id))
-      );
+      setSelectedRows([]);
     } else {
-      // add all
-      setSelectedRows((prev) => [...new Set([...prev, ...paginatedDataIds])]);
+      setSelectedRows(entries.map(entry => entry.eventId));
     }
   };
 
   const onViewDetails = (entry) => {
-    toast("Showing details coming soon!");
+    const eventDetails = `Category: ${entry.eventCategory}\nType: ${entry.eventType}\nStatus: ${entry.eventStatus}\nPlayer: ${entry.player?.fullName}\nAcademy: ${entry.Academy?.academyName}`;
+    
+    toast.success(eventDetails, { duration: 5000 });
   };
 
   const handleStatus = (entry) => {
@@ -179,24 +254,91 @@ const AcademyEntriesPage = () => {
     setShowUpdateModal(false);
   };
 
-  const handleUpdateStatus = () => {
-    toast.success("Status updated!");
-    setShowUpdateModal(false);
+  const handleUpdateStatus = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      
+      const response = await axios.put(
+        `${API_URL}/api/v2/academy/entry/${selectedEntry.id}/events/${selectedEntry.eventId}`,
+        { status: selectedStatus },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      if (response.data.success) {
+        toast.success("Status updated successfully!");
+        setShowUpdateModal(false);
+        fetchAllEntries(); // Refresh all data
+      } else {
+        toast.error(response.data.msg || "Failed to update status");
+      }
+    } catch (error) {
+      console.error("Error updating status:", error);
+      toast.error("Failed to update status");
+    }
   };
 
   const exportCSV = () => {
-    toast.success("Exported mock CSV!");
+    const headers = ['Player Name', 'TNBA ID', 'Academy', 'Category', 'Type', 'Partner', 'Status', 'Registration Date', 'Payment Status'];
+    const csvData = filteredEntries.map(entry => [
+      entry.player?.fullName || '',
+      entry.player?.tnbaId || '',
+      entry.Academy?.academyName || '',
+      entry.eventCategory,
+      entry.eventType,
+      entry.partner?.fullName || '-',
+      entry.eventStatus,
+      new Date(entry.registrationDate).toLocaleDateString('en-IN'),
+      entry.payment?.status || 'Pending'
+    ]);
+
+    const csvContent = [
+      headers.join(','),
+      ...csvData.map(row => row.join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `academy-entries-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+
+    toast.success("CSV exported successfully!");
   };
 
-  const getGenderDisplay = (g) =>
-    g === "M" ? "Male" : g === "F" ? "Female" : "-";
+  const getStatusColor = (status) => {
+    switch (status) {
+      case "approved": return "text-green-600 bg-green-50 px-2 py-1 rounded";
+      case "rejected": return "text-red-600 bg-red-50 px-2 py-1 rounded";
+      case "pending": return "text-yellow-600 bg-yellow-50 px-2 py-1 rounded";
+      default: return "text-gray-600 bg-gray-50 px-2 py-1 rounded";
+    }
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return '-';
+    return new Date(dateString).toLocaleDateString('en-IN');
+  };
+
+  if (loading && allEntries.length === 0) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+        <span className="ml-2">Loading entries...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 w-full space-y-5">
-
       {/* HEADER */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold text-gray-800">Entries</h1>
+        <h1 className="text-xl font-semibold text-gray-800">Academy Entries</h1>
 
         <div className="flex items-center gap-2">
           <SearchBar searchTerm={searchQuery} setSearchTerm={setSearchQuery} />
@@ -233,6 +375,11 @@ const AcademyEntriesPage = () => {
             )}
           </b>{" "}
           of <b>{totalFilteredCount}</b> entries
+          {allEntries.length !== totalFilteredCount && (
+            <span className="text-indigo-600 ml-1">
+              (filtered from {allEntries.length} total entries)
+            </span>
+          )}
         </span>
 
         <div className="flex items-center gap-2">
@@ -255,14 +402,16 @@ const AcademyEntriesPage = () => {
           <div className="flex flex-col items-center justify-center text-gray-500">
             <Filter className="w-12 h-12 mb-4 text-gray-400" />
             <p className="text-lg font-medium text-gray-900 mb-2">
-              No entries found matching your criteria.
+              {allEntries.length === 0 ? "No paid entries found." : "No entries found matching your criteria."}
             </p>
-            <button
-              onClick={clearAllFilters}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-lg mt-3"
-            >
-              Clear all filters
-            </button>
+            {(searchQuery || filters.statusFilter.length || filters.categoryFilter.length || filters.typeFilter.length || filters.academyFilter.length || filters.partnerFilter.length || filters.playerFilter.length) && (
+              <button
+                onClick={clearAllFilters}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-lg mt-3"
+              >
+                Clear all filters
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -284,60 +433,80 @@ const AcademyEntriesPage = () => {
                 <th className="px-3 py-3 text-center">View</th>
                 <th className="px-3 py-3">Player</th>
                 <th className="px-3 py-3">Academy</th>
-                <th className="px-3 py-3">Phone</th>
-                <th className="px-3 py-3">Gender</th>
+                <th className="px-3 py-3">Partner</th>
+                <th className="px-3 py-3">Date</th>
+                <th className="px-3 py-3">Status</th>
                 <th className="px-3 py-3">Category</th>
                 <th className="px-3 py-3">Type</th>
-                <th className="px-3 py-3">Partner</th>
-                <th className="px-3 py-3">Status</th>
-                <th className="px-3 py-3">Date</th>
-                <th className="px-3 py-3">Payment</th>
               </tr>
             </thead>
 
             <tbody>
-              {paginatedData.map((entry) => (
-                <tr key={entry.id} className="border-b hover:bg-gray-50">
+              {entries.map((entry) => (
+                <tr key={entry.eventId} className="border-b hover:bg-gray-50">
                   <td className="px-3 py-3 text-center">
                     <input
                       type="checkbox"
-                      checked={selectedRows.includes(entry.id)}
-                      onChange={() => toggleRowSelection(entry.id)}
+                      checked={selectedRows.includes(entry.eventId)}
+                      onChange={() => toggleRowSelection(entry.eventId)}
                     />
                   </td>
 
                   <td className="px-3 py-3 text-center">
-                    <button onClick={() => onViewDetails(entry)}>
+                    <button 
+                      onClick={() => navigate(`/academyEntryDetail/${entry.id}`)}
+                      className="hover:text-green-700 transition"
+                      title="View Details"
+                    >
                       <Eye className="w-5 h-5 text-green-600" />
                     </button>
                   </td>
 
-                  <td className="px-3 py-3">{entry.player?.name}</td>
-                  <td className="px-3 py-3">{entry.player?.TnBaId}</td>
-                  <td className="px-3 py-3">{entry.player?.phone}</td>
-                  <td className="px-3 py-3">{getGenderDisplay(entry.player?.gender)}</td>
-                  <td className="px-3 py-3">{entry.eventCategory}</td>
-                  <td className="px-3 py-3">{entry.eventType}</td>
-                  <td className="px-3 py-3">{entry.partner?.fullname || "-"}</td>
-
-                  <td
-                    className={`px-3 py-3 cursor-pointer ${
-                      entry.eventStatus === "approved"
-                        ? "text-green-600"
-                        : entry.eventStatus === "rejected"
-                        ? "text-red-600"
-                        : "text-yellow-600"
-                    }`}
-                    onClick={() => handleStatus(entry)}
-                  >
-                    {entry.eventStatus}
+                  <td className="px-3 py-3">
+                    <div>
+                      <div className="font-medium">{entry.player?.fullName}</div>
+                      {entry.player?.tnbaId && (
+                        <div className="text-xs text-gray-500">ID: {entry.player.tnbaId}</div>
+                      )}
+                    </div>
+                  </td>
+                  
+                  <td className="px-3 py-3">
+                    <div>
+                      <div className="font-medium">{entry.Academy?.academyName}</div>
+                      <div className="text-xs text-gray-500">{entry.Academy?.place}</div>
+                    </div>
+                  </td>
+                  
+                  <td className="px-3 py-3">
+                    {entry.partner?.fullName ? (
+                      <div>
+                        <div className="font-medium">{entry.partner.fullName}</div>
+                        {entry.partner.TnBaId && (
+                          <div className="text-xs text-gray-500">ID: {entry.partner.TnBaId}</div>
+                        )}
+                      </div>
+                    ) : (
+                      "-"
+                    )}
                   </td>
 
                   <td className="px-3 py-3">
-                    {new Date(entry.registrationDate).toLocaleDateString()}
+                    {formatDate(entry.registrationDate)}
                   </td>
 
-                  <td className="px-3 py-3">{entry.payment?.status}</td>
+                  <td 
+                    className="px-3 py-3 cursor-pointer"
+                    onClick={() => handleStatus(entry)}
+                  >
+                    <span className={getStatusColor(entry.eventStatus)}>
+                      {entry.eventStatus}
+                    </span>
+                  </td>
+
+                  <td className="px-3 py-3">{entry.eventCategory}</td>
+                  
+                  <td className="px-3 py-3">{entry.eventType}</td>
                 </tr>
               ))}
             </tbody>
@@ -348,19 +517,29 @@ const AcademyEntriesPage = () => {
       {/* PAGINATION */}
       <Pagination
         currentPage={pagination.currentPage}
-        totalPages={Math.ceil(totalFilteredCount / pagination.limit)}
+        totalPages={pagination.totalPages}
         entriesPerPage={pagination.limit}
         onPageChange={handlePageChange}
       />
 
       {/* STATUS MODAL */}
       {showUpdateModal && selectedEntry && (
-        <StatusModal
+        <AcademyStatusModal
           entry={selectedEntry}
           selectedStatus={selectedStatus}
           setSelectedStatus={setSelectedStatus}
           handleCloseUpdateModal={handleCloseUpdateModal}
           handleUpdateStatus={handleUpdateStatus}
+        />
+      )}
+
+      {/* FILTER MODAL */}
+      {showFilter && (
+        <AcademyFilterModel
+          filters={filters}
+          setFilters={setFilters}
+          availableFilters={availableFilters}
+          onClose={() => setShowFilter(false)}
         />
       )}
     </div>

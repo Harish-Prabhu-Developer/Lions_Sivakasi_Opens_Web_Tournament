@@ -67,6 +67,8 @@ export const updatePlayer = createAsyncThunk(
         playerData,
         { headers: { Authorization: `Bearer ${token}` } }
       );
+      console.log("Res : ",response.data);
+      
       return response.data;
     } catch (error) {
       return rejectWithValue(error.response?.data || error.message);

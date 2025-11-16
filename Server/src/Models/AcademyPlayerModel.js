@@ -23,6 +23,11 @@ const PlayerSchema = new mongoose.Schema(
       type: String,
       required: [true, "Date of birth is required"],
     },
+     gender: {
+      type: String,
+      enum: ["male", "female"],
+      required: [true, "Gender is required"]
+    },
     academy: {
       type: String,
       required: [true, "Academy name is required"],

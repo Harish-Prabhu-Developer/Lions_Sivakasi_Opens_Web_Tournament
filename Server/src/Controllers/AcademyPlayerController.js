@@ -1,17 +1,20 @@
 // Controller/AcademyPlayerController.js
 import AcademyPlayer from "../Models/AcademyPlayerModel.js";
 import AcademyEntryModel from "../Models/Academy.EntryModel.js";
+import mongoose from "mongoose";
+import AcademyPaymentModel from "../Models/Academy.PaymentModel.js";
+import AcademyPaymentProof from "../Models/Academy.PaymentProof.js";
 // ================= CREATE PLAYER =================
 export const createPlayer = async (req, res) => {
   try {
-    const { fullName, tnbaId, dob, academy, place, district } = req.body;
+    const { fullName, tnbaId, dob,gender, academy, place, district } = req.body;
     const academyId = req.user.id;
 
     // Validate required fields
-    if (!fullName || !dob || !academy || !place || !district) {
+    if (!fullName || !dob || !gender || !academy || !place || !district) {
       return res.status(400).json({
         success: false,
-        msg: "Full name, date of birth, academy, place, and district are required.",
+        msg: "Full name, date of birth,gender,academy, place, and district are required.",
       });
     }
 
@@ -35,6 +38,7 @@ export const createPlayer = async (req, res) => {
       fullName,
       tnbaId: tnbaId || "",
       dob,
+      gender,
       academy,
       place,
       district
@@ -49,6 +53,7 @@ export const createPlayer = async (req, res) => {
           fullName: player.fullName,
           tnbaId: player.tnbaId,
           dob: player.dob,
+          gender: player.gender,
           academy: player.academy,
           place: player.place,
           district: player.district,
@@ -144,6 +149,7 @@ export const getPlayers = async (req, res) => {
           fullName: player.fullName,
           tnbaId: player.tnbaId,
           dob: player.dob,
+          gender: player.gender,
           academy: player.academy,
           place: player.place,
           district: player.district,
@@ -213,6 +219,7 @@ export const getPlayer = async (req, res) => {
           fullName: player.fullName,
           tnbaId: player.tnbaId,
           dob: player.dob,
+          gender: player.gender,
           academy: player.academy,
           place: player.place,
           district: player.district,
@@ -243,13 +250,13 @@ export const updatePlayer = async (req, res) => {
       });
     }
 
-    const { fullName, tnbaId, dob, academy, place, district } = req.body;
+    const { fullName, tnbaId, dob,gender, academy, place, district } = req.body;
 
     // Validate required fields
-    if (!fullName || !dob || !academy || !place || !district) {
+    if (!fullName || !dob || !gender || !academy || !place || !district) {
       return res.status(400).json({
         success: false,
-        msg: "All fields (fullName, dob, academy, place, district) are required.",
+        msg: "All fields (fullName, dob, gender, academy, place, district) are required.",
       });
     }
 
@@ -285,6 +292,7 @@ export const updatePlayer = async (req, res) => {
     player.fullName = fullName;
     player.tnbaId = tnbaId || "";
     player.dob = dob;
+    player.gender = gender;
     player.academy = academy;
     player.place = place;
     player.district = district;
@@ -300,6 +308,7 @@ export const updatePlayer = async (req, res) => {
           fullName: player.fullName,
           tnbaId: player.tnbaId,
           dob: player.dob,
+          gender: player.gender,
           academy: player.academy,
           place: player.place,
           district: player.district,
@@ -336,14 +345,76 @@ export const deletePlayer = async (req, res) => {
       });
     }
 
-    // Soft delete by setting isActive to false
+    let deletedCounts = {
+      entries: 0,
+      payments: 0,
+      paymentProofs: 0
+    };
+
+    // 1. Find all entries for this player
+    const playerEntries = await AcademyEntryModel.find({
+      Academy: academyId,
+      player: id
+    });
+
+    // 2. Get all payment IDs from entries
+    const paymentIds = [];
+    const entryIds = playerEntries.map(entry => {
+      if (entry.events && Array.isArray(entry.events)) {
+        entry.events.forEach(event => {
+          if (event.payment) {
+            paymentIds.push(event.payment);
+          }
+        });
+      }
+      return entry._id;
+    });
+
+    // 3. Find all payments and get payment proof IDs
+    const payments = await AcademyPaymentModel.find({
+      _id: { $in: paymentIds }
+    });
+
+    const paymentProofIds = payments.map(payment => payment.paymentProof).filter(Boolean);
+
+    // 4. Perform cascade deletion:
+
+    // a. Delete payment proofs
+    if (paymentProofIds.length > 0) {
+      const paymentProofResult = await AcademyPaymentProof.deleteMany({
+        _id: { $in: paymentProofIds }
+      });
+      deletedCounts.paymentProofs = paymentProofResult.deletedCount;
+    }
+
+    // b. Delete payments
+    if (paymentIds.length > 0) {
+      const paymentResult = await AcademyPaymentModel.deleteMany({
+        _id: { $in: paymentIds }
+      });
+      deletedCounts.payments = paymentResult.deletedCount;
+    }
+
+    // c. Delete entries
+    if (entryIds.length > 0) {
+      const entryResult = await AcademyEntryModel.deleteMany({
+        _id: { $in: entryIds }
+      });
+      deletedCounts.entries = entryResult.deletedCount;
+    }
+
+    // d. Soft delete the player
     player.isActive = false;
     await player.save();
 
     res.status(200).json({
       success: true,
-      msg: "Player deleted successfully.",
+      msg: "Player and all associated data deleted successfully.",
+      data: {
+        deletedItems: deletedCounts
+      }
     });
+
   } catch (error) {
     console.error("Delete Player Error:", error);
     res.status(500).json({

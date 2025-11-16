@@ -10,7 +10,7 @@ import EntryPage from "./pages/EntryPage";
 
 function ProtectedRoute() {
   const isLoggedIn = !!localStorage.getItem("bulkapp_token");
-  return isLoggedIn ? <Outlet /> : <Navigate to="/auth?activeTab=login" replace />;
+  return isLoggedIn ? <Outlet /> : <Navigate to="/academy/auth?activeTab=login" replace />;
 }
 
 function PublicRoute() {
@@ -20,7 +20,7 @@ function PublicRoute() {
 
 function App() {
   return (
-<Router>
+<Router basename="/academy">
       <Routes>
         {/* Public routes */}
         <Route element={<PublicRoute />}>

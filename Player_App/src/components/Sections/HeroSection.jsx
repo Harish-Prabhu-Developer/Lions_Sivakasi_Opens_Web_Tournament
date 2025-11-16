@@ -52,28 +52,30 @@ const HeroSection = () => {
   const navigate = useNavigate();
   const deadlineDays = useCountdown(TOURNEY.entryDeadline);
   const [isLoggedIn, setIsLoggedIn] = useState(IsLoggedIn());
-const [entries, setEntries] = useState([]);
-const [totalPaidCount,setTotalPaidCount]=useState(0);
-const [canAddNewEntry, setCanAddNewEntry] = useState(true);
-const dispatch=useDispatch();
+  const [entries, setEntries] = useState([]);
+  const [totalPaidCount, setTotalPaidCount] = useState(0);
+  const [canAddNewEntry, setCanAddNewEntry] = useState(true);
+  const dispatch = useDispatch();
 
-// Fetch entries if logged in
-useEffect(() => {
-  const fetchEntries = async () => {
-    if (!isLoggedIn) return;
-    try {
-     const res = await dispatch(getPlayerEntries()).unwrap();
+  // Fetch entries if logged in
+  useEffect(() => {
+    const fetchEntries = async () => {
+      if (!isLoggedIn) return;
+      try {
+        const res = await dispatch(getPlayerEntries()).unwrap();
 
-      const events = res?.data?.events || res?.events || [];
-      setEntries(events);
-      setTotalPaidCount(res?.data?.TotalPaidCount ||res?.TotalPaidCount|| 0);
-      setCanAddNewEntry(canAddNewEntryCheck(events));
-    } catch (err) {
-      console.error("Error fetching entries:", err);
-    }
-  };
-  fetchEntries();
-}, [isLoggedIn]);
+        const events = res?.data?.events || res?.events || [];
+        setEntries(events);
+        setTotalPaidCount(
+          res?.data?.TotalPaidCount || res?.TotalPaidCount || 0
+        );
+        setCanAddNewEntry(canAddNewEntryCheck(events));
+      } catch (err) {
+        console.error("Error fetching entries:", err);
+      }
+    };
+    fetchEntries();
+  }, [isLoggedIn]);
 
   // ✅ Track login state dynamically
   useEffect(() => {
@@ -173,41 +175,60 @@ useEffect(() => {
       </div>
 
       {/* ✅ CTAs */}
+      {/* ✅ CTAs */}
       <div className="flex flex-wrap justify-center gap-6 mt-8 mb-20 md:mb-0 animate-fadeUp [animation-delay:0.8s]">
-      {isLoggedIn ? (
+        {/* --- ENTER NOW (PLAYER ENTRY) --- */}
+        {isLoggedIn ? (
+          <button
+            onClick={() => {
+              if (!canAddNewEntry && totalPaidCount === 4) {
+                toast.error(
+                  "Entry limit reached — view your Dashboard for more info.",
+                  { duration: 3000 }
+                );
+                return;
+              }
+              navigate("/entry");
+            }}
+            className={`px-10 py-3.5 rounded-full font-bold shadow-lg transition-all duration-300 ${
+              totalPaidCount === 4
+                ? "bg-gray-600/60 text-gray-300 cursor-not-allowed"
+                : "bg-gradient-to-r from-cyan-500 via-sky-400 to-blue-500 text-white hover:from-sky-500 hover:to-cyan-400 hover:shadow-cyan-300/30 active:scale-95"
+            }`}
+          >
+            Enter Now
+          </button>
+        ) : (
+          <button
+            onClick={() => navigate("/register")}
+            className="px-10 py-3.5 rounded-full font-bold bg-gradient-to-r from-cyan-500 via-sky-400 to-blue-500 shadow-lg text-white hover:from-sky-500 hover:to-cyan-400 hover:shadow-cyan-300/30 active:scale-95"
+          >
+            Register Now
+          </button>
+        )}
+
+        {/* --- 🌟 NEW: ACADEMY ENTRY BUTTON --- */}
         <button
           onClick={() => {
-            if (!canAddNewEntry && totalPaidCount === 4) {
-              toast.error("Entry limit reached — view your Dashboard for more info.", { duration: 3000 });
-              return;
-            }
-            navigate("/entry");
+            const academyUrl = `${
+              import.meta.env.VITE_ACADEMY_URL
+            }?activeTab=register`;
+            window.location.href = academyUrl;
           }}
-          
-          className={`px-10 py-3.5 rounded-full font-bold shadow-lg transition-all duration-300 ${
-            totalPaidCount===4
-              ? "bg-gray-600/60 text-gray-300 cursor-not-allowed"
-              : "bg-gradient-to-r from-cyan-500 via-sky-400 to-blue-500 text-white hover:from-sky-500 hover:to-cyan-400 hover:shadow-cyan-300/30 active:scale-95"
-          }`}
+          className="px-10 py-3.5 rounded-full font-bold bg-gradient-to-r from-purple-500 via-fuchsia-500 to-pink-500 
+    text-white shadow-lg hover:from-fuchsia-500 hover:to-purple-500 hover:shadow-pink-300/30 
+    active:scale-95 transition-all duration-300"
         >
-          Enter Now
+          Academy Entry
         </button>
-      ) : (
-        <button
-          onClick={() => navigate("/register")}
-          className="px-10 py-3.5 rounded-full font-bold bg-gradient-to-r from-cyan-500 via-sky-400 to-blue-500 shadow-lg text-white hover:from-sky-500 hover:to-cyan-400 hover:shadow-cyan-300/30 active:scale-95"
-        >
-          Register Now
-        </button>
-      )}
 
-
+        {/* --- VIEW CATEGORIES --- */}
         <a href="#categories">
           <button
             className="px-10 py-3.5 rounded-full font-semibold border-2 border-cyan-300/60 bg-white/30
-              text-cyan-100 hover:bg-cyan-300/20 hover:text-white
-              active:scale-95 transition-all duration-300
-              focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+        text-cyan-100 hover:bg-cyan-300/20 hover:text-white
+        active:scale-95 transition-all duration-300
+        focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
           >
             View Categories
           </button>

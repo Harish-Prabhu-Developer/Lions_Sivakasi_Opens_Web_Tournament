@@ -36,6 +36,7 @@ const DashboardPage = () => {
     fullName: "",
     tnbaId: "",
     dob: "",
+    gender: "", 
     academy: "",
     place: "",
     district: "",
@@ -91,6 +92,7 @@ useEffect(() => {
       fullName: "",
       tnbaId: "",
       dob: "",
+      gender: "",
       academy: "",
       place: "",
       district: "",
@@ -135,6 +137,7 @@ const handleSubmitPlayer = async (e) => {
   if (
     !playerForm.fullName.trim() ||
     !playerForm.dob ||
+    !playerForm.gender ||
     !playerForm.academy.trim() ||
     !playerForm.place.trim() ||
     !playerForm.district.trim()
@@ -181,6 +184,7 @@ const handleSubmitPlayer = async (e) => {
       fullName: player.fullName,
       tnbaId: player.tnbaId || "",
       dob: player.dob,
+      gender: player.gender,
       academy: player.academy,
       place: player.place,
       district: player.district,

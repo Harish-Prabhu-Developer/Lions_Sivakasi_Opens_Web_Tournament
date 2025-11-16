@@ -1,33 +1,41 @@
-// src/components/Tooltip.jsx
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 
 const Tooltip = ({ content, children, showCondition = true }) => {
   const [visible, setVisible] = useState(false);
-  const [coords, setCoords] = useState({ x: 0, y: 0 });
+  const [position, setPosition] = useState({ top: 0, left: 0 });
+  const triggerRef = useRef(null);
 
-  const tooltipContent = content.split("\n");
+  const tooltipContent = Array.isArray(content) ? content : content.split("\n");
 
-  const handleEnter = (e) => {
+  const handleMouseEnter = (e) => {
+    if (!showCondition) return;
+
     const rect = e.currentTarget.getBoundingClientRect();
-    //ge mouse position
-    const mouseX = e.clientX;
-    setCoords({
-      x: showCondition ? rect.left + rect.width / 3.5 : mouseX,
-      y: rect.top + rect.height / 2,
+    
+    // Calculate position to the right of the element with some offset
+    setPosition({
+      top: rect.top + window.scrollY + rect.height / 2,
+      left: rect.right + window.scrollX + 8 // 8px offset from the element
     });
+    
     setVisible(true);
   };
 
-  const handleLeave = () => setVisible(false);
+  const handleMouseLeave = () => {
+    setVisible(false);
+  };
 
-  if (!showCondition) return children;
+  if (!showCondition) {
+    return children;
+  }
 
   return (
     <>
       <div
-        className="relative flex items-center"
-        onMouseEnter={handleEnter}
-        onMouseLeave={handleLeave}
+        ref={triggerRef}
+        className="relative inline-flex w-full"
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
       >
         {children}
       </div>
@@ -35,29 +43,32 @@ const Tooltip = ({ content, children, showCondition = true }) => {
       {visible && (
         <div
           style={{
-            position: "fixed",
-            left: coords.x,
-            top: coords.y,
-            transform: "translateY(-50%)",
+            position: 'absolute',
+            top: `${position.top}px`,
+            left: `${position.left}px`,
+            transform: 'translateY(-50%)',
             zIndex: 9999,
           }}
-          className="bg-gray-900 text-white px-3 py-2 rounded-lg shadow-2xl 
-                     whitespace-nowrap animate-fade-in transition-all"
+          className="animate-fade-in"
         >
-          {tooltipContent.map((line, i) => (
-            <p
-              key={i}
-              className={`${
-                i > 0
-                  ? "text-xs text-gray-400 italic"
-                  : "text-sm font-medium"
-              } leading-tight`}
-            >
-              {line}
-            </p>
-          ))}
-          <div className="absolute -left-1.5 top-1/2 -translate-y-1/2 w-0 h-0 
-                          border-y-[6px] border-y-transparent border-r-[6px] border-r-gray-900" />
+          <div className="bg-gray-900 text-white px-3 py-2 rounded-lg shadow-lg max-w-xs">
+            {tooltipContent.map((line, index) => (
+              <div
+                key={index}
+                className={`
+                  ${index > 0 ? 'text-xs text-gray-300 mt-1' : 'text-sm font-medium'}
+                  leading-tight whitespace-nowrap
+                `}
+              >
+                {line}
+              </div>
+            ))}
+            {/* Tooltip arrow */}
+            <div 
+              className="absolute top-1/2 -left-1 transform -translate-y-1/2 w-0 h-0 
+                         border-y-[6px] border-y-transparent border-r-[6px] border-r-gray-900"
+            />
+          </div>
         </div>
       )}
     </>
