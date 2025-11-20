@@ -1,14 +1,4 @@
 [[redirects]]
-  from = "/academy/*"
-  to = "/academy/index.html"
-  status = 200
-
-[[redirects]]
-  from = "/"
-  to = "/academy/"
-  status = 200
-
-[[redirects]]
   from = "/*"
-  to = "/academy/index.html"
+  to = "/index.html"
   status = 200
