@@ -3,6 +3,7 @@ import AcademyPayment from "../Models/Academy.PaymentModel.js";
 import AcademyPaymentProof from "../Models/Academy.PaymentProof.js";
 import AcademyEntry from "../Models/Academy.EntryModel.js";
 import AcademyPlayer from "../Models/AcademyPlayerModel.js";
+import { sendAdminNotification } from "../Services/EmailService.js";
 
 /**
  * Add payment for specific player events
@@ -189,6 +190,40 @@ export const addToAcademyEventPayment = async (req, res) => {
         path: "paymentProof",
         select: "paymentProof ActualAmount expertedData metadata paymentBy"
       });
+
+ // ✅ FIXED: Prepare payment data with proper payment proof structure
+    const notificationData = {
+      ...populatedPayment.toObject(),
+      paidEvents: validPaidEvents,
+      // Ensure payment proof is properly structured
+      paymentProof: {
+        paymentProof: savedPaymentProof.paymentProof, // This is the image URL
+        ActualAmount: savedPaymentProof.ActualAmount,
+        expertedData: savedPaymentProof.expertedData,
+        metadata: savedPaymentProof.metadata
+      },
+      metadata: {
+        ...populatedPayment.paymentProof?.metadata,
+        ocrVerified: metadata?.ocrVerified || false
+      }
+    };
+
+    console.log('📧 Sending admin notification with data:', {
+      hasPaymentProof: !!savedPaymentProof.paymentProof,
+      paymentProofUrl: savedPaymentProof.paymentProof ? 'Available' : 'Not Available',
+      player: player.fullName,
+      amount: ActualAmount
+    });
+
+    // ✅ Send admin notification (non-blocking)
+    sendAdminNotification(
+      notificationData,
+      req.user, // academy data
+      player,   // player data
+      entry     // entry data
+    ).catch(error => {
+      console.error('❌ Admin notification failed (non-critical):', error);
+    });
 
     return res.status(201).json({
       success: true,

@@ -5,6 +5,7 @@ import { ForgetPassTemplate } from "../Utils/Template/ForgetPassTemplate.js";
 import dotenv from "dotenv";
 import { PlayerEntryStatusTemplate, PlayerEntryStatusTextTemplate } from "../Utils/Template/PlayerEntryStatusTemplate.js";
 import { AdminEntryRegisterTemplate, AdminEntryRegisterTextTemplate } from "../Utils/Template/AdminEntryRegisterTemplate.js";
+import { AdminAcademyEventsNotify } from "../Utils/Template/AdminAcademyEventsNotify.js";
 dotenv.config();
 const transporter = nodemailer.createTransport({
   host: 'smtp.gmail.com',
@@ -255,5 +256,54 @@ export const sendPlayerEntryRegistrationEmail = async (playerData, eventDetails,
   } catch (error) {
     console.error(`❌ Failed to send registration confirmation email to ${playerData.email}:`, error);
     throw error;
+  }
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+export const sendAdminNotification = async (paymentData, academyData, playerData, entryData) => {
+  try {
+    const adminEmails = [
+      "lionssivakasiopen@gmail.com",
+
+    ];
+
+    // Create subject & HTML template
+    const emailSubject = `🎾 New Academy Payment - ${academyData.academyName} - ${playerData.fullName}`;
+    const emailHtml = AdminAcademyEventsNotify(paymentData, academyData, playerData, entryData);
+
+    // Prepare message
+    const message = {
+      from: `"Lions Sports Foundation Team" <${process.env.SMTP_USER}>`,
+      to: adminEmails, // array supported by nodemailer
+      subject: emailSubject,
+      html: emailHtml,
+      text: `New academy payment received.\nAcademy: ${academyData.academyName}\nPlayer: ${playerData.fullName}\nAmount: ${paymentData.amount}\nEvents: ${entryData?.events?.length || 0}`,
+    };
+
+    // Send email
+    const result = await transporter.sendMail(message);
+
+    console.log(`✅ Admin notification email sent to ${adminEmails.length} admins`, {
+      recipients: adminEmails,
+      messageId: result.messageId,
+    });
+
+    return result;
+  } catch (error) {
+    console.error("❌ Failed to send admin notification:", error);
+    // Don't throw error – avoid breaking player flow
   }
 };

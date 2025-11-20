@@ -265,7 +265,7 @@ useEffect(() => {
           />
         );
       default:
-        navigate("/academy/auth?activeTab=login", { replace: true });
+        navigate("/auth?activeTab=login", { replace: true });
         return null;
     }
   };

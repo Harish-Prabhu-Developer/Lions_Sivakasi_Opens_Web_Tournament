@@ -20,7 +20,7 @@ export const Logout = (redirect = true) => {
 
   // Optional: redirect to login/register page
   if (redirect) {
-    window.location.href = "/academy/auth?activeTab=login";
+    window.location.href = "/auth?activeTab=login";
   }
 };
 

@@ -20,7 +20,7 @@ function PublicRoute() {
 
 function App() {
   return (
-<Router basename="/academy">
+<Router>
       <Routes>
         {/* Public routes */}
         <Route element={<PublicRoute />}>
